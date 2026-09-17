@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Python `>=3.13`. Dependencies go on the `ragcore` package (`core/ragcore/pyproject.toml`), not the workspace root.
-- Ruff: `line-length = 100`, `target-version = "py313"`, lint rules `["E", "F", "I", "UP", "B", "SIM"]`. Run `uv run ruff check .` and `uv run ruff format .` before every commit.
+- Ruff: `line-length = 100`, `target-version = "py313"`, lint rules `["E", "F", "I", "UP", "B", "SIM"]`. Before every commit run `uv run ruff check .`, and run the formatter **only on the files you created or modified** — e.g. `uv run ruff format core/ragcore/src/ragcore/citations.py core/ragcore/tests/test_citations.py`. Never `uv run ruff format .`: this repo is not format-clean, so a bare `.` rewrites ~10 unrelated files, including the frozen `schemas.py` and the Markdown planning documents this plan is extracted from.
 - pytest: `asyncio_mode = "auto"`, `testpaths = ["core/ragcore/tests"]`.
 - **No `torch` in `ragcore` dependencies, ever.** The S0 spike installs it in a throwaway virtualenv outside the project.
 - **No AGPL dependencies.** Specifically never PyMuPDF or `pymupdf4llm`. PDF parsing is `pypdfium2` (Apache/BSD).
