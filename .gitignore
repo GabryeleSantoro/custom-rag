@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Superpowers SDD scratch (ledger, briefs, review packages)
+.superpowers/
