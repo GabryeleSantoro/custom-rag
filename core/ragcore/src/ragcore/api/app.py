@@ -22,10 +22,8 @@ from ragcore.api.routes import (
     settings,
     sources,
 )
+from ragcore.backend import build_backend
 from ragcore.config import Config
-from ragcore.stub.hub import HubClient
-from ragcore.stub.jobs import JobManager
-from ragcore.stub.store import Store
 
 # Everything else needs the session token the Rust shell generated at spawn.
 PUBLIC_PATHS = {"/health", "/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"}
@@ -36,14 +34,17 @@ def create_app(config: Config) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.config = config
         app.state.started_at = time.monotonic()
-        app.state.store = Store(config)
-        app.state.jobs = JobManager()
-        app.state.hub = HubClient(config)
+        backend = build_backend(config)
+        app.state.backend = backend
+        app.state.store = backend.store
+        app.state.jobs = backend.jobs
+        app.state.hub = backend.hub
+        app.state.answerer = backend.answerer
         try:
             yield
         finally:
-            await app.state.jobs.shutdown()
-            await app.state.hub.aclose()
+            await backend.jobs.shutdown()
+            await backend.hub.aclose()
 
     app = FastAPI(
         title="ragcore",

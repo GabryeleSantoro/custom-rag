@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 
-from ragcore.api.deps import ConfigDep, StoreDep
+from ragcore.api.deps import AnswererDep, StoreDep
 from ragcore.api.schemas import (
     ChatMessage,
     CitationsEvent,
@@ -31,7 +31,6 @@ from ragcore.api.schemas import (
 )
 from ragcore.api.sse import frame, sse_response
 from ragcore.citations import extract_citations, parse_directives
-from ragcore.stub.answers import llm_stream, scripted_stream
 
 router = APIRouter(tags=["query"])
 
@@ -61,7 +60,7 @@ def route_mode(question: str) -> tuple[str, str]:
 
 
 @router.post("/query")
-async def query(payload: QueryRequest, request: Request, store: StoreDep, config: ConfigDep):
+async def query(payload: QueryRequest, request: Request, store: StoreDep, answerer: AnswererDep):
     query_id = payload.query_id or f"q_{uuid.uuid4().hex[:10]}"
     question, directives = parse_directives(payload.q)
 
@@ -100,12 +99,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, config
         )
 
         connection = store.connections.get(store.settings.active_connection_id or "")
-        use_llm = bool(config.llm_base_url)
-        stream = (
-            llm_stream(config, question, chunks)
-            if use_llm
-            else scripted_stream(question, chunks, directives)
-        )
+        stream = answerer.stream(question, chunks, directives)
 
         answer: list[str] = []
         first_token_at: float | None = None

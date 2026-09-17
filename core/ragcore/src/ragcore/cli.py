@@ -29,9 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--data-dir", type=Path, default=Path.home() / ".custom-rag")
     serve.add_argument("--ram-mb", type=int, default=None)
     serve.add_argument("--vram-mb", type=int, default=0)
-    serve.add_argument(
-        "--gpu-backend", default="cpu", choices=["metal", "cuda", "vulkan", "cpu"]
-    )
+    serve.add_argument("--gpu-backend", default="cpu", choices=["metal", "cuda", "vulkan", "cpu"])
+    serve.add_argument("--backend", default="stub", choices=["stub", "real"])
     serve.add_argument("--prod", action="store_true", help="Disable dev-only routes")
     serve.add_argument("--log-level", default="info")
     return parser
@@ -52,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         dev_mode=not args.prod,
         vram_mb=args.vram_mb,
         gpu_backend=args.gpu_backend,
+        backend=args.backend,
         llm_base_url=env.llm_base_url,
         llm_model=env.llm_model,
         llm_api_key=env.llm_api_key,

@@ -19,12 +19,11 @@ from ragcore.api.schemas import (
     ModelRole,
     Ok,
 )
-from ragcore.stub.hub import HubClient
 
 router = APIRouter(prefix="/models", tags=["models"])
 
 
-def _hub(request: Request) -> HubClient:
+def _hub(request: Request):
     return request.app.state.hub
 
 

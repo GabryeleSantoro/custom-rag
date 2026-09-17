@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 
 def _default_ram_mb() -> int:
@@ -29,6 +30,7 @@ class Config:
     ram_mb: int = field(default_factory=_default_ram_mb)
     vram_mb: int = 0
     gpu_backend: str = "cpu"
+    backend: Literal["stub", "real"] = "stub"
     """An OpenAI-compatible base URL. Set it and /query streams from a real model."""
     llm_base_url: str | None = None
     llm_model: str | None = None
@@ -45,4 +47,5 @@ class Config:
             llm_base_url=os.getenv("RAGCORE_LLM") or None,
             llm_model=os.getenv("RAGCORE_LLM_MODEL") or None,
             llm_api_key=os.getenv("RAGCORE_LLM_API_KEY") or None,
+            backend=os.getenv("RAGCORE_BACKEND", "stub"),  # type: ignore[arg-type]
         )
