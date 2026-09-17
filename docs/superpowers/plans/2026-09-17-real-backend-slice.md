@@ -4,7 +4,7 @@
 
 **Goal:** Replace the `ragcore` stub backend with a real one along a single narrow path — real embeddings, a real LanceDB index, real hybrid retrieval with reranking, real PDF ingestion — runnable headless, with the frozen HTTP contract unchanged.
 
-**Architecture:** A Protocol seam (`ports.py`) plus a factory (`backend.py`) lets a stub backend and a real backend satisfy the same API. The real backend stores vectors and text in LanceDB, application state in SQLite, and talks to two `llama-server` processes over HTTP for embedding and reranking. The existing 13 contract tests run against both backends, which is how we prove the contract never moved.
+**Architecture:** A Protocol seam (`ports.py`) plus a factory (`backend.py`) lets a stub backend and a real backend satisfy the same API. The real backend stores vectors and text in LanceDB, application state in SQLite, and talks to two `llama-server` processes over HTTP for embedding and reranking. The six backend-agnostic contract tests run against both backends, which is how we prove the contract never moved; the seven that assert stub-only semantics (dev directives, seeded connections, model inventory, eval sets) stay on the stub, since those subsystems are out of this slice's scope.
 
 **Tech Stack:** Python 3.13, FastAPI, httpx, LanceDB, PyArrow, NumPy, pypdfium2, SQLite (stdlib `sqlite3`), pytest, llama.cpp `llama-server`.
 
@@ -136,13 +136,7 @@ Then the two moved function bodies, unchanged.
 
 - [ ] **Step 4: Update the two importers**
 
-In `core/ragcore/src/ragcore/stub/answers.py`, delete the moved definitions and the now-unused `re` import if nothing else uses it, then add:
-
-```python
-from ragcore.citations import MARKER, extract_citations, parse_directives  # noqa: F401
-```
-
-The `noqa` is deliberate: `answers.py` re-exports these so existing importers keep working during this task.
+In `core/ragcore/src/ragcore/stub/answers.py`, delete the moved definitions (`MARKER`, `extract_citations`, `parse_directives`). `MARKER`'s only use was inside `extract_citations`, which is leaving, so drop the `import re` too if nothing else in the file uses it — `ruff check` will tell you. Do **not** re-export the moved names: `backend.py` (Task 2) imports `llm_stream`/`scripted_stream` from this module and the citation helpers from `ragcore.citations`, so a re-export would be dead weight that Task 11 has to clean up again.
 
 In `core/ragcore/src/ragcore/api/routes/query.py`, change the import block at line 33 to:
 
@@ -938,6 +932,9 @@ git commit -m "feat: add llama-server embedding client and deterministic fakes"
   - `get_document(doc_id: str) -> Document | None`
   - `delete_documents(doc_ids: list[str]) -> None`
   - `sha_index() -> dict[str, str]` mapping `path -> sha256`
+  - `set_sha(path: str, sha: str) -> None`
+  - `wipe(*, keep_connections: bool) -> None` — clears sources, documents, shas, sessions and messages
+
   - `create_session(title: str | None, scope_doc_id: str | None) -> ChatSession`
   - `list_sessions() -> dict[str, ChatSession]`
   - `append_message(message: ChatMessage) -> None`
@@ -1893,6 +1890,8 @@ Compose SQLite, LanceDB and ingestion into a `StorePort` implementation.
 - Consumes: `MetaStore`, `VectorStore`, `walk_source`, `parse`, `chunk_document`, `FakeEmbedClient`, `RetrieverPort`
 - Produces: `store.real.RealStore(config: Config, *, embedder, embed_model_id: str = "Qwen3-Embedding-0.6B-Q8_0", retriever=None)` satisfying `StorePort`, plus
   - `async RealStore.ingest_source_async(source_id: str) -> list[Document]`
+  - `RealStore.wipe(*, keep_connections: bool) -> None`, `RealStore.save_settings() -> None`
+  - `RealStore.vectors: VectorStore` (the factory wires the retriever against it in Task 11)
   - `RealStore.embed_model_id: str`
   - `RealStore.index_blocked: str | None` — set when `index_meta.embed_model` disagrees with the live embedder
 
@@ -2052,17 +2051,54 @@ Create `core/ragcore/src/ragcore/store/real.py`. Requirements, in order:
 9. `rebuild_index()` clears the chunks table and the shas table, then leaves documents queued — the route already returns a job.
 10. `close()` closes `MetaStore`.
 
-- [ ] **Step 4: Update the documents route**
+- [ ] **Step 4: Move every route off stub internals**
 
-`routes/documents.py` reads `store.loaded` in three places. Replace each with the `StorePort` surface: document listing uses `store.documents`, and the content endpoint uses `store.content(doc_id)`. Confirm with:
+Three routes reach into state that `RealStore` exposes as read-through properties, where in-place mutation silently does nothing. All three must go through the port.
+
+**`routes/documents.py`** reads `store.loaded` in three places. Document listing uses `store.documents`; the content endpoint uses `store.content(doc_id)`.
+
+**`routes/settings.py`** is the load-bearing one. `wipe` currently calls `.clear()` on `store.sources`, `store.documents`, `store.loaded`, `store.sessions` and `store.messages`. Against `RealStore` those are properties returning a fresh dict each access, so every `.clear()` would empty a throwaway and the wipe would report success while deleting nothing. Replace the body's state-clearing block with a single port call:
+
+```python
+@router.post("/wipe", response_model=Ok)
+def wipe(payload: WipeRequest, store: StoreDep) -> Ok:
+    if payload.confirm != "DELETE":
+        raise HTTPException(400, 'confirm must be the literal string "DELETE"')
+
+    store.wipe(keep_connections=payload.keep_connections)
+    return Ok()
+```
+
+`patch_settings` has the same shape of bug in slow motion: it mutates `store.settings` in place and never persists, so on `RealStore` the change is lost at restart. Add `store.save_settings()` before it returns.
+
+**`routes/evals.py`** uses `store.loaded.values()` at line 44 and calls `store.retriever.search(...)` synchronously at line 51 — the method Task 10 makes raise on the real retriever. Use `store.documents` / `store.content()` for the former and `await store.retriever.asearch(...)` for the latter; the handler is already `async def`.
+
+Add to `ports.StorePort`:
+
+```python
+    def wipe(self, *, keep_connections: bool) -> None: ...
+    def save_settings(self) -> None: ...
+```
+
+Implement both on `stub/store.Store` (clear its dicts; `save_settings` is a no-op) and on `RealStore` (`MetaStore.wipe` plus `VectorStore` chunk deletion; `save_settings` calls `MetaStore.save_settings`).
+
+Confirm with:
 
 Run: `grep -rn "store.loaded" core/ragcore/src/ragcore/api/`
+Expected: no output.
+
+Run: `grep -rn "retriever.search" core/ragcore/src/ragcore/api/`
 Expected: no output.
 
 - [ ] **Step 5: Run the tests**
 
 Run: `uv run pytest core/ragcore/tests/test_real_store.py -v`
 Expected: PASS (6 tests).
+
+Then confirm the stub still honours wipe through the new port method:
+
+Run: `uv run pytest core/ragcore/tests/test_api.py -k wipe -v`
+Expected: PASS (2 tests).
 
 Run: `uv run pytest -v`
 Expected: PASS — everything, including the 13 contract tests still on the stub.
@@ -2354,7 +2390,12 @@ class HybridRetriever:
         ]
         candidates = len(scored)
 
-        kept = [c for c in scored if c.rerank_score >= settings.min_score][: settings.top_k]
+        # `min_score` is calibrated for the reranker's sigmoid probabilities.
+        # Cosine similarities and RRF scores live near 0.0-0.05, so applying the
+        # same 0.3 default to them filters every candidate and returns nothing.
+        # The gate therefore belongs to the rerank stage (Task 13) and is skipped
+        # whenever no reranker ran.
+        kept = scored[: settings.top_k]
         t0 = time.perf_counter()
         kept = pack(kept, settings.context_token_budget)
         latency.pack_ms = (time.perf_counter() - t0) * 1000
@@ -2393,7 +2434,7 @@ git commit -m "feat: add dense retrieval and context packing"
 
 ### Task 11: Wire the real backend — S1 exit
 
-The skeleton closes here: `--backend real` serves a real cited answer, and the contract tests run against both backends.
+The skeleton closes here: `--backend real` serves a real cited answer, and the backend-agnostic contract tests run against both backends.
 
 **Files:**
 - Create: `core/ragcore/src/ragcore/llm/__init__.py`
@@ -2402,7 +2443,8 @@ The skeleton closes here: `--backend real` serves a real cited answer, and the c
 - Modify: `core/ragcore/src/ragcore/config.py` (embed/rerank server URLs)
 - Modify: `core/ragcore/src/ragcore/cli.py` (flags for those URLs)
 - Modify: `core/ragcore/src/ragcore/api/routes/health.py` (stop hard-coding `stub=True`)
-- Modify: `core/ragcore/tests/conftest.py` (parameterize the client over both backends)
+- Modify: `core/ragcore/tests/conftest.py` (add `stub_client`, parameterize `client` over both backends)
+- Modify: `core/ragcore/tests/test_api.py` (seven tests switch to the `stub_client` fixture — parameter rename only)
 - Modify: `core/ragcore/src/ragcore/stub/answers.py` (drop the moved `llm_stream`)
 
 **Interfaces:**
@@ -2529,7 +2571,13 @@ class OpenAICompatEngine:
 
 Keep the moved body's SSE parsing and `<think>` stripping exactly as it was. Delete `llm_stream` from `stub/answers.py` and have `StubAnswerEngine` use `OpenAICompatEngine` when `config.llm_base_url` is set.
 
-If `config.llm_base_url` is unset, `OpenAICompatEngine._stream` yields a grounded extractive fallback built from the retrieved chunks: the first sentence of each of the top two chunks, each followed by its `[doc_id:page]` marker. This is what makes `test_real_query` runnable without a model server, and it is honest — the text comes from the passages.
+If `config.llm_base_url` is unset, `OpenAICompatEngine._stream` yields a grounded extractive fallback built from the retrieved chunks. It is honest — every word comes from the passages — and its shape is constrained by the contract:
+
+- **Yield one frame per sentence, never one frame for the whole answer.** `test_query_streams_frames_in_contract_order` asserts `names.count("token") > 1`.
+- **Cite the top two *distinct* `(doc_id, page_start)` chunks.** That test also asserts `grounding == "ok"`, and `extract_citations` only returns `"ok"` with at least two citations and zero dropped. Two markers pointing at the same `(doc, page)` collapse to one citation and grade `"low"`.
+- Emit each sentence as `f"{first_sentence(chunk.text)} [{chunk.doc_id}:{chunk.page_start}]"`.
+
+If fewer than two chunks were retrieved, cite what there is — the grounding grade is then correctly `"low"`, and no test on the real backend asserts otherwise.
 
 - [ ] **Step 4: Add the real branch to the factory**
 
@@ -2568,15 +2616,32 @@ In `config.py` add `embed_url: str = "http://127.0.0.1:8770"` and `rerank_url: s
 
 In `routes/health.py`, replace `stub=True` with `stub=config.backend == "stub"` and change the `detail` string to `"serving fixture data"` for the stub and `"serving the local index"` for the real backend. If `store.index_blocked` is set, return `status="degraded"` and put the message in the ragcore process `detail`.
 
-- [ ] **Step 7: Parameterize the contract tests**
+- [ ] **Step 7: Split and parameterize the contract tests**
 
-In `conftest.py`, change the `client` fixture:
+The plan originally claimed all 13 contract tests would run against both backends. They cannot, and the reason is not a bug to fix — it is scope. Seven of them assert stub-only semantics:
+
+| Test | Why it is stub-only |
+|---|---|
+| `test_a_citation_nothing_retrieved_is_dropped` | drives the `!badcite` dev directive |
+| `test_an_answer_with_no_citation_reports_low_grounding` | drives `!nocite` |
+| `test_the_error_frame_replaces_the_rest_of_the_stream` | drives `!error` |
+| `test_wipe_sends_the_user_back_through_onboarding` | asserts seeded connections survive the wipe |
+| `test_wipe_refuses_without_the_literal_confirmation` | asserts seeded document count |
+| `test_embedder_activation_requires_accepting_the_reindex` | needs a seeded model inventory |
+| `test_eval_reports_progress_then_metrics` | needs a seeded eval set |
+
+Connections, the model hub and eval are all explicitly out of scope for this slice, and the dev directives are stub-only by design. **Do not relax a single assertion** and do not build those subsystems to make the tests pass. Split the fixtures instead.
+
+In `conftest.py`, keep a stub-only fixture and add the parameterized one:
 
 ```python
-@pytest.fixture(params=["stub", "real"])
-def client(request, tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
-    monkeypatch.setenv("RAGCORE_FAKE_MODELS", "1")
-    config = Config(
+import shutil
+
+REPO = Path(__file__).resolve().parents[3]
+
+
+def _config(tmp_path: Path, backend: str) -> Config:
+    return Config(
         host="127.0.0.1",
         port=0,
         token=TOKEN,
@@ -2585,25 +2650,12 @@ def client(request, tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
         ram_mb=16384,
         vram_mb=0,
         gpu_backend="cpu",
-        backend=request.param,
+        backend=backend,
     )
-    with TestClient(create_app(config)) as test_client:
-        test_client.headers["Authorization"] = f"Bearer {TOKEN}"
-        if request.param == "real":
-            _seed_real_corpus(test_client, tmp_path)
-        yield test_client
-```
-
-Add the helper above the fixture:
-
-```python
-import shutil
-
-REPO = Path(__file__).resolve().parents[3]
 
 
 def _seed_real_corpus(test_client: TestClient, tmp_path: Path) -> None:
-    """Gives the real backend the same documents the stub seeds itself with."""
+    """Gives the real backend the documents the stub seeds itself with."""
     corpus = tmp_path / "corpus"
     corpus.mkdir(exist_ok=True)
     for source in (REPO / "fixtures" / "docs").glob("*.md"):
@@ -2612,14 +2664,37 @@ def _seed_real_corpus(test_client: TestClient, tmp_path: Path) -> None:
         "/sources", json={"path": str(corpus), "include_globs": ["**/*.md"]}
     )
     assert response.status_code == 201, response.text
+
+
+@pytest.fixture
+def stub_client(tmp_path: Path) -> Iterator[TestClient]:
+    """For contract tests that assert stub-only semantics: dev directives, seeded state."""
+    with TestClient(create_app(_config(tmp_path, "stub"))) as test_client:
+        test_client.headers["Authorization"] = f"Bearer {TOKEN}"
+        yield test_client
+
+
+@pytest.fixture(params=["stub", "real"])
+def client(request, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """For contract tests both backends must satisfy identically."""
+    monkeypatch.setenv("RAGCORE_FAKE_MODELS", "1")
+    with TestClient(create_app(_config(tmp_path, request.param))) as test_client:
+        test_client.headers["Authorization"] = f"Bearer {TOKEN}"
+        if request.param == "real":
+            _seed_real_corpus(test_client, tmp_path)
+        yield test_client
 ```
 
-Two existing contract tests assert seeded state — `test_health_is_public` asserts `index["documents"] > 0` — so seeding is what keeps them honest rather than relaxing the assertion.
+Then in `test_api.py`, change the seven tests above to take `stub_client` instead of `client` — the parameter rename is the entire edit; every assertion stays exactly as written. The six that keep `client` are the ones both backends genuinely owe:
+
+`test_health_is_public`, `test_everything_else_needs_the_session_token`, `test_openapi_is_reachable_without_a_token`, `test_documents_expose_content_the_reader_can_highlight`, `test_query_streams_frames_in_contract_order`, `test_sources_and_jobs_round_trip`.
+
+Two of those six are the real prize: `test_documents_expose_content_the_reader_can_highlight` verifies that `text[char_start:char_end] == chunk["text"]` holds for chunks the real chunker produced against pages the real parser produced, and `test_query_streams_frames_in_contract_order` verifies the full SSE contract over a real index. If either fails, the failure is in your code, not in the test.
 
 - [ ] **Step 8: Run everything**
 
 Run: `uv run pytest -v`
-Expected: PASS — 13 contract tests × 2 backends, plus every unit test.
+Expected: PASS — 6 contract tests × 2 backends, 7 stub-only contract tests, plus every unit test. 19 test items from `test_api.py`.
 
 - [ ] **Step 9: Verify by hand**
 
@@ -2984,6 +3059,8 @@ In `HybridRetriever.asearch`, after fusion and before the `min_score` gate:
             scored = [
                 scored[i].model_copy(update={"rerank_score": score}) for i, score in ranked
             ]
+            # Now, and only now, the scores are on the scale min_score describes.
+            scored = [c for c in scored if c.rerank_score >= settings.min_score]
 ```
 
 The CPU profile's candidate cap arrives through `settings.rerank_candidates`, which `PerformanceSettings.profile` already drives in the settings route — no extra plumbing.
@@ -2993,11 +3070,11 @@ The CPU profile's candidate cap arrives through `settings.rerank_candidates`, wh
 In `backend.py`'s real branch:
 
 ```python
-        reranker = FakeRerankClient() if os.getenv("RAGCORE_FAKE_MODELS") else RerankClient(
-            config.rerank_url
-        )
+        reranker = None if os.getenv("RAGCORE_FAKE_MODELS") else RerankClient(config.rerank_url)
         store.retriever = HybridRetriever(store.vectors, embedder, reranker=reranker)
 ```
+
+No reranker under `RAGCORE_FAKE_MODELS`, deliberately. `FakeRerankClient` scores by literal token overlap, which is frequently below the 0.3 `min_score` default — wiring it into the default test backend would make contract tests fail for a reason that has nothing to do with the contract. Tests that exercise reranking inject `FakeRerankClient` explicitly, as `test_reranking_changes_the_order` does.
 
 - [ ] **Step 6: Run everything**
 
@@ -3454,7 +3531,7 @@ git commit -m "feat: add index/ask CLI verbs and default to the real backend (S5
 
 Run before declaring the slice done:
 
-- [ ] `uv run pytest -v` — full suite green, contract tests green on **both** backends
+- [ ] `uv run pytest -v` — full suite green; the six backend-agnostic contract tests green on **both** backends
 - [ ] `uv run pytest -v -m requires_models` — green with both llama-servers up
 - [ ] `uv run ruff check .` — clean
 - [ ] `grep -rn "ragcore.stub" core/ragcore/src/ragcore/api/` — no output

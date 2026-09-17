@@ -147,7 +147,7 @@ keeps embed_text's meaning stable when real chunking replaces the splitter. Retr
 through `openai_compat` with citation validation.
 
 **Exit:** `POST /query` emits `start`, `mode`, `sources`, `token`*, `citations`, `done` from real
-vectors, and all 13 contract tests pass against both backends.
+vectors, and the backend-agnostic contract tests pass against both backends.
 
 ### S2 · Hybrid retrieval (about 1 day)
 
@@ -182,8 +182,15 @@ mode. Add `ragcore index <path>` and `ragcore ask "<question>"` so the slice is 
 
 ## 5. Testing
 
-`conftest.py` gains a backend-parameterized client fixture, so the 13 contract tests run against
-both backends and prove the HTTP contract is unchanged.
+`conftest.py` gains a backend-parameterized client fixture, so the contract tests that both
+backends genuinely owe run against both and prove the HTTP contract is unchanged.
+
+Seven of the thirteen do not qualify, and the reason is scope rather than a defect: three drive
+stub-only dev directives (`!badcite`, `!nocite`, `!error`), and four assert seeded connections, a
+model inventory or an eval set — subsystems this slice explicitly leaves stubbed. Those seven keep
+every assertion they have and move to a stub-only fixture. The remaining six run on both backends,
+and two of them carry the real weight: one verifies that chunk character offsets index correctly
+into parsed pages, the other verifies the whole SSE contract over a live index.
 
 Real-backend tests cannot require two live `llama-server` processes. The real backend therefore
 takes its embed and rerank clients by injection. Tests default to `FakeEmbedClient` (deterministic
