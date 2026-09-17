@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from ragcore.backend import build_backend
 from ragcore.config import Config
+from ragcore.ports import AnswerEngine
 
 
 def config_for(tmp_path: Path, backend: str) -> Config:
@@ -21,7 +22,7 @@ def test_factory_builds_the_stub_backend(tmp_path: Path) -> None:
     built = build_backend(config_for(tmp_path, "stub"))
 
     assert type(built.store).__module__.startswith("ragcore.stub")
-    assert built.answerer is not None
+    assert isinstance(built.answerer, AnswerEngine)
 
 
 def test_unknown_backend_is_rejected(tmp_path: Path) -> None:
