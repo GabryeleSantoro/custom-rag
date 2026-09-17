@@ -30,19 +30,23 @@ from ragcore.api.schemas import (
     TokenEvent,
 )
 from ragcore.api.sse import frame, sse_response
-from ragcore.stub.answers import (
-    extract_citations,
-    llm_stream,
-    parse_directives,
-    scripted_stream,
-)
+from ragcore.citations import extract_citations, parse_directives
+from ragcore.stub.answers import llm_stream, scripted_stream
 
 router = APIRouter(tags=["query"])
 
 # Questions about the corpus as a whole cannot be answered from six passages.
 GLOBAL_HINTS = (
-    "across", "overall", "in general", "main themes", "summarize all", "summarise all",
-    "every document", "all documents", "what topics", "compare the",
+    "across",
+    "overall",
+    "in general",
+    "main themes",
+    "summarize all",
+    "summarise all",
+    "every document",
+    "all documents",
+    "what topics",
+    "compare the",
 )
 
 _cancelled: set[str] = set()
@@ -128,9 +132,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, config
             CitationsEvent(citations=citations, dropped=dropped, grounding=grounding),
         )
 
-        latency.llm_first_token_ms = (
-            (first_token_at - started) * 1000 if first_token_at else 0.0
-        )
+        latency.llm_first_token_ms = (first_token_at - started) * 1000 if first_token_at else 0.0
         latency.total_ms = (time.perf_counter() - started) * 1000
 
         message = ChatMessage(
@@ -162,6 +164,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, config
 @router.post("/query/{query_id}/cancel", response_model=Ok)
 async def cancel_query(query_id: str) -> Ok:
     _cancelled.add(query_id)
+
     # The generator clears it on its way out; this is only a safety net for a
     # cancel that arrives after the stream already finished.
     async def expire() -> None:
