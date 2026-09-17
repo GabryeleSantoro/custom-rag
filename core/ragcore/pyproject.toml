@@ -1,0 +1,18 @@
+[project]
+name = "ragcore"
+version = "0.1.0"
+description = "RAG core sidecar: ingestion, retrieval and generation over a local index"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.120.0",
+    "httpx>=0.28.1",
+    "pydantic>=2.11.0",
+    "uvicorn>=0.40.0",
+]
+
+[project.scripts]
+ragcore = "ragcore.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"

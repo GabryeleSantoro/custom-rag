@@ -1,17 +1,37 @@
 [project]
 name = "custom-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local-first RAG desktop app"
 readme = "README.md"
 authors = [
     { name = "GabryeleSantoro", email = "gabrielesantoro46@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = ["ragcore"]
 
-[project.scripts]
-custom-rag = "custom_rag:main"
+[tool.uv]
+package = false
 
-[build-system]
-requires = ["uv_build>=0.12.1,<0.13.0"]
-build-backend = "uv_build"
+[tool.uv.workspace]
+members = ["core/ragcore"]
+
+[tool.uv.sources]
+ragcore = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.14",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["core/ragcore/tests"]

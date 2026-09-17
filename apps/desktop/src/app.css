@@ -1,0 +1,214 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Palette: warm paper + ink in light, graphite in dark, one copper accent.
+  Deliberately not the shadcn default neutral — this is a reading tool, so the
+  surfaces carry a slight warm cast and the accent is used sparingly.
+*/
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(0.985 0.004 85);
+  --foreground: oklch(0.21 0.008 75);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.008 75);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.008 75);
+  --primary: oklch(0.55 0.13 55);
+  --primary-foreground: oklch(0.99 0.005 85);
+  --secondary: oklch(0.955 0.006 85);
+  --secondary-foreground: oklch(0.28 0.008 75);
+  --muted: oklch(0.955 0.006 85);
+  --muted-foreground: oklch(0.52 0.012 75);
+  --accent: oklch(0.94 0.02 70);
+  --accent-foreground: oklch(0.28 0.03 60);
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: oklch(0.99 0.005 85);
+  --border: oklch(0.9 0.006 85);
+  --input: oklch(0.9 0.006 85);
+  --ring: oklch(0.55 0.13 55);
+
+  /* App chrome: the rail and the contextual sidebar sit a step back from content. */
+  --rail: oklch(0.945 0.007 85);
+  --rail-foreground: oklch(0.42 0.01 75);
+  --sidebar: oklch(0.968 0.005 85);
+  --sidebar-foreground: oklch(0.28 0.008 75);
+  --sidebar-primary: oklch(0.55 0.13 55);
+  --sidebar-primary-foreground: oklch(0.99 0.005 85);
+  --sidebar-accent: oklch(0.93 0.008 85);
+  --sidebar-accent-foreground: oklch(0.24 0.008 75);
+  --sidebar-border: oklch(0.9 0.006 85);
+  --sidebar-ring: oklch(0.55 0.13 55);
+
+  /* Pipeline status. Used by document rows, job chips and sidecar cards. */
+  --status-idle: oklch(0.6 0.01 75);
+  --status-running: oklch(0.6 0.13 240);
+  --status-ok: oklch(0.55 0.13 150);
+  --status-warn: oklch(0.65 0.14 75);
+  --status-error: oklch(0.55 0.2 27);
+
+  --chart-1: oklch(0.55 0.13 55);
+  --chart-2: oklch(0.6 0.13 240);
+  --chart-3: oklch(0.55 0.13 150);
+  --chart-4: oklch(0.65 0.14 320);
+  --chart-5: oklch(0.65 0.14 100);
+}
+
+.dark {
+  --background: oklch(0.17 0.006 70);
+  --foreground: oklch(0.93 0.005 85);
+  --card: oklch(0.205 0.007 70);
+  --card-foreground: oklch(0.93 0.005 85);
+  --popover: oklch(0.225 0.008 70);
+  --popover-foreground: oklch(0.93 0.005 85);
+  --primary: oklch(0.72 0.14 62);
+  --primary-foreground: oklch(0.2 0.03 60);
+  --secondary: oklch(0.26 0.008 70);
+  --secondary-foreground: oklch(0.93 0.005 85);
+  --muted: oklch(0.25 0.007 70);
+  --muted-foreground: oklch(0.69 0.012 75);
+  --accent: oklch(0.3 0.02 60);
+  --accent-foreground: oklch(0.92 0.02 70);
+  --destructive: oklch(0.62 0.19 25);
+  --destructive-foreground: oklch(0.98 0.005 85);
+  --border: oklch(0.285 0.008 70);
+  --input: oklch(0.3 0.008 70);
+  --ring: oklch(0.72 0.14 62);
+
+  --rail: oklch(0.145 0.006 70);
+  --rail-foreground: oklch(0.7 0.01 75);
+  --sidebar: oklch(0.185 0.006 70);
+  --sidebar-foreground: oklch(0.88 0.005 85);
+  --sidebar-primary: oklch(0.72 0.14 62);
+  --sidebar-primary-foreground: oklch(0.2 0.03 60);
+  --sidebar-accent: oklch(0.26 0.008 70);
+  --sidebar-accent-foreground: oklch(0.93 0.005 85);
+  --sidebar-border: oklch(0.26 0.008 70);
+  --sidebar-ring: oklch(0.72 0.14 62);
+
+  --status-idle: oklch(0.6 0.01 75);
+  --status-running: oklch(0.7 0.13 240);
+  --status-ok: oklch(0.72 0.14 155);
+  --status-warn: oklch(0.78 0.14 80);
+  --status-error: oklch(0.68 0.18 25);
+
+  --chart-1: oklch(0.72 0.14 62);
+  --chart-2: oklch(0.7 0.13 240);
+  --chart-3: oklch(0.72 0.14 155);
+  --chart-4: oklch(0.72 0.14 320);
+  --chart-5: oklch(0.75 0.14 100);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-rail: var(--rail);
+  --color-rail-foreground: var(--rail-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-status-idle: var(--status-idle);
+  --color-status-running: var(--status-running);
+  --color-status-ok: var(--status-ok);
+  --color-status-warn: var(--status-warn);
+  --color-status-error: var(--status-error);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-reader: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+
+  /* Chrome geometry, referenced by the shell layout. */
+  --spacing-rail: 3.25rem;
+  --spacing-sidebar: 17rem;
+  --spacing-titlebar: 2.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* A desktop app should not rubber-band or select chrome text like a web page. */
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Anything the user reads or copies opts selection back in. */
+  .selectable,
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full border-3 border-solid border-transparent bg-clip-padding;
+    background-color: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+@utility drag-region {
+  -webkit-app-region: drag;
+}
+
+@utility no-drag {
+  -webkit-app-region: no-drag;
+}
