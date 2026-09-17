@@ -284,7 +284,7 @@ class StorePort(Protocol):
     models: dict[str, InstalledModel]
     sessions: dict[str, ChatSession]
     messages: dict[str, list[ChatMessage]]
-    eval_sets: dict[str, EvalSet]
+    eval_sets: list[EvalSet]
     retriever: RetrieverPort
 
     def add_source(self, payload: SourceCreate) -> Source: ...
