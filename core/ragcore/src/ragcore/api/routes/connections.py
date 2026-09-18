@@ -15,6 +15,7 @@ from ragcore.api.schemas import (
     ConnectionTestResult,
     Ok,
 )
+from ragcore.ports import StorePort
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -87,21 +88,14 @@ def delete_connection(connection_id: str, store: StoreDep) -> Ok:
     return Ok()
 
 
-@router.post("/test", response_model=ConnectionTestResult)
-async def test_connection(
-    payload: ConnectionTestRequest, store: StoreDep
+async def probe_connection(
+    store: StorePort,
+    kind: str,
+    base_url: str | None,
+    model_id: str | None,
+    api_key: str | None,
 ) -> ConnectionTestResult:
     """A real probe. Reachability is the thing users actually get wrong."""
-    kind = payload.kind
-    base_url = payload.base_url
-    model_id = payload.model_id
-
-    if payload.connection_id:
-        connection = store.connections.get(payload.connection_id)
-        if connection is None:
-            raise HTTPException(404, "connection not found")
-        kind, base_url, model_id = connection.kind, connection.base_url, connection.model_id
-
     if kind == "local-inapp":
         active = store.settings and any(
             m.role == "generation" and m.active for m in store.models.values()
@@ -118,8 +112,8 @@ async def test_connection(
         url, headers = "https://api.anthropic.com/v1/models", {
             "anthropic-version": "2023-06-01",
         }
-        if payload.api_key:
-            headers["x-api-key"] = payload.api_key
+        if api_key:
+            headers["x-api-key"] = api_key
     else:
         if not base_url:
             return ConnectionTestResult(
@@ -127,8 +121,8 @@ async def test_connection(
                 error="No base URL set",
             )
         url, headers = f"{base_url.rstrip('/')}/models", {}
-        if payload.api_key:
-            headers["Authorization"] = f"Bearer {payload.api_key}"
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
 
     started = time.perf_counter()
     try:
@@ -162,3 +156,18 @@ async def test_connection(
         latency_ms=latency_ms,
         error=None if found else f"Model {model_id!r} not offered by this endpoint",
     )
+
+
+@router.post("/test", response_model=ConnectionTestResult)
+async def test_connection(payload: ConnectionTestRequest, store: StoreDep) -> ConnectionTestResult:
+    kind = payload.kind
+    base_url = payload.base_url
+    model_id = payload.model_id
+
+    if payload.connection_id:
+        connection = store.connections.get(payload.connection_id)
+        if connection is None:
+            raise HTTPException(404, "connection not found")
+        kind, base_url, model_id = connection.kind, connection.base_url, connection.model_id
+
+    return await probe_connection(store, kind, base_url, model_id, payload.api_key)
