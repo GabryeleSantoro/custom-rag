@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from ragcore.api.routes import conversions
-from ragcore.api.schemas import ConnectionTestResult, WebResearchResult
+from ragcore.api.schemas import ConnectionTestResult, RetrievedChunk, WebResearchResult
 
 
 def test_system_prompt_forbids_treating_passages_as_instructions() -> None:
@@ -114,3 +116,63 @@ def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
 
     assert events[-1][0] == "conversion_done"
     assert not any(source["path"] == str(tmp_path) for source in client.get("/sources").json())
+
+
+def test_research_queries_combine_the_request_query_and_section_titles() -> None:
+    pages = [
+        RetrievedChunk(
+            chunk_id="a", doc_id="d", doc_title="Reranking", page_start=1, page_end=1,
+            section_path="Reranking > Cross encoders", text="...",
+        ),
+        RetrievedChunk(
+            chunk_id="b", doc_id="d", doc_title="Reranking", page_start=2, page_end=2,
+            section_path="Reranking > Latency", text="...",
+        ),
+    ]
+
+    queries = conversions._research_queries("current state of the art", "Reranking", pages)
+
+    assert queries == [
+        "current state of the art",
+        "Reranking: Cross encoders",
+        "Reranking: Latency",
+    ]
+
+
+def test_research_queries_fall_back_to_a_generic_query_with_no_sections() -> None:
+    queries = conversions._research_queries(None, "Reranking", [])
+
+    assert queries == ["Reranking: key concepts, current context, examples and sources"]
+
+
+def test_research_aggregates_and_dedupes_results_across_queries(monkeypatch) -> None:
+    calls: list[str] = []
+
+    async def fake_search(query: str):
+        calls.append(query)
+        if query == "Reranking: Cross encoders":
+            return [
+                WebResearchResult(title="A", url="https://example.com/a", snippet="..."),
+                WebResearchResult(title="B", url="https://example.com/b", snippet="..."),
+            ], None
+        return [
+            WebResearchResult(title="A dup", url="https://example.com/a", snippet="..."),
+        ], None
+
+    monkeypatch.setattr(conversions, "_search_web", fake_search)
+    pages = [
+        RetrievedChunk(
+            chunk_id="a", doc_id="d", doc_title="Reranking", page_start=1, page_end=1,
+            section_path="Reranking > Cross encoders", text="...",
+        ),
+        RetrievedChunk(
+            chunk_id="b", doc_id="d", doc_title="Reranking", page_start=2, page_end=2,
+            section_path="Reranking > Latency", text="...",
+        ),
+    ]
+
+    queries, results, warning = asyncio.run(conversions._research(None, "Reranking", pages))
+
+    assert calls == ["Reranking: Cross encoders", "Reranking: Latency"]
+    assert [r.url for r in results] == ["https://example.com/a", "https://example.com/b"]
+    assert warning is None

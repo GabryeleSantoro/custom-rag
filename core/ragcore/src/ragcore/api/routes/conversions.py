@@ -29,6 +29,9 @@ from ragcore.ingest.parse import UnsupportedFormat, parse
 
 router = APIRouter(prefix="/conversions", tags=["conversions"])
 
+_MAX_RESEARCH_QUERIES = 4
+_MAX_RESEARCH_RESULTS = 16
+
 
 def _build_system_prompt(language: Literal["it", "en"]) -> str:
     if language == "it":
@@ -210,6 +213,51 @@ async def _search_web(query: str) -> tuple[list[WebResearchResult], str | None]:
         if len(unique) == 6:
             break
     return unique, None if unique else "Nessun risultato web trovato per questa ricerca."
+
+
+def _research_queries(
+    research_query: str | None, title: str, pages: list[RetrievedChunk]
+) -> list[str]:
+    queries: list[str] = [research_query] if research_query else []
+    seen = {q.lower() for q in queries}
+    for page in pages:
+        section = (page.section_path or "").split(" > ")[-1].strip()
+        if not section or section.lower() == title.lower():
+            continue
+        candidate = f"{title}: {section}"
+        if candidate.lower() in seen:
+            continue
+        seen.add(candidate.lower())
+        queries.append(candidate)
+        if len(queries) == _MAX_RESEARCH_QUERIES:
+            break
+    if not queries:
+        queries.append(f"{title}: key concepts, current context, examples and sources")
+    return queries[:_MAX_RESEARCH_QUERIES]
+
+
+async def _research(
+    research_query: str | None, title: str, pages: list[RetrievedChunk]
+) -> tuple[list[str], list[WebResearchResult], str | None]:
+    queries = _research_queries(research_query, title, pages)
+    aggregated: list[WebResearchResult] = []
+    seen_urls: set[str] = set()
+    warnings: list[str] = []
+    for query in queries:
+        results, warning = await _search_web(query)
+        if warning:
+            warnings.append(warning)
+        for result in results:
+            if result.url in seen_urls:
+                continue
+            seen_urls.add(result.url)
+            aggregated.append(result)
+            if len(aggregated) == _MAX_RESEARCH_RESULTS:
+                break
+        if len(aggregated) == _MAX_RESEARCH_RESULTS:
+            break
+    warning = "; ".join(dict.fromkeys(warnings)) or None
+    return queries, aggregated, warning
 
 
 def _slug(value: str) -> str:
