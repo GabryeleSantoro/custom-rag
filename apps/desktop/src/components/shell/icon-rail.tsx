@@ -43,6 +43,7 @@ function RailButton({ item, active }: { item: RailItem; active: boolean }) {
           to={item.to}
           aria-label={item.label}
           aria-current={active ? "page" : undefined}
+          data-tauri-drag-region="false"
           className={cn(
             "no-drag relative grid size-9 place-items-center rounded-md transition-colors",
             "text-rail-foreground hover:bg-sidebar-accent hover:text-foreground",
@@ -71,6 +72,7 @@ export function IconRail({ devMode = false }: { devMode?: boolean }) {
 
   return (
     <nav
+      data-tauri-drag-region="deep"
       className="drag-region flex w-rail shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-rail pb-3"
       style={{ paddingTop: trafficLightGutter + 12 }}
     >
@@ -83,7 +85,7 @@ export function IconRail({ devMode = false }: { devMode?: boolean }) {
       {SECONDARY.filter((item) => !item.devOnly || devMode).map((item) => (
         <RailButton key={item.to} item={item} active={isActive(item)} />
       ))}
-      <div className="no-drag">
+      <div data-tauri-drag-region="false" className="no-drag">
         <ThemeToggle />
       </div>
     </nav>

@@ -24,6 +24,7 @@ export function PageHeader({
 }) {
   return (
     <header
+      data-tauri-drag-region="deep"
       className={cn(
         "drag-region flex shrink-0 items-center gap-3 border-b border-border px-5 pb-3",
         className,
@@ -40,7 +41,11 @@ export function PageHeader({
           ) : null}
         </div>
       )}
-      {actions ? <div className="no-drag flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div data-tauri-drag-region="false" className="no-drag flex items-center gap-2">
+          {actions}
+        </div>
+      ) : null}
     </header>
   );
 }

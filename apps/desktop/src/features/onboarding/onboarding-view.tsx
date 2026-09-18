@@ -500,7 +500,7 @@ export function OnboardingView() {
   return (
     <div className="flex h-full overflow-hidden">
       <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="drag-region h-10 shrink-0" />
+        <div data-tauri-drag-region="deep" className="drag-region h-10 shrink-0" />
         <nav className="space-y-0.5 px-2">
           {STEPS.map((entry, position) => {
             const state = position < index ? "past" : position === index ? "current" : "future";
@@ -537,7 +537,7 @@ export function OnboardingView() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="drag-region h-10 shrink-0" />
+        <div data-tauri-drag-region="deep" className="drag-region h-10 shrink-0" />
 
         <div className="min-h-0 flex-1 overflow-auto">
           <div className="mx-auto max-w-2xl px-8 pb-10">

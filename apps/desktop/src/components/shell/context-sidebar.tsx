@@ -27,13 +27,18 @@ export function ContextSidebar({
       )}
     >
       <header
+        data-tauri-drag-region="deep"
         className="drag-region flex items-center justify-between gap-2 px-3 pb-2"
         style={{ paddingTop: trafficLightGutter ? 12 : 12 }}
       >
         <h2 className="text-[0.8125rem] font-semibold tracking-tight text-sidebar-foreground">
           {title}
         </h2>
-        {action ? <div className="no-drag">{action}</div> : null}
+        {action ? (
+          <div data-tauri-drag-region="false" className="no-drag">
+            {action}
+          </div>
+        ) : null}
       </header>
 
       <ScrollArea className="flex-1">

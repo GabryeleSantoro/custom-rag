@@ -28,14 +28,23 @@ export function SourcePanel({
 
   return (
     <aside className="flex w-90 shrink-0 flex-col border-l border-border bg-sidebar">
-      <header className="drag-region flex items-center justify-between gap-2 px-3 pt-3 pb-2">
+      <header
+        data-tauri-drag-region="deep"
+        className="drag-region flex items-center justify-between gap-2 px-3 pt-3 pb-2"
+      >
         <div>
           <h2 className="text-[0.8125rem] font-semibold tracking-tight">Sources</h2>
           <p className="text-[0.6875rem] text-muted-foreground">
             {chunks.length} passage{chunks.length === 1 ? "" : "s"} sent to the model
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="no-drag size-7" onClick={onClose}>
+        <Button
+          data-tauri-drag-region="false"
+          variant="ghost"
+          size="icon"
+          className="no-drag size-7"
+          onClick={onClose}
+        >
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </Button>
