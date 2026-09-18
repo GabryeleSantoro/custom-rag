@@ -176,3 +176,18 @@ def test_research_aggregates_and_dedupes_results_across_queries(monkeypatch) -> 
     assert calls == ["Reranking: Cross encoders", "Reranking: Latency"]
     assert [r.url for r in results] == ["https://example.com/a", "https://example.com/b"]
     assert warning is None
+
+
+def test_unique_path_appends_a_counter_on_collision(tmp_path) -> None:
+    (tmp_path / "intro.md").write_text("existing")
+
+    first = conversions._unique_path(tmp_path, "intro")
+    first.write_text("first")
+    second = conversions._unique_path(tmp_path, "intro")
+
+    assert first == tmp_path / "intro-2.md"
+    assert second == tmp_path / "intro-3.md"
+
+
+def test_unique_path_uses_the_plain_name_when_free(tmp_path) -> None:
+    assert conversions._unique_path(tmp_path, "fresh-title") == tmp_path / "fresh-title.md"

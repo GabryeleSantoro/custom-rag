@@ -266,6 +266,16 @@ def _slug(value: str) -> str:
     return value[:72] or "conversione-slide"
 
 
+def _unique_path(directory: Path, stem: str) -> Path:
+    """Never clobber a file an earlier presentation in this batch (or a previous run) already claimed."""
+    candidate = directory / f"{stem}.md"
+    suffix = 2
+    while candidate.exists():
+        candidate = directory / f"{stem}-{suffix}.md"
+        suffix += 1
+    return candidate
+
+
 def _clean_markdown(text: str, title: str, results: list[WebResearchResult]) -> str:
     """Keep the model output readable and make web provenance durable in the file."""
 
