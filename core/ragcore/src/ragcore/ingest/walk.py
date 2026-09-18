@@ -36,14 +36,24 @@ Semantics later tasks (8, 9, 14) rely on, decided here deliberately:
   machine). A fixed table keeps ``mime`` deterministic across every machine
   this runs on; an extension outside the table gets
   ``"application/octet-stream"``.
+- **A file that vanishes or becomes unreadable mid-walk is skipped, not
+  fatal.** Task 9 runs this against a real user folder, where a sync client
+  can delete a file, or permissions can change, between glob discovery and
+  the ``stat``/hash below. If that raises, only that one file is dropped
+  (with a logged warning naming the path and the error); every other file
+  already found in this source is still returned. The walk never aborts and
+  discards a whole source over one bad file.
 """
 
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 MIME_BY_EXT = {
     ".md": "text/markdown",
@@ -91,8 +101,11 @@ def walk_source(
 ) -> list[FoundFile]:
     """Find files under ``root`` worth indexing.
 
-    See the module docstring for the exact glob, hidden-file, symlink and size
-    rules this applies. Results are sorted by path for a deterministic order.
+    See the module docstring for the exact glob, hidden-file, symlink, size
+    and failure-handling rules this applies. Results are sorted by path for a
+    deterministic order. A file that disappears or becomes unreadable between
+    being matched and being stat'd/hashed is skipped (with a logged warning)
+    rather than raising out of this function.
     """
     cap_bytes = max_file_mb * 1024 * 1024
 
@@ -106,14 +119,22 @@ def walk_source(
     for path in sorted(included):
         if _is_hidden(path.relative_to(root)):
             continue
-        stat = path.stat()
-        if stat.st_size > cap_bytes:
+        try:
+            stat = path.stat()
+            if stat.st_size > cap_bytes:
+                continue
+            digest = sha256_of(path)
+        except OSError as exc:
+            # Realistically FileNotFoundError (deleted between glob and stat) or
+            # PermissionError (unreadable) — both are OSError subclasses. Skip
+            # this one file rather than losing every file already found.
+            logger.warning("skipping %s: %s", path, exc)
             continue
         ext = path.suffix.lower()
         out.append(
             FoundFile(
                 path=path,
-                sha256=sha256_of(path),
+                sha256=digest,
                 size_bytes=stat.st_size,
                 mtime=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
                 ext=ext,

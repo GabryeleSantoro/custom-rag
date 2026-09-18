@@ -34,6 +34,16 @@ Semantics decided here, that Task 8/9 depend on:
   file, is worse than replacing the undecodable bytes with U+FFFD and
   indexing what does decode. A file that is mostly non-UTF-8 will simply
   chunk and embed poorly, which is a quality problem, not a crash.
+- **A page with empty text (after stripping) is dropped, not returned.** An
+  empty file, or a markdown file that is nothing but headings with no body
+  under any of them, would otherwise produce one or more pages whose ``text``
+  is ``""``. Task 8's chunker already skips those, but a document that
+  reports ``n_pages > 0`` while producing zero chunks looks indexed when it
+  is not. Dropping empty pages here means a document with no usable text
+  comes back with ``pages == []``, which Task 9 can record honestly instead
+  of silently pretending something was indexed. The kept pages are
+  renumbered ``1..n`` contiguously — a dropped page never leaves a gap in the
+  sequence.
 """
 
 from __future__ import annotations
@@ -69,35 +79,36 @@ def _title(text: str, fallback: str) -> str:
     return match.group(2).strip() if match else fallback
 
 
+def _paginate(sections: list[tuple[str, str]]) -> list[ParsedPage]:
+    """Number non-empty sections 1..n; a section with empty text is dropped."""
+    return [
+        ParsedPage(page=i, section_path=section_path, text=body)
+        for i, (section_path, body) in enumerate(
+            (sp, b) for sp, b in sections if b
+        , start=1)
+    ]
+
+
 def _markdown(path: Path) -> ParsedDoc:
     text = path.read_text(encoding="utf-8", errors="replace")
     title = _title(text, path.stem)
     marks = [m for m in _HEADING.finditer(text) if len(m.group(1)) == 2]
 
     if not marks:
-        return ParsedDoc(title=title, pages=[ParsedPage(1, title, text.strip())])
+        return ParsedDoc(title=title, pages=_paginate([(title, text.strip())]))
 
-    pages: list[ParsedPage] = []
-    preamble = text[: marks[0].start()].strip()
-    if preamble:
-        pages.append(ParsedPage(1, title, preamble))
-
+    sections: list[tuple[str, str]] = [(title, text[: marks[0].start()].strip())]
     for i, mark in enumerate(marks):
         end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
         heading = mark.group(2).strip()
-        pages.append(
-            ParsedPage(
-                page=len(pages) + 1,
-                section_path=f"{title} > {heading}",
-                text=text[mark.end() : end].strip(),
-            )
-        )
-    return ParsedDoc(title=title, pages=pages)
+        sections.append((f"{title} > {heading}", text[mark.end() : end].strip()))
+
+    return ParsedDoc(title=title, pages=_paginate(sections))
 
 
 def _plain(path: Path) -> ParsedDoc:
     text = path.read_text(encoding="utf-8", errors="replace")
-    return ParsedDoc(title=path.stem, pages=[ParsedPage(1, path.stem, text.strip())])
+    return ParsedDoc(title=path.stem, pages=_paginate([(path.stem, text.strip())]))
 
 
 _PARSERS: dict[str, Callable[[Path], ParsedDoc]] = {

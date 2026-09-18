@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from ragcore.ingest.walk import sha256_of, walk_source
 
 
@@ -58,3 +60,48 @@ def test_mime_is_derived_from_the_extension(tmp_path: Path) -> None:
     found = walk_source(tmp_path, include_globs=["**/*.txt"], exclude_globs=[], max_file_mb=100)
 
     assert found[0].mime == "text/plain"
+
+
+def test_hidden_files_and_directories_are_skipped(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "config.md").write_text("hidden dir file")
+    (tmp_path / ".dotfile.md").write_text("hidden dotfile")
+    (tmp_path / "visible.md").write_text("# Visible\n\nText.")
+
+    found = walk_source(tmp_path, include_globs=["**/*.md"], exclude_globs=[], max_file_mb=100)
+
+    assert [f.path.name for f in found] == ["visible.md"]
+
+
+def test_a_file_that_disappears_mid_walk_does_not_abort_the_walk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A file gone by the time it's stat'd is skipped; the rest of the source still comes back.
+
+    ``walk_source`` itself already calls ``.is_file()`` (which stats internally)
+    once per candidate during discovery, before its own per-file ``stat()``/hash
+    step. So the file must survive that first stat — real discovery would have
+    seen it too — and only vanish on the *second* stat, which is what the walk's
+    own try/except around ``stat``/hash is meant to catch.
+    """
+    (tmp_path / "keep.md").write_text("# Keep\n\nStays.")
+    victim = tmp_path / "vanish.md"
+    victim.write_text("# Vanish\n\nGone before the second stat.")
+    (tmp_path / "zzz.md").write_text("# Zzz\n\nAfter the gap.")
+
+    real_stat = Path.stat
+    victim_stats = 0
+
+    def flaky_stat(self: Path, *args: object, **kwargs: object) -> object:
+        nonlocal victim_stats
+        if self == victim:
+            victim_stats += 1
+            if victim_stats > 1:
+                victim.unlink()
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", flaky_stat)
+
+    found = walk_source(tmp_path, include_globs=["**/*.md"], exclude_globs=[], max_file_mb=100)
+
+    assert [f.path.name for f in found] == ["keep.md", "zzz.md"]
