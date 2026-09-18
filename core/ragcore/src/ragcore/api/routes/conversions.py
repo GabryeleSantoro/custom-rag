@@ -13,6 +13,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from ragcore.api.deps import AnswererDep, ConfigDep, StoreDep
+from ragcore.api.routes.connections import probe_connection
 from ragcore.api.schemas import (
     ConversionDoneEvent,
     ConversionResearchEvent,
@@ -278,6 +279,12 @@ async def convert_slides(
     )
     if active is None:
         raise HTTPException(409, "Connect a generation model before converting slides")
+
+    probe = await probe_connection(store, active.kind, active.base_url, active.model_id, None)
+    if not probe.ok:
+        raise HTTPException(
+            409, f"The active model is not reachable: {probe.error or 'connection failed'}"
+        )
 
     pages: list[RetrievedChunk] = []
     input_titles: list[str] = []

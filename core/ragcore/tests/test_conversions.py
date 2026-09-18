@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ragcore.api.routes import conversions
-from ragcore.api.schemas import WebResearchResult
+from ragcore.api.schemas import ConnectionTestResult, WebResearchResult
 
 
 def test_system_prompt_forbids_treating_passages_as_instructions() -> None:
@@ -26,6 +26,10 @@ def test_system_prompt_is_language_specific() -> None:
     assert "English" in conversions._build_system_prompt("en")
 
 
+async def _fake_probe_ok(store, kind, base_url, model_id, api_key):
+    return ConnectionTestResult(ok=True, reachable=True, model_found=True, streaming=True)
+
+
 def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkeypatch) -> None:
     async def fake_search(query: str):
         assert "current" in query
@@ -38,6 +42,7 @@ def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkey
         ], None
 
     monkeypatch.setattr(conversions, "_search_web", fake_search)
+    monkeypatch.setattr(conversions, "probe_connection", _fake_probe_ok)
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
     with client.stream(
@@ -70,6 +75,24 @@ def test_slide_conversion_is_disabled_without_an_active_connection(client) -> No
     assert response.status_code == 409
 
 
+def test_slide_conversion_is_disabled_when_the_active_connection_is_unreachable(
+    client, monkeypatch
+) -> None:
+    slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
+
+    async def fake_probe(store, kind, base_url, model_id, api_key):
+        return ConnectionTestResult(
+            ok=False, reachable=False, model_found=False, streaming=False, error="ConnectError"
+        )
+
+    monkeypatch.setattr(conversions, "probe_connection", fake_probe)
+
+    response = client.post("/conversions/slides", json={"slide_ids": [slide_id]})
+
+    assert response.status_code == 409
+    assert "ConnectError" in response.json()["detail"]
+
+
 def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
     client, read_events, monkeypatch, tmp_path
 ) -> None:
@@ -77,6 +100,7 @@ def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
         return [], "No web result"
 
     monkeypatch.setattr(conversions, "_search_web", fake_search)
+    monkeypatch.setattr(conversions, "probe_connection", _fake_probe_ok)
     slide = tmp_path / "local-slide.md"
     slide.write_text("# Local slide\n\n## Context\n\nThis file is only used for conversion.\n")
 
