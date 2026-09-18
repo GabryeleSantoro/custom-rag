@@ -396,7 +396,9 @@ async def convert_slides(
     if active is None:
         raise HTTPException(409, "Connect a generation model before converting slides")
 
-    probe = await probe_connection(store, active.kind, active.base_url, active.model_id, None)
+    probe = await probe_connection(
+        store, active.kind, active.base_url, active.model_id, config.llm_api_key
+    )
     if not probe.ok:
         raise HTTPException(
             409, f"The active model is not reachable: {probe.error or 'connection failed'}"
@@ -464,7 +466,7 @@ async def convert_slides(
                 )
                 for result_index, result in enumerate(results)
             ]
-            context = presentation.pages[:36] + web_chunks
+            context = presentation.pages + web_chunks
             instruction = (
                 f"Trasforma le slide in un testo compiuto e approfondito in "
                 f"{'italiano' if payload.language == 'it' else 'inglese'}. "
@@ -480,7 +482,11 @@ async def convert_slides(
             output: list[str] = []
             try:
                 async for piece in answerer.stream(
-                    instruction, context, set(), system_prompt=system_prompt
+                    instruction,
+                    context,
+                    set(),
+                    system_prompt=system_prompt,
+                    max_tokens=active.max_output_tokens,
                 ):
                     output.append(piece)
                     yield frame("token", {"text": piece})

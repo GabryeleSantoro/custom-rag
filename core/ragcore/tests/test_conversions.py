@@ -132,7 +132,7 @@ def test_slide_conversion_uses_the_hardened_system_prompt(client, monkeypatch) -
     captured: dict = {}
 
     class _FakeAnswerer:
-        async def stream(self, question, chunks, directives, *, system_prompt=None):
+        async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
             captured["system_prompt"] = system_prompt
             yield "ok"
 

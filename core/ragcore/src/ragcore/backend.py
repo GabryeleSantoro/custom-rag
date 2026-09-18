@@ -31,11 +31,14 @@ class StubAnswerEngine:
         directives: set[str],
         *,
         system_prompt: str | None = None,
+        max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         from ragcore.stub.answers import llm_stream, scripted_stream
 
         if self.config.llm_base_url:
-            return llm_stream(self.config, question, chunks, system_prompt=system_prompt)
+            return llm_stream(
+                self.config, question, chunks, system_prompt=system_prompt, max_tokens=max_tokens
+            )
         return scripted_stream(question, chunks, directives)
 
 

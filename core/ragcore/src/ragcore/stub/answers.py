@@ -92,6 +92,7 @@ async def llm_stream(
     chunks: list[RetrievedChunk],
     *,
     system_prompt: str | None = None,
+    max_tokens: int | None = None,
 ) -> AsyncIterator[str]:
     """Stream from a real OpenAI-compatible endpoint."""
     context = "\n\n".join(
@@ -106,6 +107,8 @@ async def llm_stream(
             {"role": "user", "content": f"Passages:\n\n{context}\n\nQuestion: {question}"},
         ],
     }
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
     headers = {"Content-Type": "application/json"}
     if config.llm_api_key:
         headers["Authorization"] = f"Bearer {config.llm_api_key}"

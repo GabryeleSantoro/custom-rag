@@ -84,6 +84,7 @@ class AnswerEngine(Protocol):
         directives: set[str],
         *,
         system_prompt: str | None = None,
+        max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
         """Yields answer text pieces. Directives are stub-only and ignored by real engines."""
         ...
