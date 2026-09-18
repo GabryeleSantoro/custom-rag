@@ -54,6 +54,10 @@ export type EvalMetrics = EvalResult["metrics"];
 export type ChatSessionPatch = Schemas["ChatSessionPatch"];
 export type ChatProject = Schemas["ChatProject"];
 export type ChatProjectPatch = Schemas["ChatProjectPatch"];
+export type SlideConversionRequest = Schemas["SlideConversionRequest"];
+export type WebResearchResult = Schemas["WebResearchResult"];
+export type ConversionSavedEvent = Schemas["ConversionSavedEvent"];
+export type ConversionDoneEvent = Schemas["ConversionDoneEvent"];
 
 /**
  * Literal unions live inline in the OpenAPI schema rather than as named
@@ -323,6 +327,36 @@ export function streamJobs(onJob: (job: Job) => void): StreamHandle {
 export type EvalEvent =
   | { event: "progress"; data: EvalProgress }
   | { event: "result"; data: EvalResult };
+
+export type ConversionEvent =
+  | { event: "conversion_start"; data: { slide_ids: string[]; title: string } }
+  | {
+      event: "conversion_research";
+      data: { query: string; results: WebResearchResult[]; warning?: string | null };
+    }
+  | { event: "token"; data: { text: string } }
+  | { event: "conversion_saved"; data: ConversionSavedEvent }
+  | { event: "conversion_done"; data: ConversionDoneEvent }
+  | { event: "error"; data: { message: string; retryable: boolean } };
+
+export function streamSlideConversion(
+  payload: SlideConversionRequest,
+  handlers: {
+    onEvent: (event: ConversionEvent) => void;
+    onClosed?: (reason: string) => void;
+    onFailed?: (message: string) => void;
+  },
+): StreamHandle {
+  return openStream({ path: "/conversions/slides", body: payload }, (frame) => {
+    if (frame.kind === "event") {
+      handlers.onEvent({ event: frame.event, data: frame.data } as ConversionEvent);
+    } else if (frame.kind === "closed") {
+      handlers.onClosed?.(frame.reason);
+    } else {
+      handlers.onFailed?.(frame.message);
+    }
+  });
+}
 
 export function streamEval(
   payload: { set_name: string; connection_id?: string | null; compare_baseline?: boolean },

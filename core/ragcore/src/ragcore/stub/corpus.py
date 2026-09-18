@@ -13,12 +13,14 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ragcore.ingest.parse import parse
 from ragcore.ingest.walk import walk_source
 
 MIME_BY_EXT = {
     ".md": "text/markdown",
     ".txt": "text/plain",
     ".pdf": "application/pdf",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".html": "text/html",
     ".csv": "text/csv",
@@ -26,7 +28,7 @@ MIME_BY_EXT = {
 
 _HEADING = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
 _WORD = re.compile(r"[a-z0-9]+")
-SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf"}
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf", ".pptx"}
 
 
 @dataclass(slots=True)
@@ -125,12 +127,11 @@ def _split_chunks(doc_id: str, doc_title: str, pages: list[Page]) -> list[Chunk]
 
 
 def load_document(path: Path) -> LoadedDoc:
-    raw = path.read_text(encoding="utf-8", errors="replace")
+    parsed = parse(path)
     stat = path.stat()
     doc_id = path.stem
-    first_line = raw.lstrip().splitlines()[0] if raw.strip() else path.stem
-    title = first_line.lstrip("# ").strip() or path.stem.replace("-", " ").title()
-    pages = _split_pages(raw)
+    title = parsed.title
+    pages = [Page(page=p.page, section_path=p.section_path, text=p.text) for p in parsed.pages]
     chunks = _split_chunks(doc_id, title, pages)
 
     counts: dict[str, int] = {}

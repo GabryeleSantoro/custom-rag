@@ -5,12 +5,12 @@ a real page; for markdown/text it is a level-two section, which is the
 closest honest analogue and is what the reader view highlights against. Task
 8 chunks within a page's text; it never crosses a page boundary.
 
-``parse()`` dispatches on suffix through the ``_PARSERS`` table below, so
-Task 14 adding PDF support is one new entry (``".pdf": _pdf``) plus a
-function — not a change to ``parse()`` itself. ``ParsedDoc.needs_ocr``
-exists for that future case (a PDF with no extractable text layer); nothing
-this task parses can ever set it True, and both handlers below leave it at
-its default of ``False``.
+``parse()`` dispatches on suffix through the ``_PARSERS`` table below. PDFs
+are opened with ``pypdfium2`` rather than being decoded as UTF-8: a PDF is a
+binary container, and reading it as text returns font tables and drawing
+operators instead of the words visible on the slide. ``ParsedDoc.needs_ocr``
+is set when a PDF page has no extractable text layer (for example, a slide
+exported as an image).
 
 Semantics decided here, that Task 8/9 depend on:
 
@@ -49,9 +49,12 @@ Semantics decided here, that Task 8/9 depend on:
 from __future__ import annotations
 
 import re
+import unicodedata
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from zipfile import ZipFile
 
 _HEADING = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
 
@@ -84,8 +87,8 @@ def _paginate(sections: list[tuple[str, str]]) -> list[ParsedPage]:
     return [
         ParsedPage(page=i, section_path=section_path, text=body)
         for i, (section_path, body) in enumerate(
-            (sp, b) for sp, b in sections if b
-        , start=1)
+            ((section_path, body) for section_path, body in sections if body), start=1
+        )
     ]
 
 
@@ -111,9 +114,78 @@ def _plain(path: Path) -> ParsedDoc:
     return ParsedDoc(title=path.stem, pages=_paginate([(path.stem, text.strip())]))
 
 
+def _clean_pdf_text(text: str) -> str:
+    """Normalize text returned by PDFium without changing its character offsets."""
+    text = unicodedata.normalize("NFC", text)
+    text = text.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n")
+    return text.strip()
+
+
+def _pdf(path: Path) -> ParsedDoc:
+    """Extract one page per PDF page using PDFium's text layer.
+
+    OCR is intentionally not run here. Pages without a text layer are omitted
+    from the searchable text and flagged so the ingestion job can send them
+    through the OCR stage once that stage is enabled.
+    """
+    try:
+        import pypdfium2 as pdfium
+    except ModuleNotFoundError as exc:  # pragma: no cover - packaging guard
+        raise RuntimeError(
+            "PDF support requires pypdfium2; reinstall the ragcore dependencies"
+        ) from exc
+
+    document = pdfium.PdfDocument(str(path))
+    sections: list[tuple[str, str]] = []
+    needs_ocr = False
+    try:
+        for page_number in range(len(document)):
+            page = document[page_number]
+            text_page = None
+            try:
+                text_page = page.get_textpage()
+                text = _clean_pdf_text(text_page.get_text_range())
+            finally:
+                if text_page is not None:
+                    text_page.close()
+                page.close()
+
+            if text:
+                sections.append((f"{path.stem} > Page {page_number + 1}", text))
+            else:
+                needs_ocr = True
+    finally:
+        document.close()
+
+    return ParsedDoc(title=path.stem, pages=_paginate(sections), needs_ocr=needs_ocr)
+
+
+def _pptx(path: Path) -> ParsedDoc:
+    """Extract visible text from a PowerPoint package, one page per slide."""
+    with ZipFile(path) as archive:
+        slide_names = sorted(
+            name
+            for name in archive.namelist()
+            if re.fullmatch(r"ppt/slides/slide\d+\.xml", name)
+        )
+        slide_names.sort(key=lambda name: int(re.search(r"slide(\d+)\.xml$", name).group(1)))
+        sections: list[tuple[str, str]] = []
+        for slide_number, name in enumerate(slide_names, start=1):
+            root = ET.fromstring(archive.read(name))
+            text = " ".join(
+                node.text.strip()
+                for node in root.iter()
+                if node.tag.endswith("}t") and node.text and node.text.strip()
+            )
+            sections.append((f"{path.stem} > Slide {slide_number}", text))
+    return ParsedDoc(title=path.stem, pages=_paginate(sections))
+
+
 _PARSERS: dict[str, Callable[[Path], ParsedDoc]] = {
     ".md": _markdown,
     ".txt": _plain,
+    ".pdf": _pdf,
+    ".pptx": _pptx,
 }
 
 

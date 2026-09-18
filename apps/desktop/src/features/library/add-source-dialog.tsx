@@ -21,7 +21,7 @@ import { IconTooltip } from "@/components/ui/tooltip";
 import { api } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
 
-const DEFAULT_INCLUDE = "**/*.md, **/*.txt, **/*.pdf, **/*.docx";
+const DEFAULT_INCLUDE = "**/*.md, **/*.txt, **/*.pdf, **/*.pptx, **/*.docx";
 const DEFAULT_EXCLUDE = "**/node_modules/**, **/.git/**";
 
 function globs(value: string): string[] {

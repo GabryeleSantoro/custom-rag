@@ -13,6 +13,7 @@ from ragcore import __version__
 from ragcore.api.routes import (
     chats,
     connections,
+    conversions,
     documents,
     evals,
     health,
@@ -70,6 +71,7 @@ def create_app(config: Config) -> FastAPI:
         query.router,
         chats.router,
         connections.router,
+        conversions.router,
         models.router,
         settings.router,
         evals.router,

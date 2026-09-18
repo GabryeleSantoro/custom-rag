@@ -13,6 +13,7 @@ import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ShellIndexRouteImport } from './routes/_shell.index'
 import { Route as ShellChatRouteImport } from './routes/_shell.chat'
+import { Route as ShellConvertRouteImport } from './routes/_shell.convert'
 import { Route as ShellDiagnosticsRouteImport } from './routes/_shell.diagnostics'
 import { Route as ShellEvalRouteImport } from './routes/_shell.eval'
 import { Route as ShellLibraryRouteImport } from './routes/_shell.library'
@@ -41,6 +42,11 @@ const ShellIndexRoute = ShellIndexRouteImport.update({
 const ShellChatRoute = ShellChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellConvertRoute = ShellConvertRouteImport.update({
+  id: '/convert',
+  path: '/convert',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellDiagnosticsRoute = ShellDiagnosticsRouteImport.update({
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
   '/onboarding': typeof OnboardingRoute
   '/chat': typeof ShellChatRouteWithChildren
+  '/convert': typeof ShellConvertRoute
   '/diagnostics': typeof ShellDiagnosticsRoute
   '/eval': typeof ShellEvalRoute
   '/library': typeof ShellLibraryRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
+  '/convert': typeof ShellConvertRoute
   '/diagnostics': typeof ShellDiagnosticsRoute
   '/eval': typeof ShellEvalRoute
   '/library': typeof ShellLibraryRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/_shell': typeof ShellRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/_shell/chat': typeof ShellChatRouteWithChildren
+  '/_shell/convert': typeof ShellConvertRoute
   '/_shell/diagnostics': typeof ShellDiagnosticsRoute
   '/_shell/eval': typeof ShellEvalRoute
   '/_shell/library': typeof ShellLibraryRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/chat'
+    | '/convert'
     | '/diagnostics'
     | '/eval'
     | '/library'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/onboarding'
+    | '/convert'
     | '/diagnostics'
     | '/eval'
     | '/library'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_shell'
     | '/onboarding'
     | '/_shell/chat'
+    | '/_shell/convert'
     | '/_shell/diagnostics'
     | '/_shell/eval'
     | '/_shell/library'
@@ -219,6 +231,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ShellChatRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/convert': {
+      id: '/_shell/convert'
+      path: '/convert'
+      fullPath: '/convert'
+      preLoaderRoute: typeof ShellConvertRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/diagnostics': {
@@ -324,6 +343,7 @@ const ShellSettingsRouteWithChildren = ShellSettingsRoute._addFileChildren(
 
 interface ShellRouteChildren {
   ShellChatRoute: typeof ShellChatRouteWithChildren
+  ShellConvertRoute: typeof ShellConvertRoute
   ShellDiagnosticsRoute: typeof ShellDiagnosticsRoute
   ShellEvalRoute: typeof ShellEvalRoute
   ShellLibraryRoute: typeof ShellLibraryRoute
@@ -335,6 +355,7 @@ interface ShellRouteChildren {
 
 const ShellRouteChildren: ShellRouteChildren = {
   ShellChatRoute: ShellChatRouteWithChildren,
+  ShellConvertRoute: ShellConvertRoute,
   ShellDiagnosticsRoute: ShellDiagnosticsRoute,
   ShellEvalRoute: ShellEvalRoute,
   ShellLibraryRoute: ShellLibraryRoute,

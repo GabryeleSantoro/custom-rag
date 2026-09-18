@@ -4,6 +4,7 @@ import {
   BoxesIcon,
   FlaskConicalIcon,
   LibraryIcon,
+  FilePenLineIcon,
   MessagesSquareIcon,
   SettingsIcon,
   type LucideIcon,
@@ -26,6 +27,7 @@ type RailItem = {
 const PRIMARY: RailItem[] = [
   { to: "/chat", label: "Chat", icon: MessagesSquareIcon, match: ["/chat", "/"] },
   { to: "/library", label: "Library", icon: LibraryIcon, match: ["/library", "/reader"] },
+  { to: "/convert", label: "Slide → testo", icon: FilePenLineIcon, match: ["/convert"] },
   { to: "/models", label: "Models", icon: BoxesIcon, match: ["/models"] },
   { to: "/settings", label: "Settings", icon: SettingsIcon, match: ["/settings"] },
 ];

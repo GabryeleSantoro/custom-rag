@@ -14,6 +14,45 @@ from fastapi.testclient import TestClient
 Events = Callable[..., list[tuple[str, dict]]]
 
 
+def _minimal_text_pdf(text: str) -> bytes:
+    """Build a tiny valid PDF for the recursive-ingestion contract test."""
+    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET\n".encode("ascii")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>"
+        ),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        (
+            b"<< /Length "
+            + str(len(stream)).encode("ascii")
+            + b" >>\nstream\n"
+            + stream
+            + b"endstream"
+        ),
+    ]
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{number} 0 obj\n".encode("ascii"))
+        pdf.extend(body)
+        pdf.extend(b"\nendobj\n")
+    xref = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode(
+            "ascii"
+        )
+    )
+    return bytes(pdf)
+
+
 def test_health_is_public(client: TestClient) -> None:
     del client.headers["Authorization"]
     response = client.get("/health")
@@ -191,7 +230,7 @@ def test_nested_pdfs_are_indexed_when_adding_a_source(client: TestClient, tmp_pa
     nested = tmp_path / "research" / "papers" / "2026"
     nested.mkdir(parents=True)
     pdf = nested / "paper.pdf"
-    pdf.write_bytes(b"%PDF-1.4\nBT\n/F1 12 Tf\n(Indexed paper) Tj\nET\n")
+    pdf.write_bytes(_minimal_text_pdf("Indexed paper"))
 
     source = client.post(
         "/sources",

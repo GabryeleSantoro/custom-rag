@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # --------------------------------------------------------------------------- health
 
@@ -264,6 +264,56 @@ class DoneEvent(BaseModel):
 class ErrorEvent(BaseModel):
     message: str
     retryable: bool = False
+
+
+# --------------------------------------------------------------- slide to text
+
+
+class SlideConversionRequest(BaseModel):
+    """Input for the research-backed slide conversion stream."""
+
+    slide_ids: list[str] = Field(default_factory=list)
+    file_paths: list[str] = Field(default_factory=list)
+    research_query: str | None = None
+    output_title: str | None = None
+    language: Literal["it", "en"] = "it"
+    depth: Literal["standard", "deep"] = "deep"
+
+    @model_validator(mode="after")
+    def has_input(self) -> SlideConversionRequest:
+        if not self.slide_ids and not self.file_paths:
+            raise ValueError("Select at least one indexed slide or local slide file")
+        return self
+
+
+class WebResearchResult(BaseModel):
+    title: str
+    url: str
+    snippet: str
+
+
+class ConversionStartEvent(BaseModel):
+    slide_ids: list[str]
+    title: str
+
+
+class ConversionResearchEvent(BaseModel):
+    query: str
+    results: list[WebResearchResult]
+    warning: str | None = None
+
+
+class ConversionSavedEvent(BaseModel):
+    path: str
+    title: str
+    document_id: str
+
+
+class ConversionDoneEvent(BaseModel):
+    path: str
+    title: str
+    document_id: str
+    research_count: int
 
 
 # --------------------------------------------------------------------- connections
@@ -576,3 +626,7 @@ class StreamEnvelope(BaseModel):
     job: Job | None = None
     eval_progress: EvalProgressEvent | None = None
     eval_result: EvalResult | None = None
+    conversion_start: ConversionStartEvent | None = None
+    conversion_research: ConversionResearchEvent | None = None
+    conversion_saved: ConversionSavedEvent | None = None
+    conversion_done: ConversionDoneEvent | None = None

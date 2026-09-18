@@ -59,6 +59,7 @@ MIME_BY_EXT = {
     ".md": "text/markdown",
     ".txt": "text/plain",
     ".pdf": "application/pdf",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 READ_CHUNK = 1024 * 1024  # stream digests in 1 MiB blocks; never read a whole file into memory

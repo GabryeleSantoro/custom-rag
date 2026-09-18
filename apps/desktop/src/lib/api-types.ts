@@ -1074,6 +1074,51 @@ export interface components {
              */
             retryable: boolean;
         };
+        /** SlideConversionRequest */
+        SlideConversionRequest: {
+            /** Slide Ids */
+            slide_ids?: string[];
+            /** File Paths */
+            file_paths?: string[];
+            /** Research Query */
+            research_query?: string | null;
+            /** Output Title */
+            output_title?: string | null;
+            /** Language */
+            language?: "it" | "en";
+            /** Depth */
+            depth?: "standard" | "deep";
+        };
+        /** WebResearchResult */
+        WebResearchResult: {
+            title: string;
+            url: string;
+            snippet: string;
+        };
+        /** ConversionStartEvent */
+        ConversionStartEvent: {
+            slide_ids: string[];
+            title: string;
+        };
+        /** ConversionResearchEvent */
+        ConversionResearchEvent: {
+            query: string;
+            results: components["schemas"]["WebResearchResult"][];
+            warning?: string | null;
+        };
+        /** ConversionSavedEvent */
+        ConversionSavedEvent: {
+            path: string;
+            title: string;
+            document_id: string;
+        };
+        /** ConversionDoneEvent */
+        ConversionDoneEvent: {
+            path: string;
+            title: string;
+            document_id: string;
+            research_count: number;
+        };
         /** EvalMetrics */
         EvalMetrics: {
             /** Set Name */
@@ -1744,6 +1789,10 @@ export interface components {
             job?: components["schemas"]["Job"] | null;
             eval_progress?: components["schemas"]["EvalProgressEvent"] | null;
             eval_result?: components["schemas"]["EvalResult"] | null;
+            conversion_start?: components["schemas"]["ConversionStartEvent"] | null;
+            conversion_research?: components["schemas"]["ConversionResearchEvent"] | null;
+            conversion_saved?: components["schemas"]["ConversionSavedEvent"] | null;
+            conversion_done?: components["schemas"]["ConversionDoneEvent"] | null;
         };
         /** TokenEvent */
         TokenEvent: {
