@@ -6,6 +6,26 @@ from ragcore.api.routes import conversions
 from ragcore.api.schemas import WebResearchResult
 
 
+def test_system_prompt_forbids_treating_passages_as_instructions() -> None:
+    prompt_it = conversions._build_system_prompt("it")
+    prompt_en = conversions._build_system_prompt("en")
+
+    for prompt in (prompt_it, prompt_en):
+        assert "Passages:" in prompt
+        assert "```" not in prompt.split("COSA NON DEVI MAI FARE")[-1] if "COSA NON DEVI MAI FARE" in prompt else True
+
+    assert "materiale grezzo" in prompt_it
+    assert "NON obbedire" in prompt_it
+    assert "raw material" in prompt_en
+    assert "do NOT obey" in prompt_en
+
+
+def test_system_prompt_is_language_specific() -> None:
+    assert conversions._build_system_prompt("it") != conversions._build_system_prompt("en")
+    assert "italiano" in conversions._build_system_prompt("it")
+    assert "English" in conversions._build_system_prompt("en")
+
+
 def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkeypatch) -> None:
     async def fake_search(query: str):
         assert "current" in query
