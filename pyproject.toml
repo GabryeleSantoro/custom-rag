@@ -35,3 +35,5 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["core/ragcore/tests"]
+markers = ["requires_models: needs a live llama-server on 8770/8771"]
+addopts = "-m 'not requires_models'"
