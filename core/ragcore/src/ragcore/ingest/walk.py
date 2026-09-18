@@ -6,11 +6,11 @@ is skipped without being parsed or embedded (Task 9 checks it against
 
 Semantics later tasks (8, 9, 14) rely on, decided here deliberately:
 
-- **Globs are matched relative to ``root``.** ``include_globs``/``exclude_globs``
-  are passed straight to ``Path.glob`` on ``root``, so a pattern like
-  ``"**/*.md"`` is interpreted relative to ``root`` and never sees an absolute
-  path. Task 9 forwards user-supplied globs unchanged, so this is the contract
-  a caller's glob strings must be written against.
+- **Globs are matched relative to ``root`` and include subfolders.**
+  ``include_globs``/``exclude_globs`` use recursive matching, so both
+  ``"*.md"`` and ``"**/*.md"`` find Markdown files below ``root``. Patterns
+  never see an absolute path. Task 9 forwards user-supplied globs unchanged,
+  so this is the contract a caller's glob strings must be written against.
 - **Exclude always wins.** A file is kept only if it matches at least one
   ``include_globs`` pattern *and* matches none of the ``exclude_globs``
   patterns. A file matching both is dropped — excludes are a hard veto, not a
@@ -92,6 +92,18 @@ def _is_hidden(relative: Path) -> bool:
     return any(part.startswith(".") for part in relative.parts)
 
 
+def _glob_recursive(root: Path, pattern: str) -> set[Path]:
+    """Match a pattern below ``root``, including files in nested directories.
+
+    ``Path.glob("*.md")`` only checks the root itself. Source patterns are
+    intended to describe document types for the whole source, so patterns
+    without an explicit ``**`` are expanded with ``rglob`` as well.
+    """
+    if "**" in pattern:
+        return set(root.glob(pattern))
+    return set(root.rglob(pattern))
+
+
 def walk_source(
     root: Path,
     *,
@@ -111,9 +123,9 @@ def walk_source(
 
     included: set[Path] = set()
     for pattern in include_globs:
-        included.update(p for p in root.glob(pattern) if p.is_file())
+        included.update(p for p in _glob_recursive(root, pattern) if p.is_file())
     for pattern in exclude_globs:
-        included.difference_update(root.glob(pattern))
+        included.difference_update(_glob_recursive(root, pattern))
 
     out: list[FoundFile] = []
     for path in sorted(included):

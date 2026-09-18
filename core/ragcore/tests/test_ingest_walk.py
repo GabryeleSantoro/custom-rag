@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from ragcore.ingest.walk import sha256_of, walk_source
 
 
@@ -21,6 +20,14 @@ def test_include_globs_select_files(tmp_path: Path) -> None:
     build_corpus(tmp_path)
 
     found = walk_source(tmp_path, include_globs=["**/*.md"], exclude_globs=[], max_file_mb=100)
+
+    assert sorted(f.path.name for f in found) == ["huge.md", "reranking.md"]
+
+
+def test_include_glob_without_double_star_still_scans_subfolders(tmp_path: Path) -> None:
+    build_corpus(tmp_path)
+
+    found = walk_source(tmp_path, include_globs=["*.md"], exclude_globs=[], max_file_mb=100)
 
     assert sorted(f.path.name for f in found) == ["huge.md", "reranking.md"]
 

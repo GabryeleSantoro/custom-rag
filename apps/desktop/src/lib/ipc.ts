@@ -51,6 +51,9 @@ export type EvalResult = NonNullable<StreamEnvelope["eval_result"]>;
 export type EvalProgress = NonNullable<StreamEnvelope["eval_progress"]>;
 export type EvalQuestionResult = EvalResult["questions"][number];
 export type EvalMetrics = EvalResult["metrics"];
+export type ChatSessionPatch = Schemas["ChatSessionPatch"];
+export type ChatProject = Schemas["ChatProject"];
+export type ChatProjectPatch = Schemas["ChatProjectPatch"];
 
 /**
  * Literal unions live inline in the OpenAPI schema rather than as named
@@ -149,10 +152,18 @@ export const api = {
   cancelJob: (id: string) => request<void>("POST", `/jobs/${id}/cancel`),
 
   listSessions: () => request<ChatSession[]>("GET", "/chats"),
-  createSession: (payload: { title?: string; scope_doc_id?: string } = {}) =>
+  listProjects: () => request<ChatProject[]>("GET", "/chats/projects"),
+  createProject: (payload: { name: string }) =>
+    request<ChatProject>("POST", "/chats/projects", payload),
+  updateProject: (id: string, payload: ChatProjectPatch) =>
+    request<ChatProject>("PATCH", `/chats/projects/${id}`, payload),
+  deleteProject: (id: string) => request<void>("DELETE", `/chats/projects/${id}`),
+  createSession: (payload: { title?: string; scope_doc_id?: string; project_id?: string } = {}) =>
     request<ChatSession>("POST", "/chats", payload),
   getSession: (id: string) => request<ChatSession>("GET", `/chats/${id}`),
   getMessages: (id: string) => request<ChatMessage[]>("GET", `/chats/${id}/messages`),
+  updateSession: (id: string, payload: ChatSessionPatch) =>
+    request<ChatSession>("PATCH", `/chats/${id}`, payload),
   renameSession: (id: string, title: string) =>
     request<ChatSession>("PATCH", `/chats/${id}`, { title }),
   deleteSession: (id: string) => request<void>("DELETE", `/chats/${id}`),

@@ -124,12 +124,50 @@ def test_sources_and_jobs_round_trip(client: TestClient, tmp_path) -> None:
     assert client.delete(f"/sources/{created['id']}").status_code in {200, 204}
 
 
+def test_projects_group_and_pin_chats(client: TestClient) -> None:
+    project = client.post("/chats/projects", json={"name": "Research"})
+    assert project.status_code == 201
+    project_body = project.json()
+
+    session = client.post("/chats", json={"project_id": project_body["id"]})
+    assert session.status_code == 201
+    session_body = session.json()
+    assert session_body["project_id"] == project_body["id"]
+
+    pinned_chat = client.patch(f"/chats/{session_body['id']}", json={"pinned": True})
+    assert pinned_chat.status_code == 200
+    assert pinned_chat.json()["pinned"] is True
+
+    pinned_project = client.patch(f"/chats/projects/{project_body['id']}", json={"pinned": True})
+    assert pinned_project.status_code == 200
+    assert pinned_project.json()["pinned"] is True
+
+    deleted_project = client.delete(f"/chats/projects/{project_body['id']}")
+    assert deleted_project.status_code == 200
+    assert client.get(f"/chats/{session_body['id']}").json()["project_id"] is None
+
+
+def test_nested_pdfs_are_indexed_when_adding_a_source(client: TestClient, tmp_path) -> None:
+    nested = tmp_path / "research" / "papers" / "2026"
+    nested.mkdir(parents=True)
+    pdf = nested / "paper.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nBT\n/F1 12 Tf\n(Indexed paper) Tj\nET\n")
+
+    source = client.post(
+        "/sources",
+        json={"path": str(tmp_path / "research"), "include_globs": ["**/*.pdf"]},
+    )
+    assert source.status_code == 201
+
+    documents = client.get("/documents", params={"source_id": source.json()["id"]}).json()
+    assert documents["total"] == 1
+    assert documents["items"][0]["path"] == str(pdf)
+
+
 def test_wipe_sends_the_user_back_through_onboarding(client: TestClient) -> None:
     assert client.get("/settings").json()["onboarded"] is True
 
-    response = client.post(
-        "/settings/wipe", json={"confirm": "DELETE", "keep_connections": True}
-    )
+    response = client.post("/settings/wipe", json={"confirm": "DELETE", "keep_connections": True})
     assert response.status_code == 200
 
     settings = client.get("/settings").json()

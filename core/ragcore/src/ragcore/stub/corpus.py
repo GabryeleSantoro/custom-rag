@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from ragcore.ingest.walk import walk_source
+
 MIME_BY_EXT = {
     ".md": "text/markdown",
     ".txt": "text/plain",
@@ -24,6 +26,7 @@ MIME_BY_EXT = {
 
 _HEADING = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
 _WORD = re.compile(r"[a-z0-9]+")
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf"}
 
 
 @dataclass(slots=True)
@@ -151,8 +154,35 @@ def load_document(path: Path) -> LoadedDoc:
     )
 
 
-def load_corpus(directory: Path) -> list[LoadedDoc]:
-    files = sorted(
-        p for p in directory.rglob("*") if p.is_file() and p.suffix in {".md", ".txt"}
-    )
-    return [load_document(p) for p in files]
+def load_corpus(
+    directory: Path,
+    *,
+    include_globs: list[str] | None = None,
+    exclude_globs: list[str] | None = None,
+    max_file_mb: int = 100,
+) -> list[LoadedDoc]:
+    """Load supported documents recursively, honoring a source's scan filters.
+
+    The stub used to hard-code a recursive Markdown/text scan, which meant the
+    source dialog's PDF patterns were ignored entirely. Reuse the same walker
+    as the real ingestion path so nested PDFs and user include/exclude globs
+    behave consistently while the stub is active.
+    """
+    if include_globs is None:
+        files = sorted(
+            p
+            for p in directory.rglob("*")
+            if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+        )
+    else:
+        files = [
+            found.path
+            for found in walk_source(
+                directory,
+                include_globs=include_globs,
+                exclude_globs=exclude_globs or [],
+                max_file_mb=max_file_mb,
+            )
+            if found.ext in SUPPORTED_EXTENSIONS
+        ]
+    return [load_document(path) for path in files]

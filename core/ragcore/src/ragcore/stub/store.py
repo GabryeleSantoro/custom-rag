@@ -13,6 +13,7 @@ from pathlib import Path
 from ragcore.api.schemas import (
     AppSettings,
     ChatMessage,
+    ChatProject,
     ChatSession,
     Connection,
     Document,
@@ -54,6 +55,7 @@ class Store:
         self.connections: dict[str, Connection] = {}
         self.models: dict[str, InstalledModel] = {}
         self.sessions: dict[str, ChatSession] = {}
+        self.projects: dict[str, ChatProject] = {}
         self.messages: dict[str, list[ChatMessage]] = {}
         self.retriever = Retriever([])
 
@@ -172,7 +174,12 @@ class Store:
             return []
 
         docs: list[Document] = []
-        for loaded in load_corpus(directory):
+        for loaded in load_corpus(
+            directory,
+            include_globs=source.include_globs,
+            exclude_globs=source.exclude_globs,
+            max_file_mb=source.max_file_mb,
+        ):
             document = Document(
                 id=loaded.doc_id,
                 source_id=source_id,
@@ -263,14 +270,32 @@ class Store:
 
     # ------------------------------------------------------------------- chats
 
-    def create_session(self, title: str | None, scope_doc_id: str | None = None) -> ChatSession:
+    def create_project(self, name: str) -> ChatProject:
+        now = _now()
+        project = ChatProject(
+            id=_id("project"),
+            name=name.strip() or "Untitled project",
+            created_at=now,
+            updated_at=now,
+        )
+        self.projects[project.id] = project
+        return project
+
+    def create_session(
+        self,
+        title: str | None,
+        scope_doc_id: str | None = None,
+        project_id: str | None = None,
+    ) -> ChatSession:
+        now = _now()
         session = ChatSession(
             id=_id("chat"),
             title=title or "New chat",
             message_count=0,
             scope_doc_id=scope_doc_id,
-            created_at=_now(),
-            updated_at=_now(),
+            project_id=project_id,
+            created_at=now,
+            updated_at=now,
         )
         self.sessions[session.id] = session
         self.messages[session.id] = []

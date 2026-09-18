@@ -493,6 +493,23 @@ class EvalSet(BaseModel):
 # --------------------------------------------------------------------- chat history
 
 
+class ChatProject(BaseModel):
+    id: str
+    name: str
+    pinned: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatProjectCreate(BaseModel):
+    name: str
+
+
+class ChatProjectPatch(BaseModel):
+    name: str | None = None
+    pinned: bool | None = None
+
+
 class ChatMessage(BaseModel):
     id: str
     session_id: str
@@ -510,6 +527,8 @@ class ChatSession(BaseModel):
     title: str
     message_count: int
     scope_doc_id: str | None = None
+    project_id: str | None = None
+    pinned: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -517,6 +536,13 @@ class ChatSession(BaseModel):
 class ChatSessionCreate(BaseModel):
     title: str | None = None
     scope_doc_id: str | None = None
+    project_id: str | None = None
+
+
+class ChatSessionPatch(BaseModel):
+    title: str | None = None
+    project_id: str | None = None
+    pinned: bool | None = None
 
 
 class Ok(BaseModel):
@@ -547,4 +573,3 @@ class StreamEnvelope(BaseModel):
     job: Job | None = None
     eval_progress: EvalProgressEvent | None = None
     eval_result: EvalResult | None = None
-

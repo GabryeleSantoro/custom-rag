@@ -21,6 +21,7 @@ export const keys = {
   content: (id: string) => ["content", id] as const,
   jobs: ["jobs"] as const,
   sessions: ["sessions"] as const,
+  projects: ["chat-projects"] as const,
   messages: (id: string) => ["messages", id] as const,
   connections: ["connections"] as const,
   models: ["models"] as const,
@@ -67,6 +68,11 @@ export const sourcesQuery = queryOptions({
 export const sessionsQuery = queryOptions({
   queryKey: keys.sessions,
   queryFn: api.listSessions,
+});
+
+export const projectsQuery = queryOptions({
+  queryKey: keys.projects,
+  queryFn: api.listProjects,
 });
 
 export const connectionsQuery = queryOptions({

@@ -282,6 +282,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chats/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Projects */
+        get: operations["list_projects_chats_projects_get"];
+        put?: never;
+        /** Create Project */
+        post: operations["create_project_chats_projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chats/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Project */
+        delete: operations["delete_project_chats_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Project */
+        patch: operations["update_project_chats_projects__project_id__patch"];
+        trace?: never;
+    };
     "/chats/{session_id}": {
         parameters: {
             query?: never;
@@ -297,8 +333,8 @@ export interface paths {
         delete: operations["delete_session_chats__session_id__delete"];
         options?: never;
         head?: never;
-        /** Rename Session */
-        patch: operations["rename_session_chats__session_id__patch"];
+        /** Update Session */
+        patch: operations["update_session_chats__session_id__patch"];
         trace?: never;
     };
     "/chats/{session_id}/messages": {
@@ -662,6 +698,40 @@ export interface components {
              */
             created_at: string;
         };
+        /** ChatProject */
+        ChatProject: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Pinned
+             * @default false
+             */
+            pinned: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ChatProjectCreate */
+        ChatProjectCreate: {
+            /** Name */
+            name: string;
+        };
+        /** ChatProjectPatch */
+        ChatProjectPatch: {
+            /** Name */
+            name?: string | null;
+            /** Pinned */
+            pinned?: boolean | null;
+        };
         /** ChatSession */
         ChatSession: {
             /** Id */
@@ -672,6 +742,13 @@ export interface components {
             message_count: number;
             /** Scope Doc Id */
             scope_doc_id?: string | null;
+            /** Project Id */
+            project_id?: string | null;
+            /**
+             * Pinned
+             * @default false
+             */
+            pinned: boolean;
             /**
              * Created At
              * Format: date-time
@@ -689,6 +766,17 @@ export interface components {
             title?: string | null;
             /** Scope Doc Id */
             scope_doc_id?: string | null;
+            /** Project Id */
+            project_id?: string | null;
+        };
+        /** ChatSessionPatch */
+        ChatSessionPatch: {
+            /** Title */
+            title?: string | null;
+            /** Project Id */
+            project_id?: string | null;
+            /** Pinned */
+            pinned?: boolean | null;
         };
         /** Citation */
         Citation: {
@@ -2222,6 +2310,125 @@ export interface operations {
             };
         };
     };
+    list_projects_chats_projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProject"][];
+                };
+            };
+        };
+    };
+    create_project_chats_projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProject"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_project_chats_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_chats_projects__project_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatProjectPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatProject"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_session_chats__session_id__get: {
         parameters: {
             query?: never;
@@ -2284,7 +2491,7 @@ export interface operations {
             };
         };
     };
-    rename_session_chats__session_id__patch: {
+    update_session_chats__session_id__patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -2295,7 +2502,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ChatSessionCreate"];
+                "application/json": components["schemas"]["ChatSessionPatch"];
             };
         };
         responses: {

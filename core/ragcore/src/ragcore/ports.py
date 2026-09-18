@@ -13,6 +13,7 @@ from typing import Protocol, runtime_checkable
 from ragcore.api.schemas import (
     AppSettings,
     ChatMessage,
+    ChatProject,
     ChatSession,
     Connection,
     Document,
@@ -51,6 +52,7 @@ class StorePort(Protocol):
     connections: dict[str, Connection]
     models: dict[str, InstalledModel]
     sessions: dict[str, ChatSession]
+    projects: dict[str, ChatProject]
     messages: dict[str, list[ChatMessage]]
     eval_sets: list[EvalSet]
     retriever: RetrieverPort
@@ -62,7 +64,13 @@ class StorePort(Protocol):
     def doc_meta(self) -> dict[str, dict]: ...
     def content(self, doc_id: str) -> DocumentContent | None: ...
     def index_stats(self) -> IndexStats: ...
-    def create_session(self, title: str | None, scope_doc_id: str | None = None) -> ChatSession: ...
+    def create_project(self, name: str) -> ChatProject: ...
+    def create_session(
+        self,
+        title: str | None,
+        scope_doc_id: str | None = None,
+        project_id: str | None = None,
+    ) -> ChatSession: ...
     def append_message(self, message: ChatMessage) -> None: ...
     def new_id(self, prefix: str) -> str: ...
 
