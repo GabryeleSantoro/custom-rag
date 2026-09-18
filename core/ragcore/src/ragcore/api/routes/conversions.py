@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import re
+from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Literal
@@ -19,6 +20,7 @@ from ragcore.api.schemas import (
     ConversionResearchEvent,
     ConversionSavedEvent,
     ConversionStartEvent,
+    PresentationErrorEvent,
     RetrievedChunk,
     SlideConversionRequest,
     SourceCreate,
@@ -325,6 +327,62 @@ def _chunks_from_pages(
     ]
 
 
+@dataclass(slots=True)
+class _PresentationRef:
+    slide_id: str | None
+    file_path: str | None
+
+
+@dataclass(slots=True)
+class _Presentation:
+    slide_id: str | None
+    title: str
+    pages: list[RetrievedChunk]
+
+
+def _ref_label(ref: _PresentationRef) -> str:
+    if ref.slide_id is not None:
+        return ref.slide_id
+    return Path(ref.file_path).stem if ref.file_path else "unknown"
+
+
+def _resolve_presentation(ref: _PresentationRef, index: int, store) -> _Presentation:
+    """Raises ValueError with a user-facing message on any per-item problem."""
+    if ref.slide_id is not None:
+        document = store.documents.get(ref.slide_id)
+        if document is None:
+            raise ValueError(f"Slide file not found: {ref.slide_id}")
+        content = store.content(document.id)
+        if content is None:
+            raise ValueError(f"No readable content for {document.title}")
+        pages = _chunks_from_pages(
+            document.id,
+            document.title,
+            [(page.page, page.section_path, page.text) for page in content.pages],
+        )
+        if not pages:
+            raise ValueError(f"{document.title} does not contain any slide text")
+        return _Presentation(slide_id=document.id, title=document.title, pages=pages)
+
+    assert ref.file_path is not None
+    path = Path(ref.file_path).expanduser()
+    if not path.is_file():
+        raise ValueError(f"Slide file not found: {ref.file_path}")
+    try:
+        parsed = parse(path)
+    except (OSError, UnsupportedFormat, ValueError) as exc:
+        raise ValueError(f"Could not read slide file {path.name}: {exc}") from exc
+    title = parsed.title or path.stem
+    pages = _chunks_from_pages(
+        f"upload-{index}",
+        title,
+        [(page.page, page.section_path, page.text) for page in parsed.pages],
+    )
+    if not pages:
+        raise ValueError(f"{title} does not contain any slide text")
+    return _Presentation(slide_id=None, title=title, pages=pages)
+
+
 @router.post("/slides")
 async def convert_slides(
     payload: SlideConversionRequest,
@@ -344,123 +402,131 @@ async def convert_slides(
             409, f"The active model is not reachable: {probe.error or 'connection failed'}"
         )
 
-    pages: list[RetrievedChunk] = []
-    input_titles: list[str] = []
-    if payload.slide_ids:
-        documents = [store.documents.get(doc_id) for doc_id in payload.slide_ids]
-        if any(document is None for document in documents):
-            raise HTTPException(404, "One or more selected slide files were not found")
-        for document in (item for item in documents if item is not None):
-            content = store.content(document.id)
-            if content is None:
-                raise HTTPException(422, f"No readable content for {document.title}")
-            input_titles.append(document.title)
-            pages.extend(
-                _chunks_from_pages(
-                    document.id,
-                    document.title,
-                    [(page.page, page.section_path, page.text) for page in content.pages],
-                )
-            )
-
-    for index, file_path in enumerate(payload.file_paths):
-        path = Path(file_path).expanduser()
-        if not path.is_file():
-            raise HTTPException(404, f"Slide file not found: {file_path}")
-        try:
-            parsed = parse(path)
-        except (OSError, UnsupportedFormat, ValueError) as exc:
-            raise HTTPException(422, f"Could not read slide file {path.name}: {exc}") from exc
-        title_for_file = parsed.title or path.stem
-        input_titles.append(title_for_file)
-        pages.extend(
-            _chunks_from_pages(
-                f"upload-{index}",
-                title_for_file,
-                [(page.page, page.section_path, page.text) for page in parsed.pages],
-            )
-        )
-
-    if not pages:
-        raise HTTPException(422, "The selected files do not contain any slide text")
-
-    title = payload.output_title or input_titles[0]
-    query = payload.research_query or (
-        f"{title}: key concepts, current context, examples and sources"
-    )
-    results, warning = await _search_web(query)
-    web_chunks = [
-        RetrievedChunk(
-            chunk_id=f"web-{index}",
-            doc_id=f"web-{index}",
-            doc_title=result.title,
-            page_start=1,
-            page_end=1,
-            text=f"{result.title}. {result.snippet} Source: {result.url}",
-        )
-        for index, result in enumerate(results)
-    ]
-    context = pages[:36] + web_chunks
-    instruction = (
-        f"Trasforma le slide in un testo compiuto e approfondito in "
-        f"{'italiano' if payload.language == 'it' else 'inglese'}. "
-        "Scrivi direttamente Markdown valido, senza delimitatori ``` e senza parlare del processo. "
-        "Mantieni i concetti delle slide, collega le idee in una narrazione leggibile, "
-        "aggiungi definizioni, contesto, esempi e implicazioni usando la ricerca web fornita. "
-        "Distingui chiaramente fatti e inferenze. "
-        f"Livello di approfondimento: {'alto' if payload.depth == 'deep' else 'standard'}. "
-        "Usa un titolo H1, sezioni H2/H3, paragrafi e liste quando aiutano."
-    )
+    refs = [_PresentationRef(slide_id=slide_id, file_path=None) for slide_id in payload.slide_ids]
+    refs += [_PresentationRef(slide_id=None, file_path=file_path) for file_path in payload.file_paths]
+    total = len(refs)
+    system_prompt = _build_system_prompt(payload.language)
 
     async def events():
-        yield frame(
-            "conversion_start",
-            ConversionStartEvent(slide_ids=payload.slide_ids, title=title),
-        )
-        yield frame(
-            "conversion_research",
-            ConversionResearchEvent(query=query, results=results, warning=warning),
-        )
-        output: list[str] = []
-        try:
-            async for piece in answerer.stream(instruction, context, set()):
-                output.append(piece)
-                yield frame("token", {"text": piece})
-        except Exception as exc:  # noqa: BLE001 - reported as an SSE error
-            yield frame("error", {"message": str(exc), "retryable": True})
-            return
-
-        markdown = _clean_markdown("".join(output), title, results)
         global_dir = config.data_dir / "global-files"
         global_dir.mkdir(parents=True, exist_ok=True)
-        output_path = global_dir / f"{_slug(title)}.md"
-        output_path.write_text(markdown, encoding="utf-8")
+        saved: list[ConversionSavedEvent] = []
+        failed: list[PresentationErrorEvent] = []
+        research_count = 0
 
-        source = _global_source(store, global_dir)
-        indexed = store.ingest_source(source.id)
-        saved = next((document for document in indexed if Path(document.path) == output_path), None)
-        if saved is None:
+        for index, ref in enumerate(refs):
+            try:
+                presentation = _resolve_presentation(ref, index, store)
+            except ValueError as exc:
+                error = PresentationErrorEvent(
+                    presentation_index=index,
+                    presentation_total=total,
+                    title=_ref_label(ref),
+                    message=str(exc),
+                )
+                failed.append(error)
+                yield frame("presentation_error", error)
+                continue
+
+            title = presentation.title
+            if payload.output_title and total == 1:
+                title = payload.output_title
+
             yield frame(
-                "error",
-                {
-                    "message": "Markdown file was saved but could not be indexed",
-                    "retryable": False,
-                },
+                "conversion_start",
+                ConversionStartEvent(
+                    presentation_index=index,
+                    presentation_total=total,
+                    slide_id=presentation.slide_id,
+                    title=title,
+                ),
             )
-            return
 
-        yield frame(
-            "conversion_saved",
-            ConversionSavedEvent(path=str(output_path), title=saved.title, document_id=saved.id),
-        )
+            queries, results, warning = await _research(
+                payload.research_query, title, presentation.pages
+            )
+            research_count += len(results)
+            yield frame(
+                "conversion_research",
+                ConversionResearchEvent(
+                    presentation_index=index, queries=queries, results=results, warning=warning
+                ),
+            )
+
+            web_chunks = [
+                RetrievedChunk(
+                    chunk_id=f"web-{index}-{result_index}",
+                    doc_id=f"web-{index}-{result_index}",
+                    doc_title=result.title,
+                    page_start=1,
+                    page_end=1,
+                    text=f"{result.title}. {result.snippet} Source: {result.url}",
+                )
+                for result_index, result in enumerate(results)
+            ]
+            context = presentation.pages[:36] + web_chunks
+            instruction = (
+                f"Trasforma le slide in un testo compiuto e approfondito in "
+                f"{'italiano' if payload.language == 'it' else 'inglese'}. "
+                "Scrivi direttamente Markdown valido, senza delimitatori ``` e senza "
+                "parlare del processo. Mantieni i concetti delle slide, collega le idee "
+                "in una narrazione leggibile, aggiungi definizioni, contesto, esempi e "
+                "implicazioni usando la ricerca web fornita. Distingui chiaramente fatti "
+                "e inferenze. "
+                f"Livello di approfondimento: {'alto' if payload.depth == 'deep' else 'standard'}. "
+                "Usa un titolo H1, sezioni H2/H3, paragrafi e liste quando aiutano."
+            )
+
+            output: list[str] = []
+            try:
+                async for piece in answerer.stream(
+                    instruction, context, set(), system_prompt=system_prompt
+                ):
+                    output.append(piece)
+                    yield frame("token", {"text": piece})
+            except Exception as exc:  # noqa: BLE001 - reported as a per-presentation error
+                error = PresentationErrorEvent(
+                    presentation_index=index,
+                    presentation_total=total,
+                    title=title,
+                    message=str(exc),
+                )
+                failed.append(error)
+                yield frame("presentation_error", error)
+                continue
+
+            markdown = _clean_markdown("".join(output), title, results)
+            output_path = _unique_path(global_dir, _slug(title))
+            output_path.write_text(markdown, encoding="utf-8")
+
+            source = _global_source(store, global_dir)
+            indexed = store.ingest_source(source.id)
+            saved_document = next(
+                (document for document in indexed if Path(document.path) == output_path), None
+            )
+            if saved_document is None:
+                error = PresentationErrorEvent(
+                    presentation_index=index,
+                    presentation_total=total,
+                    title=title,
+                    message="Markdown file was saved but could not be indexed",
+                )
+                failed.append(error)
+                yield frame("presentation_error", error)
+                continue
+
+            saved_event = ConversionSavedEvent(
+                presentation_index=index,
+                path=str(output_path),
+                title=saved_document.title,
+                document_id=saved_document.id,
+            )
+            saved.append(saved_event)
+            yield frame("conversion_saved", saved_event)
+
         yield frame(
             "conversion_done",
-            ConversionDoneEvent(
-                path=str(output_path),
-                title=saved.title,
-                document_id=saved.id,
-                research_count=len(results),
-            ),
+            ConversionDoneEvent(saved=saved, failed=failed, research_count=research_count),
         )
 
     return sse_response(events())

@@ -293,26 +293,36 @@ class WebResearchResult(BaseModel):
 
 
 class ConversionStartEvent(BaseModel):
-    slide_ids: list[str]
+    presentation_index: int
+    presentation_total: int
+    slide_id: str | None
     title: str
 
 
 class ConversionResearchEvent(BaseModel):
-    query: str
+    presentation_index: int
+    queries: list[str]
     results: list[WebResearchResult]
     warning: str | None = None
 
 
 class ConversionSavedEvent(BaseModel):
+    presentation_index: int
     path: str
     title: str
     document_id: str
+
+
+class PresentationErrorEvent(BaseModel):
+    presentation_index: int
+    presentation_total: int
+    title: str
+    message: str
 
 
 class ConversionDoneEvent(BaseModel):
-    path: str
-    title: str
-    document_id: str
+    saved: list[ConversionSavedEvent]
+    failed: list[PresentationErrorEvent]
     research_count: int
 
 
@@ -629,4 +639,5 @@ class StreamEnvelope(BaseModel):
     conversion_start: ConversionStartEvent | None = None
     conversion_research: ConversionResearchEvent | None = None
     conversion_saved: ConversionSavedEvent | None = None
+    presentation_error: PresentationErrorEvent | None = None
     conversion_done: ConversionDoneEvent | None = None

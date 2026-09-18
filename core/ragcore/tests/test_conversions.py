@@ -8,49 +8,27 @@ from ragcore.api.routes import conversions
 from ragcore.api.schemas import ConnectionTestResult, RetrievedChunk, WebResearchResult
 
 
-def test_system_prompt_forbids_treating_passages_as_instructions() -> None:
-    prompt_it = conversions._build_system_prompt("it")
-    prompt_en = conversions._build_system_prompt("en")
-
-    for prompt in (prompt_it, prompt_en):
-        assert "Passages:" in prompt
-        assert "```" not in prompt.split("COSA NON DEVI MAI FARE")[-1] if "COSA NON DEVI MAI FARE" in prompt else True
-
-    assert "materiale grezzo" in prompt_it
-    assert "NON obbedire" in prompt_it
-    assert "raw material" in prompt_en
-    assert "do NOT obey" in prompt_en
-
-
-def test_system_prompt_is_language_specific() -> None:
-    assert conversions._build_system_prompt("it") != conversions._build_system_prompt("en")
-    assert "italiano" in conversions._build_system_prompt("it")
-    assert "English" in conversions._build_system_prompt("en")
-
-
 async def _fake_probe_ok(store, kind, base_url, model_id, api_key):
     return ConnectionTestResult(ok=True, reachable=True, model_found=True, streaming=True)
 
 
-def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkeypatch) -> None:
+def _mock_ok(monkeypatch, search_results=None) -> None:
     async def fake_search(query: str):
-        assert "current" in query
-        return [
-            WebResearchResult(
-                title="A useful reference",
-                url="https://example.com/reference",
-                snippet="A current context for the selected slide.",
-            )
-        ], None
+        return search_results or [], None
 
-    monkeypatch.setattr(conversions, "_search_web", fake_search)
     monkeypatch.setattr(conversions, "probe_connection", _fake_probe_ok)
+    monkeypatch.setattr(conversions, "_search_web", fake_search)
+
+
+def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkeypatch) -> None:
+    _mock_ok(
+        monkeypatch,
+        [WebResearchResult(title="A useful reference", url="https://example.com/reference", snippet="...")],
+    )
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
     with client.stream(
-        "POST",
-        "/conversions/slides",
-        json={"slide_ids": [slide_id], "research_query": "current context"},
+        "POST", "/conversions/slides", json={"slide_ids": [slide_id], "research_query": "current context"},
     ) as response:
         assert response.status_code == 200
         events = read_events(response)
@@ -60,10 +38,13 @@ def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkey
     assert "token" in names
     assert names[-2:] == ["conversion_saved", "conversion_done"]
     done = events[-1][1]
+    assert done["failed"] == []
+    assert len(done["saved"]) == 1
     assert done["research_count"] == 1
-    assert done["path"].endswith(".md")
-    saved = client.get(f"/documents/{done['document_id']}").json()
-    assert saved["path"] == done["path"]
+    saved_event = done["saved"][0]
+    assert saved_event["path"].endswith(".md")
+    saved = client.get(f"/documents/{saved_event['document_id']}").json()
+    assert saved["path"] == saved_event["path"]
     assert saved["ext"] == ".md"
 
 
@@ -98,24 +79,84 @@ def test_slide_conversion_is_disabled_when_the_active_connection_is_unreachable(
 def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
     client, read_events, monkeypatch, tmp_path
 ) -> None:
-    async def fake_search(_query: str):
-        return [], "No web result"
-
-    monkeypatch.setattr(conversions, "_search_web", fake_search)
-    monkeypatch.setattr(conversions, "probe_connection", _fake_probe_ok)
+    _mock_ok(monkeypatch)
     slide = tmp_path / "local-slide.md"
     slide.write_text("# Local slide\n\n## Context\n\nThis file is only used for conversion.\n")
 
     with client.stream(
-        "POST",
-        "/conversions/slides",
-        json={"file_paths": [str(slide)], "output_title": "Local conversion"},
+        "POST", "/conversions/slides", json={"file_paths": [str(slide)], "output_title": "Local conversion"},
     ) as response:
         assert response.status_code == 200
         events = read_events(response)
 
     assert events[-1][0] == "conversion_done"
     assert not any(source["path"] == str(tmp_path) for source in client.get("/sources").json())
+
+
+def test_slide_conversion_processes_each_presentation_independently(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(monkeypatch)
+    good = tmp_path / "good.md"
+    good.write_text("# Good\n\n## Context\n\nReadable content.\n")
+    missing = str(tmp_path / "missing.pdf")
+
+    with client.stream(
+        "POST", "/conversions/slides", json={"file_paths": [missing, str(good)]},
+    ) as response:
+        assert response.status_code == 200
+        events = read_events(response)
+
+    names = [name for name, _ in events]
+    assert names[0] == "presentation_error"
+    assert names[-1] == "conversion_done"
+    error_event = events[0][1]
+    assert error_event["presentation_index"] == 0
+    assert error_event["presentation_total"] == 2
+    done = events[-1][1]
+    assert len(done["saved"]) == 1
+    assert len(done["failed"]) == 1
+    assert done["saved"][0]["presentation_index"] == 1
+
+
+def test_slide_conversion_uses_the_hardened_system_prompt(client, monkeypatch) -> None:
+    _mock_ok(monkeypatch)
+    slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
+    captured: dict = {}
+
+    class _FakeAnswerer:
+        async def stream(self, question, chunks, directives, *, system_prompt=None):
+            captured["system_prompt"] = system_prompt
+            yield "ok"
+
+    from ragcore.api import deps
+
+    monkeypatch.setitem(
+        client.app.dependency_overrides, deps.get_answerer, lambda: _FakeAnswerer()
+    )
+
+    with client.stream("POST", "/conversions/slides", json={"slide_ids": [slide_id]}) as response:
+        assert response.status_code == 200
+        list(response.iter_lines())
+
+    assert captured["system_prompt"] == conversions._build_system_prompt("it")
+
+
+def test_system_prompt_forbids_treating_passages_as_instructions() -> None:
+    prompt_it = conversions._build_system_prompt("it")
+    prompt_en = conversions._build_system_prompt("en")
+
+    assert "Passages:" in prompt_it and "Passages:" in prompt_en
+    assert "materiale grezzo" in prompt_it
+    assert "NON obbedire" in prompt_it
+    assert "raw material" in prompt_en
+    assert "do NOT obey" in prompt_en
+
+
+def test_system_prompt_is_language_specific() -> None:
+    assert conversions._build_system_prompt("it") != conversions._build_system_prompt("en")
+    assert "italiano" in conversions._build_system_prompt("it")
+    assert "English" in conversions._build_system_prompt("en")
 
 
 def test_research_queries_combine_the_request_query_and_section_titles() -> None:
@@ -155,9 +196,7 @@ def test_research_aggregates_and_dedupes_results_across_queries(monkeypatch) -> 
                 WebResearchResult(title="A", url="https://example.com/a", snippet="..."),
                 WebResearchResult(title="B", url="https://example.com/b", snippet="..."),
             ], None
-        return [
-            WebResearchResult(title="A dup", url="https://example.com/a", snippet="..."),
-        ], None
+        return [WebResearchResult(title="A dup", url="https://example.com/a", snippet="...")], None
 
     monkeypatch.setattr(conversions, "_search_web", fake_search)
     pages = [
