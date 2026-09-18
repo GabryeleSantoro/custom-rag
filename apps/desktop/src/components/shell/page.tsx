@@ -29,7 +29,7 @@ export function PageHeader({
         "drag-region flex shrink-0 items-center gap-3 border-b border-border px-5 pb-3",
         className,
       )}
-      style={{ paddingTop: (trafficLightGutter ? 0 : 0) + 12 }}
+      style={{ paddingTop: trafficLightGutter + 12 }}
     >
       {children ?? (
         <div className="min-w-0 flex-1">
