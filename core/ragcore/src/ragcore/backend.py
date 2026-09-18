@@ -25,12 +25,17 @@ class StubAnswerEngine:
         self.config = config
 
     def stream(
-        self, question: str, chunks: list[RetrievedChunk], directives: set[str]
+        self,
+        question: str,
+        chunks: list[RetrievedChunk],
+        directives: set[str],
+        *,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         from ragcore.stub.answers import llm_stream, scripted_stream
 
         if self.config.llm_base_url:
-            return llm_stream(self.config, question, chunks)
+            return llm_stream(self.config, question, chunks, system_prompt=system_prompt)
         return scripted_stream(question, chunks, directives)
 
 

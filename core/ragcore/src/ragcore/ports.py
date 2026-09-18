@@ -78,7 +78,12 @@ class StorePort(Protocol):
 @runtime_checkable
 class AnswerEngine(Protocol):
     def stream(
-        self, question: str, chunks: list[RetrievedChunk], directives: set[str]
+        self,
+        question: str,
+        chunks: list[RetrievedChunk],
+        directives: set[str],
+        *,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
         """Yields answer text pieces. Directives are stub-only and ignored by real engines."""
         ...

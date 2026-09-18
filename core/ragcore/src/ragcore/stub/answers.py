@@ -87,7 +87,11 @@ async def scripted_stream(
 
 
 async def llm_stream(
-    config: Config, question: str, chunks: list[RetrievedChunk]
+    config: Config,
+    question: str,
+    chunks: list[RetrievedChunk],
+    *,
+    system_prompt: str | None = None,
 ) -> AsyncIterator[str]:
     """Stream from a real OpenAI-compatible endpoint."""
     context = "\n\n".join(
@@ -98,7 +102,7 @@ async def llm_stream(
         "model": config.llm_model or "local-model",
         "stream": True,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt or SYSTEM_PROMPT},
             {"role": "user", "content": f"Passages:\n\n{context}\n\nQuestion: {question}"},
         ],
     }
