@@ -6,7 +6,9 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.120.0",
     "httpx>=0.28.1",
+    "lancedb>=0.39.0",
     "numpy>=2.5.3",
+    "pyarrow>=25.0.1",
     "pydantic>=2.11.0",
     "uvicorn>=0.40.0",
 ]
