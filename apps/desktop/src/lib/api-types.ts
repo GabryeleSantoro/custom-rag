@@ -416,11 +416,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Test Connection
-         * @description A real probe. Reachability is the thing users actually get wrong.
-         */
+        /** Test Connection */
         post: operations["test_connection_connections_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/conversions/slides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Convert Slides */
+        post: operations["convert_slides_conversions_slides_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -936,6 +950,48 @@ export interface components {
             /** Error */
             error?: string | null;
         };
+        /** ConversionDoneEvent */
+        ConversionDoneEvent: {
+            /** Saved */
+            saved: components["schemas"]["ConversionSavedEvent"][];
+            /** Failed */
+            failed: components["schemas"]["PresentationErrorEvent"][];
+            /** Research Count */
+            research_count: number;
+        };
+        /** ConversionResearchEvent */
+        ConversionResearchEvent: {
+            /** Presentation Index */
+            presentation_index: number;
+            /** Queries */
+            queries: string[];
+            /** Results */
+            results: components["schemas"]["WebResearchResult"][];
+            /** Warning */
+            warning?: string | null;
+        };
+        /** ConversionSavedEvent */
+        ConversionSavedEvent: {
+            /** Presentation Index */
+            presentation_index: number;
+            /** Path */
+            path: string;
+            /** Title */
+            title: string;
+            /** Document Id */
+            document_id: string;
+        };
+        /** ConversionStartEvent */
+        ConversionStartEvent: {
+            /** Presentation Index */
+            presentation_index: number;
+            /** Presentation Total */
+            presentation_total: number;
+            /** Slide Id */
+            slide_id: string | null;
+            /** Title */
+            title: string;
+        };
         /** Document */
         Document: {
             /** Id */
@@ -1073,51 +1129,6 @@ export interface components {
              * @default false
              */
             retryable: boolean;
-        };
-        /** SlideConversionRequest */
-        SlideConversionRequest: {
-            /** Slide Ids */
-            slide_ids?: string[];
-            /** File Paths */
-            file_paths?: string[];
-            /** Research Query */
-            research_query?: string | null;
-            /** Output Title */
-            output_title?: string | null;
-            /** Language */
-            language?: "it" | "en";
-            /** Depth */
-            depth?: "standard" | "deep";
-        };
-        /** WebResearchResult */
-        WebResearchResult: {
-            title: string;
-            url: string;
-            snippet: string;
-        };
-        /** ConversionStartEvent */
-        ConversionStartEvent: {
-            slide_ids: string[];
-            title: string;
-        };
-        /** ConversionResearchEvent */
-        ConversionResearchEvent: {
-            query: string;
-            results: components["schemas"]["WebResearchResult"][];
-            warning?: string | null;
-        };
-        /** ConversionSavedEvent */
-        ConversionSavedEvent: {
-            path: string;
-            title: string;
-            document_id: string;
-        };
-        /** ConversionDoneEvent */
-        ConversionDoneEvent: {
-            path: string;
-            title: string;
-            document_id: string;
-            research_count: number;
         };
         /** EvalMetrics */
         EvalMetrics: {
@@ -1497,6 +1508,17 @@ export interface components {
              */
             max_parallel_parsers: number;
         };
+        /** PresentationErrorEvent */
+        PresentationErrorEvent: {
+            /** Presentation Index */
+            presentation_index: number;
+            /** Presentation Total */
+            presentation_total: number;
+            /** Title */
+            title: string;
+            /** Message */
+            message: string;
+        };
         /** ProcessStatus */
         ProcessStatus: {
             /** Name */
@@ -1650,6 +1672,32 @@ export interface components {
              */
             rerank_score: number;
         };
+        /**
+         * SlideConversionRequest
+         * @description Input for the research-backed slide conversion stream.
+         */
+        SlideConversionRequest: {
+            /** Slide Ids */
+            slide_ids?: string[];
+            /** File Paths */
+            file_paths?: string[];
+            /** Research Query */
+            research_query?: string | null;
+            /** Output Title */
+            output_title?: string | null;
+            /**
+             * Language
+             * @default it
+             * @enum {string}
+             */
+            language: "it" | "en";
+            /**
+             * Depth
+             * @default deep
+             * @enum {string}
+             */
+            depth: "standard" | "deep";
+        };
         /** Source */
         Source: {
             /** Path */
@@ -1792,6 +1840,7 @@ export interface components {
             conversion_start?: components["schemas"]["ConversionStartEvent"] | null;
             conversion_research?: components["schemas"]["ConversionResearchEvent"] | null;
             conversion_saved?: components["schemas"]["ConversionSavedEvent"] | null;
+            presentation_error?: components["schemas"]["PresentationErrorEvent"] | null;
             conversion_done?: components["schemas"]["ConversionDoneEvent"] | null;
         };
         /** TokenEvent */
@@ -1811,6 +1860,15 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WebResearchResult */
+        WebResearchResult: {
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            /** Snippet */
+            snippet: string;
         };
         /** WipeRequest */
         WipeRequest: {
@@ -2787,6 +2845,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    convert_slides_conversions_slides_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlideConversionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

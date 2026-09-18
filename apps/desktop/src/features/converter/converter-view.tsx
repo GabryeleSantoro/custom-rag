@@ -37,16 +37,19 @@ import {
 import { connectionsQuery, keys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-type ConversionStatus = "idle" | "researching" | "generating" | "saved" | "error";
-type LocalSlide = { path: string; title: string; ext: string };
-
-const STATUS_LABEL: Record<ConversionStatus, string> = {
-  idle: "Pronto",
-  researching: "Ricerca web in corso",
-  generating: "Scrittura del testo",
-  saved: "Salvato nella libreria globale",
-  error: "Conversione non riuscita",
+type PresentationStatus = "pending" | "researching" | "generating" | "saved" | "error";
+type PresentationRow = {
+  index: number;
+  title: string;
+  status: PresentationStatus;
+  output: string;
+  queries: string[];
+  researchResults: WebResearchResult[];
+  researchWarning: string | null;
+  savedPath: string | null;
+  errorMessage: string | null;
 };
+type LocalSlide = { path: string; title: string; ext: string };
 
 function readableExtension(document: Document) {
   return document.ext.replace(".", "").toUpperCase() || "FILE";
@@ -62,19 +65,17 @@ function localSlideFromPath(path: string): LocalSlide {
   };
 }
 
-function ConverterStatus({ status }: { status: ConversionStatus }) {
+function ConverterStatus({ running, hasError }: { running: boolean; hasError: boolean }) {
   return (
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      {status === "researching" || status === "generating" ? (
+      {running ? (
         <LoaderCircleIcon className="size-3.5 animate-spin text-primary" />
-      ) : status === "saved" ? (
-        <CheckCircle2Icon className="size-3.5 text-status-ok" />
-      ) : status === "error" ? (
+      ) : hasError ? (
         <span className="size-2 rounded-full bg-status-error" />
       ) : (
         <span className="size-2 rounded-full bg-status-idle" />
       )}
-      <span>{STATUS_LABEL[status]}</span>
+      <span>{running ? "Conversione in corso" : hasError ? "Conversione non riuscita" : "Pronto"}</span>
     </div>
   );
 }
@@ -124,12 +125,9 @@ export function ConverterView() {
   const [outputTitle, setOutputTitle] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [depth, setDepth] = useState<"standard" | "deep">("deep");
-  const [status, setStatus] = useState<ConversionStatus>("idle");
-  const [output, setOutput] = useState("");
-  const [researchResults, setResearchResults] = useState<WebResearchResult[]>([]);
-  const [researchWarning, setResearchWarning] = useState<string | null>(null);
-  const [savedPath, setSavedPath] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [rows, setRows] = useState<PresentationRow[]>([]);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const stream = useRef<StreamHandle | null>(null);
 
   const connections = useQuery(connectionsQuery);
@@ -141,13 +139,17 @@ export function ConverterView() {
   const items = documents.data?.items ?? [];
   const selected = items.filter((document) => selectedIds.includes(document.id));
   const selectedCount = selected.length + uploadedSlides.length;
-  const canConvert = Boolean(
-    active && selectedCount && status !== "researching" && status !== "generating",
-  );
+  const canConvert = Boolean(active && selectedCount && !running);
 
   const toggle = (id: string, checked: boolean) => {
     setSelectedIds((current) =>
       checked ? [...current, id] : current.filter((selectedId) => selectedId !== id),
+    );
+  };
+
+  const updateRow = (index: number, patch: Partial<PresentationRow>) => {
+    setRows((current) =>
+      current.map((row) => (row.index === index ? { ...row, ...patch } : row)),
     );
   };
 
@@ -165,42 +167,81 @@ export function ConverterView() {
         const known = new Set(current.map((file) => file.path));
         return [...current, ...paths.filter((path) => !known.has(path)).map(localSlideFromPath)];
       });
-      setError(null);
+      setRequestError(null);
     } catch (cause) {
-      setStatus("error");
-      setError(String(cause));
+      setRequestError(String(cause));
     }
   };
 
   const handleEvent = (event: ConversionEvent) => {
-    if (event.event === "conversion_research") {
-      setStatus("researching");
-      setResearchResults(event.data.results);
-      setResearchWarning(event.data.warning ?? null);
+    if (event.event === "conversion_start") {
+      setRows((current) => [
+        ...current,
+        {
+          index: event.data.presentation_index,
+          title: event.data.title,
+          status: "researching",
+          output: "",
+          queries: [],
+          researchResults: [],
+          researchWarning: null,
+          savedPath: null,
+          errorMessage: null,
+        },
+      ]);
+    } else if (event.event === "conversion_research") {
+      updateRow(event.data.presentation_index, {
+        queries: event.data.queries,
+        researchResults: event.data.results,
+        researchWarning: event.data.warning ?? null,
+      });
     } else if (event.event === "token") {
-      setStatus("generating");
-      setOutput((current) => current + event.data.text);
+      setRows((current) => {
+        const last = current[current.length - 1];
+        if (!last) return current;
+        return current.map((row) =>
+          row.index === last.index
+            ? { ...row, status: "generating", output: row.output + event.data.text }
+            : row,
+        );
+      });
     } else if (event.event === "conversion_saved") {
-      setSavedPath(event.data.path);
+      updateRow(event.data.presentation_index, { status: "saved", savedPath: event.data.path });
+    } else if (event.event === "presentation_error") {
+      const existing = rows.some((row) => row.index === event.data.presentation_index);
+      if (!existing) {
+        setRows((current) => [
+          ...current,
+          {
+            index: event.data.presentation_index,
+            title: event.data.title,
+            status: "error",
+            output: "",
+            queries: [],
+            researchResults: [],
+            researchWarning: null,
+            savedPath: null,
+            errorMessage: event.data.message,
+          },
+        ]);
+      } else {
+        updateRow(event.data.presentation_index, { status: "error", errorMessage: event.data.message });
+      }
     } else if (event.event === "conversion_done") {
-      setStatus("saved");
-      setSavedPath(event.data.path);
+      setRunning(false);
       void queryClient.invalidateQueries({ queryKey: ["documents"] });
       void queryClient.invalidateQueries({ queryKey: keys.sources });
     } else if (event.event === "error") {
-      setStatus("error");
-      setError(event.data.message);
+      setRunning(false);
+      setRequestError(event.data.message);
     }
   };
 
   const convert = () => {
     if (!canConvert) return;
-    setStatus("researching");
-    setOutput("");
-    setSavedPath(null);
-    setResearchResults([]);
-    setResearchWarning(null);
-    setError(null);
+    setRunning(true);
+    setRows([]);
+    setRequestError(null);
     stream.current = streamSlideConversion(
       {
         slide_ids: selectedIds,
@@ -213,8 +254,8 @@ export function ConverterView() {
       {
         onEvent: handleEvent,
         onFailed: (message) => {
-          setStatus("error");
-          setError(message);
+          setRunning(false);
+          setRequestError(message);
         },
       },
     );
@@ -222,7 +263,7 @@ export function ConverterView() {
 
   const stop = () => {
     void stream.current?.cancel();
-    setStatus("idle");
+    setRunning(false);
   };
 
   return (
@@ -232,7 +273,7 @@ export function ConverterView() {
         description={active ? `${active.name} · ${active.model_id}` : "Nessun modello collegato"}
         actions={
           <>
-            <ConverterStatus status={status} />
+            <ConverterStatus running={running} hasError={Boolean(requestError)} />
             <Button asChild variant="ghost" size="sm" className="h-8">
               <Link to="/chat">Apri chat</Link>
             </Button>
@@ -286,7 +327,7 @@ export function ConverterView() {
                     variant="secondary"
                     size="sm"
                     className="h-7"
-                    disabled={!active || status === "researching" || status === "generating"}
+                    disabled={!active || running}
                     onClick={pickSlides}
                   >
                     <FileUpIcon className="size-3.5" />
@@ -335,7 +376,7 @@ export function ConverterView() {
                       key={document.id}
                       document={document}
                       checked={selectedIds.includes(document.id)}
-                      disabled={!active || status === "researching" || status === "generating"}
+                      disabled={!active || running}
                       onCheckedChange={(checked) => toggle(document.id, checked)}
                     />
                   ))}
@@ -357,7 +398,7 @@ export function ConverterView() {
                     onChange={(event) => setResearchQuery(event.target.value)}
                     placeholder="Es. stato dell'arte, casi d'uso e implicazioni per il mercato…"
                     className="min-h-24 resize-none text-sm"
-                    disabled={!active || status === "researching" || status === "generating"}
+                    disabled={!active || running}
                   />
                   <p className="text-[0.68rem] leading-4 text-muted-foreground">Lascia vuoto per ricavare la ricerca dal titolo delle slide.</p>
                 </div>
@@ -368,7 +409,7 @@ export function ConverterView() {
                     value={outputTitle}
                     onChange={(event) => setOutputTitle(event.target.value)}
                     placeholder={selected[0]?.title ?? uploadedSlides[0]?.title ?? "Titolo del testo"}
-                    disabled={!active || status === "researching" || status === "generating"}
+                    disabled={!active || running}
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
@@ -391,42 +432,55 @@ export function ConverterView() {
                   <WandSparklesIcon className="size-4" />
                   Genera testo Markdown
                 </Button>
-                {status === "researching" || status === "generating" ? (
+                {running ? (
                   <Button variant="ghost" size="sm" className="w-full" onClick={stop}>Interrompi</Button>
                 ) : null}
               </div>
             </section>
           </div>
 
-          {error ? (
-            <Alert variant="destructive"><SearchIcon /><AlertTitle>La conversione si è fermata</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
+          {requestError ? (
+            <Alert variant="destructive"><SearchIcon /><AlertTitle>La conversione si è fermata</AlertTitle><AlertDescription>{requestError}</AlertDescription></Alert>
           ) : null}
 
-          {(output || researchResults.length || savedPath) ? (
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.5fr)]">
-              <article className="overflow-hidden rounded-xl border border-border bg-card">
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <div className="flex items-center gap-2"><SparklesIcon className="size-4 text-primary" /><h2 className="text-sm font-semibold">Anteprima del testo</h2></div>
-                  <Badge variant="outline" className="font-mono text-[0.6rem]">.md</Badge>
-                </div>
-                <div className="max-h-[28rem] overflow-auto p-5">
-                  {output ? <pre className="selectable whitespace-pre-wrap font-sans text-sm leading-7 text-foreground">{output}</pre> : <div className="space-y-3"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-2/3" /></div>}
-                </div>
-              </article>
+          {rows.length ? (
+            <div className="space-y-5">
+              {rows.map((row) => (
+                <section key={row.index} className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.5fr)]">
+                  <article className="overflow-hidden rounded-xl border border-border bg-card">
+                    <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                      <div className="flex items-center gap-2"><SparklesIcon className="size-4 text-primary" /><h2 className="text-sm font-semibold">{row.title}</h2></div>
+                      <Badge variant={row.status === "error" ? "destructive" : "outline"} className="font-mono text-[0.6rem]">
+                        {row.status === "error" ? "errore" : ".md"}
+                      </Badge>
+                    </div>
+                    <div className="max-h-[28rem] overflow-auto p-5">
+                      {row.status === "error" ? (
+                        <p className="text-sm text-status-error">{row.errorMessage}</p>
+                      ) : row.output ? (
+                        <pre className="selectable whitespace-pre-wrap font-sans text-sm leading-7 text-foreground">{row.output}</pre>
+                      ) : (
+                        <div className="space-y-3"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-2/3" /></div>
+                      )}
+                    </div>
+                  </article>
 
-              <aside className="space-y-5">
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center gap-2"><Globe2Icon className="size-4 text-primary" /><h2 className="text-sm font-semibold">Ricerca web</h2></div>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Le fonti consultate restano collegate al file Markdown generato.</p>
-                  {researchWarning ? <p className="mt-3 rounded-md bg-status-warn/10 px-2.5 py-2 text-xs leading-5 text-status-warn">{researchWarning}</p> : null}
-                  <div className="mt-3 space-y-2">
-                    {researchResults.map((result) => <a key={result.url} href={result.url} target="_blank" rel="noreferrer" className="block rounded-md border border-border/70 p-2.5 transition-colors hover:border-primary/45 hover:bg-muted/30"><p className="line-clamp-2 text-xs font-medium">{result.title}</p><p className="mt-1 truncate font-mono text-[0.6rem] text-muted-foreground">{result.url}</p></a>)}
-                    {!researchResults.length && !researchWarning ? <p className="text-xs text-muted-foreground">In attesa della ricerca.</p> : null}
-                  </div>
-                </div>
-                {savedPath ? <div className="rounded-xl border border-status-ok/25 bg-status-ok/6 p-4"><div className="flex items-center gap-2 text-status-ok"><CheckCircle2Icon className="size-4" /><p className="text-sm font-semibold">File pronto</p></div><p className="mt-2 break-all font-mono text-[0.65rem] leading-5 text-muted-foreground">{savedPath}</p><Link to="/library" className="mt-3 inline-flex text-xs font-medium text-primary underline underline-offset-4">Apri nella Libreria</Link></div> : null}
-              </aside>
-            </section>
+                  <aside className="space-y-5">
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <div className="flex items-center gap-2"><Globe2Icon className="size-4 text-primary" /><h2 className="text-sm font-semibold">Ricerca web</h2></div>
+                      {row.queries.length ? (
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">{row.queries.join(" · ")}</p>
+                      ) : null}
+                      {row.researchWarning ? <p className="mt-3 rounded-md bg-status-warn/10 px-2.5 py-2 text-xs leading-5 text-status-warn">{row.researchWarning}</p> : null}
+                      <div className="mt-3 space-y-2">
+                        {row.researchResults.map((result) => <a key={result.url} href={result.url} target="_blank" rel="noreferrer" className="block rounded-md border border-border/70 p-2.5 transition-colors hover:border-primary/45 hover:bg-muted/30"><p className="line-clamp-2 text-xs font-medium">{result.title}</p><p className="mt-1 truncate font-mono text-[0.6rem] text-muted-foreground">{result.url}</p></a>)}
+                      </div>
+                    </div>
+                    {row.savedPath ? <div className="rounded-xl border border-status-ok/25 bg-status-ok/6 p-4"><div className="flex items-center gap-2 text-status-ok"><CheckCircle2Icon className="size-4" /><p className="text-sm font-semibold">File pronto</p></div><p className="mt-2 break-all font-mono text-[0.65rem] leading-5 text-muted-foreground">{row.savedPath}</p><Link to="/library" className="mt-3 inline-flex text-xs font-medium text-primary underline underline-offset-4">Apri nella Libreria</Link></div> : null}
+                  </aside>
+                </section>
+              ))}
+            </div>
           ) : null}
 
           <div className="flex items-center gap-2 border-t border-border pt-4 text-[0.68rem] text-muted-foreground">

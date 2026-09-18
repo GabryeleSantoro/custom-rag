@@ -328,16 +328,36 @@ export type EvalEvent =
   | { event: "progress"; data: EvalProgress }
   | { event: "result"; data: EvalResult };
 
+export type PresentationErrorEvent = Schemas["PresentationErrorEvent"];
+
 export type ConversionEvent =
-  | { event: "conversion_start"; data: { slide_ids: string[]; title: string } }
-  | {
-      event: "conversion_research";
-      data: { query: string; results: WebResearchResult[]; warning?: string | null };
-    }
+  | { event: "conversion_start"; data: ConversionStartEventData }
+  | { event: "conversion_research"; data: ConversionResearchEventData }
   | { event: "token"; data: { text: string } }
   | { event: "conversion_saved"; data: ConversionSavedEvent }
-  | { event: "conversion_done"; data: ConversionDoneEvent }
+  | { event: "presentation_error"; data: PresentationErrorEvent }
+  | { event: "conversion_done"; data: ConversionDoneEventData }
   | { event: "error"; data: { message: string; retryable: boolean } };
+
+type ConversionStartEventData = {
+  presentation_index: number;
+  presentation_total: number;
+  slide_id: string | null;
+  title: string;
+};
+
+type ConversionResearchEventData = {
+  presentation_index: number;
+  queries: string[];
+  results: WebResearchResult[];
+  warning?: string | null;
+};
+
+type ConversionDoneEventData = {
+  saved: ConversionSavedEvent[];
+  failed: PresentationErrorEvent[];
+  research_count: number;
+};
 
 export function streamSlideConversion(
   payload: SlideConversionRequest,
