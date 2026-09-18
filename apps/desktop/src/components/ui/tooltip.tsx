@@ -53,4 +53,21 @@ function TooltipContent({
   )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+function IconTooltip({
+  label,
+  children,
+  side = "top",
+}: {
+  label: React.ReactNode
+  children: React.ReactElement
+  side?: React.ComponentProps<typeof TooltipPrimitive.Content>["side"]
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side}>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, IconTooltip }

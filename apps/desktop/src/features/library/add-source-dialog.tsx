@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { api } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
 
@@ -30,7 +31,15 @@ function globs(value: string): string[] {
     .filter(Boolean);
 }
 
-export function AddSourceDialog({ trigger }: { trigger: React.ReactNode }) {
+export function AddSourceDialog({
+  trigger,
+  triggerLabel,
+  projectId,
+}: {
+  trigger: React.ReactElement;
+  triggerLabel?: string;
+  projectId?: string;
+}) {
   const queryClient = useQueryClient();
   const [openDialog, setOpenDialog] = useState(false);
   const [path, setPath] = useState("");
@@ -47,6 +56,7 @@ export function AddSourceDialog({ trigger }: { trigger: React.ReactNode }) {
         exclude_globs: globs(exclude),
         max_file_mb: maxFileMb,
         watch,
+        project_id: projectId,
       }),
     onSuccess: (source) => {
       void queryClient.invalidateQueries({ queryKey: keys.sources });
@@ -65,7 +75,13 @@ export function AddSourceDialog({ trigger }: { trigger: React.ReactNode }) {
 
   return (
     <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {triggerLabel ? (
+        <IconTooltip label={triggerLabel}>
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+        </IconTooltip>
+      ) : (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add a source folder</DialogTitle>

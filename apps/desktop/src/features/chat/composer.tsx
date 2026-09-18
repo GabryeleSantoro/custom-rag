@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const MAX_ROWS_PX = 180;
@@ -67,20 +68,29 @@ export function Composer({
             className="max-h-45 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />
           {streaming ? (
-            <Button size="icon" variant="secondary" className="size-8" onClick={onStop}>
-              <SquareIcon className="size-3.5 fill-current" />
-              <span className="sr-only">Stop</span>
-            </Button>
+            <IconTooltip label="Stop generating">
+              <Button
+                size="icon"
+                variant="secondary"
+                className="size-8"
+                aria-label="Stop generating"
+                onClick={onStop}
+              >
+                <SquareIcon className="size-3.5 fill-current" />
+              </Button>
+            </IconTooltip>
           ) : (
-            <Button
-              size="icon"
-              className="size-8"
-              disabled={!value.trim() || disabled}
-              onClick={submit}
-            >
-              <ArrowUpIcon className="size-4" />
-              <span className="sr-only">Send</span>
-            </Button>
+            <IconTooltip label="Send">
+              <Button
+                size="icon"
+                className="size-8"
+                aria-label="Send"
+                disabled={!value.trim() || disabled}
+                onClick={submit}
+              >
+                <ArrowUpIcon className="size-4" />
+              </Button>
+            </IconTooltip>
           )}
         </div>
 

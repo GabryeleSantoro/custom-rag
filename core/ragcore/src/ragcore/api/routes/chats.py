@@ -43,6 +43,8 @@ def update_project(project_id: str, payload: ChatProjectPatch, store: StoreDep) 
         project.name = payload.name.strip() or project.name
     if payload.pinned is not None:
         project.pinned = payload.pinned
+    if payload.use_global_sources is not None:
+        project.use_global_sources = payload.use_global_sources
     project.updated_at = datetime.now(tz=UTC)
     return project
 
@@ -52,6 +54,11 @@ def delete_project(project_id: str, store: StoreDep) -> Ok:
     if project_id not in store.projects:
         raise HTTPException(404, "project not found")
     store.projects.pop(project_id)
+    # Project folders remain available as global knowledge when their project
+    # is removed; deleting a project must not delete files from the index.
+    for source in store.sources.values():
+        if source.project_id == project_id:
+            source.project_id = None
     for session in store.sessions.values():
         if session.project_id == project_id:
             session.project_id = None

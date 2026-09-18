@@ -24,6 +24,7 @@ from ragcore.api.schemas import (
     ErrorEvent,
     ModeEvent,
     Ok,
+    QueryFilters,
     QueryRequest,
     SourcesEvent,
     StartEvent,
@@ -49,6 +50,44 @@ GLOBAL_HINTS = (
 )
 
 _cancelled: set[str] = set()
+
+
+def project_filters(store, session_id: str, filters: QueryFilters) -> QueryFilters:
+    """Restrict chats to global knowledge plus the current project's folders."""
+    session = store.sessions.get(session_id)
+    global_ids = [source.id for source in store.sources.values() if source.project_id is None]
+    allowed = set(global_ids)
+
+    if session is not None and session.project_id is not None:
+        project = store.projects.get(session.project_id)
+        if project is not None:
+            allowed = {
+                source.id
+                for source in store.sources.values()
+                if source.project_id == project.id
+            }
+            if project.use_global_sources:
+                allowed.update(global_ids)
+
+    scoped = filters.model_copy(deep=True)
+    requested = scoped.source_ids
+    scoped.source_ids = (
+        sorted(allowed)
+        if requested is None
+        else [source_id for source_id in requested if source_id in allowed]
+    )
+    allowed_documents = {
+        document.id
+        for document in store.documents.values()
+        if document.source_id in allowed
+    }
+    requested_documents = scoped.doc_ids
+    scoped.doc_ids = (
+        sorted(allowed_documents)
+        if requested_documents is None
+        else [doc_id for doc_id in requested_documents if doc_id in allowed_documents]
+    )
+    return scoped
 
 
 def route_mode(question: str) -> tuple[str, str]:
@@ -77,10 +116,11 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
             mode, reason = payload.mode, "Set manually"
         yield frame("mode", ModeEvent(mode=mode, reason=reason))
 
+        filters = project_filters(store, session_id, payload.filters)
         chunks, latency, candidates = store.retriever.search(
             question,
             settings=store.settings.retrieval,
-            filters=payload.filters,
+            filters=filters,
             doc_meta=store.doc_meta(),
         )
         yield frame(

@@ -60,9 +60,9 @@ class Retriever:
         meta = doc_meta.get(chunk.doc_id)
         if meta is None:
             return False
-        if filters.doc_ids and chunk.doc_id not in filters.doc_ids:
+        if filters.doc_ids is not None and chunk.doc_id not in filters.doc_ids:
             return False
-        if filters.source_ids and meta["source_id"] not in filters.source_ids:
+        if filters.source_ids is not None and meta["source_id"] not in filters.source_ids:
             return False
         if filters.exts and meta["ext"] not in filters.exts:
             return False

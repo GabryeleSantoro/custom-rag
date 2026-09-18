@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { SourceSidebar } from "@/features/library/source-sidebar";
 import { bytes, relativeTime } from "@/lib/format";
 import { api } from "@/lib/ipc";
@@ -161,33 +162,39 @@ export function LibraryView() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                        <Button asChild variant="ghost" size="icon" className="size-7">
-                          <Link
-                            to="/reader/$docId"
-                            params={{ docId: document.id }}
-                            aria-label={`Open ${document.title}`}
+                        <IconTooltip label={`Open ${document.title}`}>
+                          <Button asChild variant="ghost" size="icon" className="size-7">
+                            <Link
+                              to="/reader/$docId"
+                              params={{ docId: document.id }}
+                              aria-label={`Open ${document.title}`}
+                            >
+                              <BookOpenIcon className="size-3.5" />
+                            </Link>
+                          </Button>
+                        </IconTooltip>
+                        <IconTooltip label="Re-index">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            aria-label="Re-index"
+                            onClick={() => reindex.mutate([document.id])}
                           >
-                            <BookOpenIcon className="size-3.5" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          aria-label="Re-index"
-                          onClick={() => reindex.mutate([document.id])}
-                        >
-                          <RefreshCwIcon className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          aria-label="Remove"
-                          onClick={() => remove.mutate(document.id)}
-                        >
-                          <Trash2Icon className="size-3.5" />
-                        </Button>
+                            <RefreshCwIcon className="size-3.5" />
+                          </Button>
+                        </IconTooltip>
+                        <IconTooltip label="Remove">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            aria-label="Remove"
+                            onClick={() => remove.mutate(document.id)}
+                          >
+                            <Trash2Icon className="size-3.5" />
+                          </Button>
+                        </IconTooltip>
                       </div>
                     </TableCell>
                   </TableRow>

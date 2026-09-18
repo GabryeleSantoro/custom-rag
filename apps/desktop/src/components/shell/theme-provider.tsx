@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IconTooltip } from "@/components/ui/tooltip";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -87,16 +88,18 @@ export function ThemeToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-9 text-rail-foreground hover:text-foreground"
-          aria-label="Theme"
-        >
-          <active.icon className="size-4.5" />
-        </Button>
-      </DropdownMenuTrigger>
+      <IconTooltip label="Theme" side="right">
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9 text-rail-foreground hover:text-foreground"
+            aria-label="Theme"
+          >
+            <active.icon className="size-4.5" />
+          </Button>
+        </DropdownMenuTrigger>
+      </IconTooltip>
       <DropdownMenuContent side="right" align="end">
         {OPTIONS.map((option) => (
           <DropdownMenuItem key={option.value} onSelect={() => setTheme(option.value)}>

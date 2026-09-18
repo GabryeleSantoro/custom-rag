@@ -147,6 +147,46 @@ def test_projects_group_and_pin_chats(client: TestClient) -> None:
     assert client.get(f"/chats/{session_body['id']}").json()["project_id"] is None
 
 
+def test_project_can_disable_global_knowledge_and_add_project_folder(
+    client: TestClient, tmp_path, read_events: Events
+) -> None:
+    project = client.post("/chats/projects", json={"name": "Private research"}).json()
+    folder = tmp_path / "private"
+    folder.mkdir()
+    (folder / "brief.md").write_text("Project-only material about the cobalt launch.")
+
+    project_source = client.post(
+        "/sources",
+        json={"path": str(folder), "include_globs": ["**/*.md"], "project_id": project["id"]},
+    )
+    assert project_source.status_code == 201
+    assert project_source.json()["project_id"] == project["id"]
+
+    updated = client.patch(
+        f"/chats/projects/{project['id']}", json={"use_global_sources": False}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["use_global_sources"] is False
+
+    session = client.post("/chats", json={"project_id": project["id"]}).json()
+    with client.stream(
+        "POST",
+        "/query",
+        json={"q": "reciprocal rank fusion", "session_id": session["id"]},
+    ) as response:
+        disabled_events = dict(read_events(response))
+    assert disabled_events["sources"]["chunks"] == []
+
+    client.patch(f"/chats/projects/{project['id']}", json={"use_global_sources": True})
+    with client.stream(
+        "POST",
+        "/query",
+        json={"q": "reciprocal rank fusion", "session_id": session["id"]},
+    ) as response:
+        enabled_events = dict(read_events(response))
+    assert enabled_events["sources"]["chunks"]
+
+
 def test_nested_pdfs_are_indexed_when_adding_a_source(client: TestClient, tmp_path) -> None:
     nested = tmp_path / "research" / "papers" / "2026"
     nested.mkdir(parents=True)

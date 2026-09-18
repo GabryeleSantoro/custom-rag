@@ -61,6 +61,7 @@ class SourceCreate(BaseModel):
     exclude_globs: list[str] = Field(default_factory=list)
     max_file_mb: int = 100
     watch: bool = True
+    project_id: str | None = None
 
 
 class Source(SourceCreate):
@@ -497,6 +498,7 @@ class ChatProject(BaseModel):
     id: str
     name: str
     pinned: bool = False
+    use_global_sources: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -508,6 +510,7 @@ class ChatProjectCreate(BaseModel):
 class ChatProjectPatch(BaseModel):
     name: str | None = None
     pinned: bool | None = None
+    use_global_sources: bool | None = None
 
 
 class ChatMessage(BaseModel):

@@ -710,6 +710,11 @@ export interface components {
              */
             pinned: boolean;
             /**
+             * Use Global Sources
+             * @default true
+             */
+            use_global_sources: boolean;
+            /**
              * Created At
              * Format: date-time
              */
@@ -731,6 +736,8 @@ export interface components {
             name?: string | null;
             /** Pinned */
             pinned?: boolean | null;
+            /** Use Global Sources */
+            use_global_sources?: boolean | null;
         };
         /** ChatSession */
         ChatSession: {
@@ -1616,6 +1623,8 @@ export interface components {
              * @default true
              */
             watch: boolean;
+            /** Project Id */
+            project_id?: string | null;
             /** Id */
             id: string;
             /**
@@ -1659,6 +1668,8 @@ export interface components {
              * @default true
              */
             watch: boolean;
+            /** Project Id */
+            project_id?: string | null;
         };
         /** SourcesEvent */
         SourcesEvent: {

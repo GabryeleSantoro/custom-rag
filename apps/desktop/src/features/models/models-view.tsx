@@ -8,6 +8,7 @@ import { Page, PageBody, PageHeader } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { HubBrowser } from "@/features/models/hub-browser";
 import { ModelDetailSheet } from "@/features/models/model-detail";
 import { bytes, relativeTime } from "@/lib/format";
@@ -77,9 +78,17 @@ function InstalledCard({
           </Button>
         ) : null}
         {!model.shipped && !model.active ? (
-          <Button variant="ghost" size="icon" className="size-7" aria-label="Remove" onClick={onRemove}>
-            <Trash2Icon className="size-3.5" />
-          </Button>
+          <IconTooltip label="Remove">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Remove"
+              onClick={onRemove}
+            >
+              <Trash2Icon className="size-3.5" />
+            </Button>
+          </IconTooltip>
         ) : null}
       </div>
     </div>

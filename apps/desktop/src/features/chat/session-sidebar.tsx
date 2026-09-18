@@ -33,6 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { api, type ChatProject, type ChatSession } from "@/lib/ipc";
 import { relativeTime } from "@/lib/format";
 import { keys, projectsQuery, sessionsQuery } from "@/lib/queries";
@@ -92,15 +93,17 @@ function SessionRow({
             </p>
           </Link>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Delete ${session.title}`}
-            onClick={() => onDelete(session.id)}
-            className="absolute top-1.5 right-1 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-          >
-            <Trash2Icon className="size-3.5" />
-          </Button>
+          <IconTooltip label={`Delete ${session.title}`}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Delete ${session.title}`}
+              onClick={() => onDelete(session.id)}
+              className="absolute top-1.5 right-1 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            >
+              <Trash2Icon className="size-3.5" />
+            </Button>
+          </IconTooltip>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -170,18 +173,20 @@ function ProjectRow({
               {chatCount}
             </span>
           </button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-            aria-label={`New chat in ${project.name}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onNewChat();
-            }}
-          >
-            <PlusIcon className="size-3.5" />
-          </Button>
+          <IconTooltip label={`New chat in ${project.name}`}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              aria-label={`New chat in ${project.name}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onNewChat();
+              }}
+            >
+              <PlusIcon className="size-3.5" />
+            </Button>
+          </IconTooltip>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -327,20 +332,24 @@ export function ChatSessionSidebar() {
         title="Chats"
         action={
           <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="icon" className="size-7" asChild>
-              <Link to="/chat" aria-label="New chat">
-                <MessageSquarePlusIcon className="size-4" />
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              aria-label="New project"
-              onClick={() => setProjectDialogOpen(true)}
-            >
-              <FolderPlusIcon className="size-4" />
-            </Button>
+            <IconTooltip label="New chat">
+              <Button variant="ghost" size="icon" className="size-7" asChild>
+                <Link to="/chat" aria-label="New chat">
+                  <MessageSquarePlusIcon className="size-4" />
+                </Link>
+              </Button>
+            </IconTooltip>
+            <IconTooltip label="New project">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label="New project"
+                onClick={() => setProjectDialogOpen(true)}
+              >
+                <FolderPlusIcon className="size-4" />
+              </Button>
+            </IconTooltip>
           </div>
         }
       >

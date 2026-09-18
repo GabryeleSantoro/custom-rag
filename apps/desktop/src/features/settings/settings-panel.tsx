@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IconTooltip } from "@/components/ui/tooltip";
 import { ConnectionDialog } from "@/features/settings/connection-dialog";
 import { SETTINGS_SECTIONS } from "@/features/settings/settings-sidebar";
 import {
@@ -163,15 +164,17 @@ function ConnectionsSection() {
                 </Button>
               }
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              aria-label="Remove"
-              onClick={() => remove.mutate(connection.id)}
-            >
-              <Trash2Icon className="size-3.5" />
-            </Button>
+            <IconTooltip label="Remove">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label="Remove"
+                onClick={() => remove.mutate(connection.id)}
+              >
+                <Trash2Icon className="size-3.5" />
+              </Button>
+            </IconTooltip>
           </div>
         </div>
       ))}

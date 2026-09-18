@@ -15,6 +15,8 @@ def list_sources(store: StoreDep) -> list[Source]:
 
 @router.post("", response_model=Source, status_code=201)
 async def add_source(payload: SourceCreate, store: StoreDep, jobs: JobsDep) -> Source:
+    if payload.project_id is not None and payload.project_id not in store.projects:
+        raise HTTPException(404, "project not found")
     source = store.add_source(payload)
     documents = store.ingest_source(source.id)
 

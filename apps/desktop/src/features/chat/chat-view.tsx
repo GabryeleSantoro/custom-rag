@@ -6,6 +6,7 @@ import { CloudIcon, FileTextIcon, PanelRightIcon } from "lucide-react";
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import { SourcePanel } from "@/features/chat/source-panel";
 import { useChat } from "@/features/chat/use-chat";
 import type { CitationTarget } from "@/features/chat/answer-text";
 import { api, type ChatMessage, type QueryMode } from "@/lib/ipc";
-import { connectionsQuery, keys, sourcesQuery } from "@/lib/queries";
+import { connectionsQuery, keys, projectsQuery, sourcesQuery } from "@/lib/queries";
 
 const SUGGESTIONS = [
   "How many candidates should the reranker get?",
@@ -31,13 +32,18 @@ const SUGGESTIONS = [
 export function ChatView({ sessionId }: { sessionId: string | null }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<QueryMode>("auto");
-  const [sourceId, setSourceId] = useState<string>("all");
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[] | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [selectedChunk, setSelectedChunk] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   const { pending, isStreaming, send, cancel, activeSession } = useChat(sessionId);
   const sources = useQuery(sourcesQuery);
+  const projects = useQuery(projectsQuery);
+  const documents = useQuery({
+    queryKey: keys.documents({ limit: 500 }),
+    queryFn: () => api.listDocuments({ limit: 500 }),
+  });
   const connections = useQuery(connectionsQuery);
 
   const session = useQuery({
@@ -90,15 +96,47 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
   };
 
   const scopeDocId = session.data?.scope_doc_id ?? null;
+  const activeProject = projects.data?.find((project) => project.id === session.data?.project_id);
+  const globalSourceIds = new Set(
+    (sources.data ?? [])
+      .filter((source) => source.project_id === null)
+      .map((source) => source.id),
+  );
+  const availableSourceIds = new Set(
+    (sources.data ?? [])
+      .filter(
+        (source) =>
+          source.project_id === null || source.project_id === activeProject?.id,
+      )
+      .map((source) => source.id),
+  );
+  const availableDocumentIds = (documents.data?.items ?? [])
+    .filter(
+      (document) =>
+        availableSourceIds.has(document.source_id) &&
+        (!activeProject ||
+          activeProject.use_global_sources ||
+          !globalSourceIds.has(document.source_id)),
+    )
+    .map((document) => document.id);
+
+  useEffect(() => {
+    setSelectedDocumentIds(null);
+  }, [activeProject?.id]);
+
+  const availableDocumentIdSet = new Set(availableDocumentIds);
+  const includedDocumentIds =
+    selectedDocumentIds?.filter((documentId) => availableDocumentIdSet.has(documentId)) ??
+    availableDocumentIds;
+
+  const selectedDocumentCount = includedDocumentIds.length;
 
   const onSend = (text: string) => {
     send(text, {
       mode,
       filters: scopeDocId
         ? { doc_ids: [scopeDocId] }
-        : sourceId === "all"
-          ? {}
-          : { source_ids: [sourceId] },
+        : { doc_ids: includedDocumentIds },
     });
   };
 
@@ -108,16 +146,18 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
         <PageHeader
           title={sessionId ? undefined : "New chat"}
           actions={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-pressed={panelOpen}
-              onClick={() => setPanelOpen((open) => !open)}
-            >
-              <PanelRightIcon className="size-4" />
-              <span className="sr-only">Toggle sources</span>
-            </Button>
+            <IconTooltip label={panelOpen ? "Hide resources" : "Show resources"}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                aria-pressed={panelOpen}
+                aria-label={panelOpen ? "Hide resources" : "Show resources"}
+                onClick={() => setPanelOpen((open) => !open)}
+              >
+                <PanelRightIcon className="size-4" />
+              </Button>
+            </IconTooltip>
           }
         >
           <div className="min-w-0 flex-1">
@@ -230,24 +270,20 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
             </SelectContent>
           </Select>
 
-          <Select value={sourceId} onValueChange={setSourceId} disabled={Boolean(scopeDocId)}>
-            <SelectTrigger size="sm" className="h-7 gap-1 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              {(sources.data ?? []).map((source) => (
-                <SelectItem key={source.id} value={source.id}>
-                  {source.path.split("/").slice(-2).join("/")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Badge variant="secondary" className="h-7 gap-1.5 font-normal">
+            <FileTextIcon className="size-3" />
+            {scopeDocId
+              ? "1 file selected"
+              : `${selectedDocumentCount} file${selectedDocumentCount === 1 ? "" : "s"} selected`}
+          </Badge>
         </Composer>
       </Page>
 
       {panelOpen ? (
         <SourcePanel
+          project={activeProject ?? null}
+          selectedDocumentIds={selectedDocumentIds}
+          onSelectionChange={setSelectedDocumentIds}
           chunks={lastChunks}
           citations={lastCitations}
           selectedChunkId={selectedChunk}
