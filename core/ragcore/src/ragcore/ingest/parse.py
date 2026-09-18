@@ -48,6 +48,7 @@ Semantics decided here, that Task 8/9 depend on:
 
 from __future__ import annotations
 
+import posixpath
 import re
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -57,6 +58,8 @@ from pathlib import Path
 from zipfile import ZipFile
 
 _HEADING = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
+_NOTES_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide"
+_HYPERLINK_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 
 
 class UnsupportedFormat(Exception):
@@ -160,8 +163,49 @@ def _pdf(path: Path) -> ParsedDoc:
     return ParsedDoc(title=path.stem, pages=_paginate(sections), needs_ocr=needs_ocr)
 
 
+def _slide_relationships(archive: ZipFile, slide_name: str) -> dict[str, tuple[str, str]]:
+    """``rId`` -> ``(relationship type, target)`` for one slide's ``.rels`` part."""
+    rels_name = slide_name.replace("ppt/slides/", "ppt/slides/_rels/") + ".rels"
+    if rels_name not in archive.namelist():
+        return {}
+    root = ET.fromstring(archive.read(rels_name))
+    return {rel.get("Id"): (rel.get("Type", ""), rel.get("Target", "")) for rel in root}
+
+
+def _notes_text(archive: ZipFile, rels: dict[str, tuple[str, str]]) -> str:
+    target = next((target for kind, target in rels.values() if kind == _NOTES_REL), None)
+    if target is None:
+        return ""
+    notes_path = posixpath.normpath(posixpath.join("ppt/slides", target))
+    if notes_path not in archive.namelist():
+        return ""
+    root = ET.fromstring(archive.read(notes_path))
+    return " ".join(
+        node.text.strip()
+        for node in root.iter()
+        if node.tag.endswith("}t") and node.text and node.text.strip()
+    )
+
+
+def _slide_links(root: ET.Element, rels: dict[str, tuple[str, str]]) -> list[str]:
+    r_ns = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+    links: list[str] = []
+    seen: set[str] = set()
+    for node in root.iter():
+        if not node.tag.endswith("}hlinkClick"):
+            continue
+        rid = node.get(f"{r_ns}id")
+        if not rid or rid not in rels:
+            continue
+        kind, target = rels[rid]
+        if kind == _HYPERLINK_REL and target and target not in seen:
+            seen.add(target)
+            links.append(target)
+    return links
+
+
 def _pptx(path: Path) -> ParsedDoc:
-    """Extract visible text from a PowerPoint package, one page per slide."""
+    """Extract visible text, speaker notes and external links, one page per slide."""
     with ZipFile(path) as archive:
         slide_names = sorted(
             name
@@ -177,7 +221,16 @@ def _pptx(path: Path) -> ParsedDoc:
                 for node in root.iter()
                 if node.tag.endswith("}t") and node.text and node.text.strip()
             )
-            sections.append((f"{path.stem} > Slide {slide_number}", text))
+            rels = _slide_relationships(archive, name)
+            notes = _notes_text(archive, rels)
+            links = _slide_links(root, rels)
+
+            parts = [text] if text else []
+            if notes:
+                parts.append(f"Note del relatore: {notes}")
+            if links:
+                parts.append("Link nella slide: " + ", ".join(links))
+            sections.append((f"{path.stem} > Slide {slide_number}", "\n\n".join(parts)))
     return ParsedDoc(title=path.stem, pages=_paginate(sections))
 
 
