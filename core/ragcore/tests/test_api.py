@@ -245,6 +245,10 @@ def test_nested_pdfs_are_indexed_when_adding_a_source(client: TestClient, tmp_pa
 
 def test_wipe_sends_the_user_back_through_onboarding(client: TestClient) -> None:
     assert client.get("/settings").json()["onboarded"] is True
+    client.post(
+        "/connections",
+        json={"name": "LM Studio", "kind": "openai-compatible", "model_id": "qwen3-8b-instruct"},
+    )
 
     response = client.post("/settings/wipe", json={"confirm": "DELETE", "keep_connections": True})
     assert response.status_code == 200

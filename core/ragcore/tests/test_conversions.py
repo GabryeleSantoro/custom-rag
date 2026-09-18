@@ -12,16 +12,21 @@ async def _fake_probe_ok(store, kind, base_url, model_id, api_key):
     return ConnectionTestResult(ok=True, reachable=True, model_found=True, streaming=True)
 
 
-def _mock_ok(monkeypatch, search_results=None) -> None:
+def _mock_ok(client, monkeypatch, search_results=None) -> None:
     async def fake_search(query: str):
         return search_results or [], None
 
+    client.post(
+        "/connections",
+        json={"name": "LM Studio", "kind": "openai-compatible", "model_id": "qwen3-8b-instruct"},
+    )
     monkeypatch.setattr(conversions, "probe_connection", _fake_probe_ok)
     monkeypatch.setattr(conversions, "_search_web", fake_search)
 
 
 def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkeypatch) -> None:
     _mock_ok(
+        client,
         monkeypatch,
         [WebResearchResult(title="A useful reference", url="https://example.com/reference", snippet="...")],
     )
@@ -50,8 +55,6 @@ def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkey
 
 def test_slide_conversion_is_disabled_without_an_active_connection(client) -> None:
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
-    connection_id = client.get("/connections").json()[0]["id"]
-    assert client.delete(f"/connections/{connection_id}").status_code == 200
 
     response = client.post("/conversions/slides", json={"slide_ids": [slide_id]})
 
@@ -61,6 +64,10 @@ def test_slide_conversion_is_disabled_without_an_active_connection(client) -> No
 def test_slide_conversion_is_disabled_when_the_active_connection_is_unreachable(
     client, monkeypatch
 ) -> None:
+    client.post(
+        "/connections",
+        json={"name": "LM Studio", "kind": "openai-compatible", "model_id": "qwen3-8b-instruct"},
+    )
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
     async def fake_probe(store, kind, base_url, model_id, api_key):
@@ -79,7 +86,7 @@ def test_slide_conversion_is_disabled_when_the_active_connection_is_unreachable(
 def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
     client, read_events, monkeypatch, tmp_path
 ) -> None:
-    _mock_ok(monkeypatch)
+    _mock_ok(client, monkeypatch)
     slide = tmp_path / "local-slide.md"
     slide.write_text("# Local slide\n\n## Context\n\nThis file is only used for conversion.\n")
 
@@ -96,7 +103,7 @@ def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
 def test_slide_conversion_processes_each_presentation_independently(
     client, read_events, monkeypatch, tmp_path
 ) -> None:
-    _mock_ok(monkeypatch)
+    _mock_ok(client, monkeypatch)
     good = tmp_path / "good.md"
     good.write_text("# Good\n\n## Context\n\nReadable content.\n")
     missing = str(tmp_path / "missing.pdf")
@@ -120,7 +127,7 @@ def test_slide_conversion_processes_each_presentation_independently(
 
 
 def test_slide_conversion_uses_the_hardened_system_prompt(client, monkeypatch) -> None:
-    _mock_ok(monkeypatch)
+    _mock_ok(client, monkeypatch)
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
     captured: dict = {}
 

@@ -4,6 +4,13 @@ from __future__ import annotations
 
 import httpx
 
+_LM_STUDIO = {
+    "name": "LM Studio",
+    "kind": "openai-compatible",
+    "base_url": "http://localhost:1234/v1",
+    "model_id": "qwen3-8b-instruct",
+}
+
 
 def test_probe_reports_ok_when_the_model_is_offered(client, monkeypatch) -> None:
     async def fake_get(self, url, headers=None):
@@ -11,7 +18,7 @@ def test_probe_reports_ok_when_the_model_is_offered(client, monkeypatch) -> None
         return httpx.Response(200, json={"data": [{"id": "qwen3-8b-instruct"}]})
 
     monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
-    connection_id = client.get("/connections").json()[0]["id"]
+    connection_id = client.post("/connections", json=_LM_STUDIO).json()["id"]
 
     response = client.post("/connections/test", json={"connection_id": connection_id})
 
@@ -35,7 +42,7 @@ def test_probe_reports_unreachable_when_the_endpoint_refuses_the_connection(
         raise httpx.ConnectError("connection refused", request=httpx.Request("GET", url))
 
     monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
-    connection_id = client.get("/connections").json()[0]["id"]
+    connection_id = client.post("/connections", json=_LM_STUDIO).json()["id"]
 
     response = client.post("/connections/test", json={"connection_id": connection_id})
 

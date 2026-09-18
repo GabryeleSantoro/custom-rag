@@ -75,14 +75,12 @@ class Store:
 
     def _seed(self) -> None:
         self._seed_models()
-        self._seed_connections()
         fixture_dir = find_fixture_dir()
         if fixture_dir:
             source = self.add_source(
                 SourceCreate(path=str(fixture_dir), include_globs=["**/*.md", "**/*.txt"])
             )
             self.ingest_source(source.id)
-        self._seed_sessions()
 
     def _seed_models(self) -> None:
         shipped = [
@@ -117,36 +115,6 @@ class Store:
         ]
         for model in shipped:
             self.models[model.id] = model
-
-    def _seed_connections(self) -> None:
-        conn = Connection(
-            id="conn_lmstudio",
-            name="LM Studio",
-            kind="openai-compatible",
-            base_url="http://localhost:1234/v1",
-            model_id="qwen3-8b-instruct",
-            context_window=32768,
-            max_output_tokens=2048,
-            thinking="off",
-            is_remote=False,
-            has_api_key=False,
-            active=True,
-            created_at=_now() - timedelta(days=1),
-        )
-        self.connections[conn.id] = conn
-        self.settings.active_connection_id = conn.id
-
-    def _seed_sessions(self) -> None:
-        for title, ago in (("Reranking candidate counts", 2), ("How chunking works", 26)):
-            session = ChatSession(
-                id=_id("chat"),
-                title=title,
-                message_count=0,
-                created_at=_now() - timedelta(hours=ago),
-                updated_at=_now() - timedelta(hours=ago),
-            )
-            self.sessions[session.id] = session
-            self.messages[session.id] = []
 
     # ------------------------------------------------------------------ sources
 
