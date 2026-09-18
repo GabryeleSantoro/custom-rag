@@ -39,6 +39,8 @@ class EmbedClient:
         return [row["embedding"] for row in rows]
 
     async def embed(self, texts: list[str], *, batch_size: int = 32) -> list[list[float]]:
+        if not texts:
+            return []
         out: list[list[float]] = []
         for start in range(0, len(texts), batch_size):
             out.extend(await self._post(texts[start : start + batch_size]))

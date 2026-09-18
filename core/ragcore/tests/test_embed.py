@@ -45,6 +45,30 @@ async def test_batches_are_split(monkeypatch: pytest.MonkeyPatch) -> None:
     assert seen == [32, 32, 6]
 
 
+async def test_fake_client_handles_empty_texts() -> None:
+    result = await FakeEmbedClient().embed([])
+
+    assert result == []
+
+
+async def test_embed_client_handles_empty_texts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = EmbedClient("http://127.0.0.1:8770")
+    called = False
+
+    async def fake_post(texts: list[str]) -> list[list[float]]:
+        nonlocal called
+        called = True
+        return []
+
+    monkeypatch.setattr(client, "_post", fake_post)
+    result = await client.embed([])
+
+    assert result == []
+    assert not called
+
+
 @pytest.mark.requires_models
 async def test_live_server_returns_1024_dimensions() -> None:
     client = EmbedClient("http://127.0.0.1:8770")
