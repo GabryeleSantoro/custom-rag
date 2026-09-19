@@ -22,7 +22,7 @@ jobs:
 
       # Cargo.toml is the single source of the app version; tauri.conf.json inherits it.
       - name: Stamp version
-        run: sed -i '' "0,/^version = /s//version = \"${{ steps.version.outputs.next }}\"/" apps/desktop/src-tauri/Cargo.toml
+        run: sed -i '' "s/^version = .*/version = \"${{ steps.version.outputs.next }}\"/" apps/desktop/src-tauri/Cargo.toml
 
       - uses: oven-sh/setup-bun@v2
       - uses: dtolnay/rust-toolchain@stable
