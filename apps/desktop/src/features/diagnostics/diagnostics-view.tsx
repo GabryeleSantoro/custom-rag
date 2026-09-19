@@ -47,7 +47,6 @@ const ROLE_BLURB: Record<string, string> = {
   ragcore: "Python core: ingestion, retrieval, the API every screen reads from.",
   embedding: "Embedding server. Turns chunks and questions into vectors.",
   reranking: "Cross-encoder. Reorders candidates before the prompt is packed.",
-  generation: "In-app chat model. Only running when a local model is active.",
 };
 
 function Section({

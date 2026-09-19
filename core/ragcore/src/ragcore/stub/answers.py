@@ -176,11 +176,6 @@ async def llm_stream(
     max_tokens: int | None = None,
 ) -> AsyncIterator[str]:
     """Stream from the connection the user activated, and from nothing else."""
-    if connection.kind == "local-inapp":
-        raise RuntimeError(
-            "The in-app generation model cannot answer yet. "
-            "Connect an OpenAI-compatible or Anthropic endpoint in Settings."
-        )
     if connection.kind != "anthropic" and not connection.base_url:
         raise RuntimeError(f"Connection {connection.name!r} has no base URL")
 

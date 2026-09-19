@@ -34,7 +34,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "resources": ["binaries/ragcore"]
   },
   "plugins": {
     "updater": {

@@ -53,22 +53,6 @@ def test_probe_reports_unreachable_when_the_endpoint_refuses_the_connection(
     assert "ConnectError" in result["error"]
 
 
-def test_probe_for_local_inapp_checks_the_active_generation_model(client) -> None:
-    response = client.post("/connections/test", json={"kind": "local-inapp"})
-
-    assert response.status_code == 200
-    result = response.json()
-    assert result == {
-        "ok": False,
-        "reachable": False,
-        "model_found": False,
-        "streaming": True,
-        "tokens_per_second": None,
-        "latency_ms": None,
-        "error": "No in-app generation model is active",
-    }
-
-
 def test_probe_rejects_an_unknown_connection_id(client) -> None:
     response = client.post("/connections/test", json={"connection_id": "missing"})
 

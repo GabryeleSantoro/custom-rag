@@ -27,11 +27,6 @@ const ROLES: { role: ModelRole; label: string; blurb: string }[] = [
     label: "Reranker",
     blurb: "Scores how well each candidate answers the question. Swappable at any time.",
   },
-  {
-    role: "generation",
-    label: "Generation",
-    blurb: "Writes the answer. Download one to run it in-app instead of connecting a server.",
-  },
 ];
 
 function InstalledCard({
@@ -207,9 +202,7 @@ export function ModelsView() {
                 <div className="rounded-lg border border-dashed border-border p-8 text-center">
                   <p className="text-sm font-medium">No {meta.label.toLowerCase()} installed</p>
                   <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                    {role === "generation"
-                      ? "Download one here to answer questions without an external server, or connect a provider in Settings."
-                      : "Browse Hugging Face to install one."}
+                    Browse Hugging Face to install one.
                   </p>
                 </div>
               ) : null}

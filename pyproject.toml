@@ -19,6 +19,8 @@ members = ["core/ragcore"]
 ragcore = { workspace = true }
 
 [dependency-groups]
+# Only used by scripts/build-sidecar.sh; keeps PyInstaller out of the dev env.
+build = ["pyinstaller>=6.16"]
 dev = [
     "pytest>=8.4",
     "pytest-asyncio>=1.0",

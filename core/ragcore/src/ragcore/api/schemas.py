@@ -19,7 +19,7 @@ ProcessState = Literal["stopped", "starting", "ready", "restarting", "error"]
 
 class ProcessStatus(BaseModel):
     name: str
-    role: Literal["ragcore", "embedding", "reranking", "generation"]
+    role: Literal["ragcore", "embedding", "reranking"]
     state: ProcessState
     pid: int | None = None
     port: int | None = None
@@ -315,7 +315,7 @@ class ConversionDoneEvent(BaseModel):
 # --------------------------------------------------------------------- connections
 
 
-ConnectionKind = Literal["openai-compatible", "anthropic", "local-inapp"]
+ConnectionKind = Literal["openai-compatible", "anthropic"]
 ThinkingLevel = Literal["off", "low", "medium", "high"]
 ProviderSort = Literal["price", "throughput", "latency"]
 
@@ -383,7 +383,7 @@ class ConnectionTestResult(BaseModel):
 # -------------------------------------------------------------------------- models
 
 
-ModelRole = Literal["embedding", "reranking", "generation"]
+ModelRole = Literal["embedding", "reranking"]
 FitVerdict = Literal["vram", "ram", "too-large", "unknown"]
 
 
@@ -442,7 +442,6 @@ class ModelInventory(BaseModel):
     installed: list[InstalledModel]
     active_embedding: str | None = None
     active_reranking: str | None = None
-    active_generation: str | None = None
 
 
 class DownloadRequest(BaseModel):

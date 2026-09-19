@@ -25,7 +25,6 @@ import { keys } from "@/lib/queries";
 const ROLE_LABEL: Record<ModelRole, string> = {
   embedding: "embedder",
   reranking: "reranker",
-  generation: "generation model",
 };
 
 function modelJobId(repoId: string, filename: string) {

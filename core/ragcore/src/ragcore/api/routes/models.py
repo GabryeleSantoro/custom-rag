@@ -37,7 +37,6 @@ def inventory(store: StoreDep) -> ModelInventory:
         installed=sorted(store.models.values(), key=lambda m: (m.role, m.name)),
         active_embedding=_active(store, "embedding"),
         active_reranking=_active(store, "reranking"),
-        active_generation=_active(store, "generation"),
     )
 
 

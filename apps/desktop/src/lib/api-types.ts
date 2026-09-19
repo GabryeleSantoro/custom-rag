@@ -854,7 +854,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "openai-compatible" | "anthropic" | "local-inapp";
+            kind: "openai-compatible" | "anthropic";
             /** Base Url */
             base_url?: string | null;
             /** Model Id */
@@ -890,7 +890,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "openai-compatible" | "anthropic" | "local-inapp";
+            kind: "openai-compatible" | "anthropic";
             /** Base Url */
             base_url?: string | null;
             /** Model Id */
@@ -932,7 +932,7 @@ export interface components {
             /** Connection Id */
             connection_id?: string | null;
             /** Kind */
-            kind?: ("openai-compatible" | "anthropic" | "local-inapp") | null;
+            kind?: ("openai-compatible" | "anthropic") | null;
             /** Base Url */
             base_url?: string | null;
             /** Model Id */
@@ -1102,7 +1102,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "embedding" | "reranking" | "generation";
+            role: "embedding" | "reranking";
             /**
              * Activate
              * @default false
@@ -1334,7 +1334,7 @@ export interface components {
             /** Items */
             items: components["schemas"]["HubModel"][];
             /** Role */
-            role?: ("embedding" | "reranking" | "generation") | null;
+            role?: ("embedding" | "reranking") | null;
             /** Query */
             query?: string | null;
         };
@@ -1384,7 +1384,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "embedding" | "reranking" | "generation";
+            role: "embedding" | "reranking";
             /** Name */
             name: string;
             /** Repo Id */
@@ -1467,8 +1467,6 @@ export interface components {
             active_embedding?: string | null;
             /** Active Reranking */
             active_reranking?: string | null;
-            /** Active Generation */
-            active_generation?: string | null;
         };
         /** Ok */
         Ok: {
@@ -1521,7 +1519,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "ragcore" | "embedding" | "reranking" | "generation";
+            role: "ragcore" | "embedding" | "reranking";
             /**
              * State
              * @enum {string}
@@ -2918,7 +2916,7 @@ export interface operations {
     hub_search_models_hub_search_get: {
         parameters: {
             query?: {
-                role?: ("embedding" | "reranking" | "generation") | null;
+                role?: ("embedding" | "reranking") | null;
                 q?: string | null;
                 sort?: string;
                 limit?: number;
@@ -2952,7 +2950,7 @@ export interface operations {
     hub_recommended_models_hub_recommended_get: {
         parameters: {
             query: {
-                role: "embedding" | "reranking" | "generation";
+                role: "embedding" | "reranking";
             };
             header?: never;
             path?: never;
@@ -2983,7 +2981,7 @@ export interface operations {
     hub_detail_models_hub__repo_id__get: {
         parameters: {
             query?: {
-                role?: ("embedding" | "reranking" | "generation") | null;
+                role?: ("embedding" | "reranking") | null;
             };
             header?: never;
             path: {

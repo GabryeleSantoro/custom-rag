@@ -66,6 +66,10 @@ fn keychain_delete(connection_id: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // reqwest is built with `rustls-no-provider` (pulled in by tauri-plugin-updater),
+    // so a crypto provider must exist before the first Client. ring, same as the updater's.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     let hardware = hardware::detect();
     let supervisor = Supervisor::new().expect("could not reserve a port for ragcore");
     let http = reqwest::Client::builder()
@@ -115,4 +119,15 @@ pub fn run() {
             state.supervisor.kill_child();
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    /// reqwest is compiled with `rustls-no-provider`, so building a Client panics
+    /// unless a crypto provider was installed first (see `run`).
+    #[test]
+    fn http_client_builds_with_crypto_provider() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        assert!(reqwest::Client::builder().build().is_ok());
+    }
 }

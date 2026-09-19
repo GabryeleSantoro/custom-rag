@@ -23,8 +23,6 @@ LOCAL_HOSTS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
 
 
 def _is_remote(kind: str, base_url: str | None) -> bool:
-    if kind == "local-inapp":
-        return False
     if kind == "anthropic":
         return True
     return not any(host in (base_url or "") for host in LOCAL_HOSTS)
@@ -103,18 +101,6 @@ async def probe_connection(
     api_key: str | None,
 ) -> ConnectionTestResult:
     """A real probe. Reachability is the thing users actually get wrong."""
-    if kind == "local-inapp":
-        active = store.settings and any(
-            m.role == "generation" and m.active for m in store.models.values()
-        )
-        return ConnectionTestResult(
-            ok=bool(active),
-            reachable=bool(active),
-            model_found=bool(active),
-            streaming=True,
-            error=None if active else "No in-app generation model is active",
-        )
-
     if kind == "anthropic":
         url, headers = "https://api.anthropic.com/v1/models", {
             "anthropic-version": "2023-06-01",

@@ -35,6 +35,14 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: apps/desktop
 
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # The packaged app spawns this frozen binary instead of uv; tauri.conf.json
+      # ships it as a resource. Dev builds still run ragcore from the workspace.
+      - run: ./scripts/build-sidecar.sh
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -21,7 +21,6 @@ HUB = "https://huggingface.co/api"
 PIPELINE_BY_ROLE: dict[ModelRole, str] = {
     "embedding": "sentence-similarity",
     "reranking": "text-ranking",
-    "generation": "text-generation",
 }
 
 # Known-good starting points per role. Search results that match one are
@@ -36,12 +35,6 @@ CURATED: dict[ModelRole, list[tuple[str, str]]] = {
         ("Qwen/Qwen3-Reranker-0.6B-GGUF", "Ships with the app"),
         ("Qwen/Qwen3-Reranker-4B-GGUF", "Best quality; worth it above 8 GB of VRAM"),
         ("BAAI/bge-reranker-v2-m3", "Multilingual alternative"),
-    ],
-    "generation": [
-        ("Qwen/Qwen3-8B-GGUF", "Good grounded-answer quality at 8B"),
-        ("Qwen/Qwen3-4B-GGUF", "Fits comfortably on 8 GB"),
-        ("bartowski/Llama-3.2-3B-Instruct-GGUF", "Light enough for CPU-only machines"),
-        ("unsloth/gemma-3-12b-it-GGUF", "Strong writing; wants 12 GB or more"),
     ],
 }
 

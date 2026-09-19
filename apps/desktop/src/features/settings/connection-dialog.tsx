@@ -32,7 +32,7 @@ import {
 } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
 
-type ProviderId = "openrouter" | "openai" | "anthropic" | "local-inapp" | "custom";
+type ProviderId = "openrouter" | "openai" | "anthropic" | "custom";
 
 /** A preset prefills kind + base_url; "custom" is the only one with an editable URL. */
 const PROVIDERS: { id: ProviderId; label: string; kind: ConnectionKind; baseUrl: string | null; hint: string }[] = [
@@ -51,13 +51,6 @@ const PROVIDERS: { id: ProviderId; label: string; kind: ConnectionKind; baseUrl:
     hint: "GPT models, native OpenAI API",
   },
   { id: "anthropic", label: "Anthropic", kind: "anthropic", baseUrl: null, hint: "Claude models, native API" },
-  {
-    id: "local-inapp",
-    label: "In-app model",
-    kind: "local-inapp",
-    baseUrl: null,
-    hint: "A GGUF downloaded here, served by the app itself",
-  },
   {
     id: "custom",
     label: "Custom / localhost",
@@ -160,7 +153,7 @@ export function ConnectionDialog({
       const payload = {
         name: form.name || form.model_id,
         kind: form.kind,
-        base_url: form.kind === "local-inapp" || form.kind === "anthropic" ? null : form.base_url,
+        base_url: form.kind === "anthropic" ? null : form.base_url,
         model_id: form.model_id,
         max_output_tokens: form.max_output_tokens,
         thinking: form.thinking,
@@ -220,11 +213,7 @@ export function ConnectionDialog({
                     kind: next.kind,
                     base_url: next.baseUrl ?? (next.id === "custom" ? current.base_url : null),
                     is_remote:
-                      next.id === "local-inapp"
-                        ? false
-                        : next.id === "custom"
-                          ? isRemoteUrl(current.base_url ?? "")
-                          : true,
+                      next.id === "custom" ? isRemoteUrl(current.base_url ?? "") : true,
                   }));
                 }}
               >
@@ -361,23 +350,21 @@ export function ConnectionDialog({
             </div>
           </div>
 
-          {form.kind !== "local-inapp" ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="conn-key">
-                API key {connection?.has_api_key ? "(stored — type to replace)" : ""}
-              </Label>
-              <Input
-                id="conn-key"
-                type="password"
-                value={apiKey}
-                placeholder={connection?.has_api_key ? "••••••••" : "Leave empty for local servers"}
-                onChange={(event) => setApiKey(event.target.value)}
-              />
-              <p className="text-[0.6875rem] text-muted-foreground">
-                Stored in the OS keychain. It is never written to the index, settings or logs.
-              </p>
-            </div>
-          ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="conn-key">
+              API key {connection?.has_api_key ? "(stored — type to replace)" : ""}
+            </Label>
+            <Input
+              id="conn-key"
+              type="password"
+              value={apiKey}
+              placeholder={connection?.has_api_key ? "••••••••" : "Leave empty for local servers"}
+              onChange={(event) => setApiKey(event.target.value)}
+            />
+            <p className="text-[0.6875rem] text-muted-foreground">
+              Stored in the OS keychain. It is never written to the index, settings or logs.
+            </p>
+          </div>
 
           {result ? <TestResult result={result} /> : null}
         </div>

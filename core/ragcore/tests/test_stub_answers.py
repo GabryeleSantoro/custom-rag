@@ -143,7 +143,6 @@ def test_anthropic_uses_its_native_messages_endpoint_and_headers() -> None:
     assert captured["payload"]["system"] == answers.SYSTEM_PROMPT
 
 
-def test_a_connection_that_cannot_generate_fails_loudly_instead_of_scripting() -> None:
-    for conn in (connection(kind="local-inapp"), connection(base_url=None)):
-        with pytest.raises(RuntimeError):
-            run(conn)
+def test_a_connection_without_a_base_url_fails_loudly_instead_of_scripting() -> None:
+    with pytest.raises(RuntimeError):
+        run(connection(base_url=None))
