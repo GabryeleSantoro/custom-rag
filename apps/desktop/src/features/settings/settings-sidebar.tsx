@@ -20,6 +20,7 @@ export const SETTINGS_SECTIONS = [
     blurb: "Batch sizes and GPU offload, defaulted from the detected hardware.",
   },
   { slug: "storage", label: "Storage", blurb: "Where data lives, and how to remove it." },
+  { slug: "updates", label: "Updates", blurb: "Version in use, and how new ones arrive." },
 ] as const;
 
 export function SettingsSidebar() {

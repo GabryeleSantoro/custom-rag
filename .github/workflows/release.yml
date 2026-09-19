@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    branches: [master]
+
+concurrency: release
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Next patch version
+        id: version
+        run: echo "next=$(./scripts/next-version.sh)" >> "$GITHUB_OUTPUT"
+
+      # Cargo.toml is the single source of the app version; tauri.conf.json inherits it.
+      - name: Stamp version
+        run: sed -i '' "0,/^version = /s//version = \"${{ steps.version.outputs.next }}\"/" apps/desktop/src-tauri/Cargo.toml
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - run: bun install --frozen-lockfile
+        working-directory: apps/desktop
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: apps/desktop
+          tagName: v${{ steps.version.outputs.next }}
+          releaseName: v${{ steps.version.outputs.next }}
+          releaseBody: ${{ github.event.head_commit.message }}
+          releaseDraft: false
+          prerelease: false  # GitHub "latest" skips prereleases, and the updater endpoint reads it
+          includeUpdaterJson: true
+          args: --target universal-apple-darwin

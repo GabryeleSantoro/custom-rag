@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { ConnectionDialog } from "@/features/settings/connection-dialog";
 import { SETTINGS_SECTIONS } from "@/features/settings/settings-sidebar";
+import { UpdatesSection } from "@/features/settings/updates";
 import {
   api,
   shell,
@@ -464,6 +465,7 @@ export function SettingsPanel() {
           {section === "retrieval" ? <RetrievalSection /> : null}
           {section === "performance" ? <PerformanceSection /> : null}
           {section === "storage" ? <StorageSection /> : null}
+          {section === "updates" ? <UpdatesSection /> : null}
         </div>
       </PageBody>
     </Page>
