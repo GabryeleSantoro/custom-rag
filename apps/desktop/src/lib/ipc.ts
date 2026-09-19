@@ -55,7 +55,6 @@ export type ChatSessionPatch = Schemas["ChatSessionPatch"];
 export type ChatProject = Schemas["ChatProject"];
 export type ChatProjectPatch = Schemas["ChatProjectPatch"];
 export type SlideConversionRequest = Schemas["SlideConversionRequest"];
-export type WebResearchResult = Schemas["WebResearchResult"];
 export type ConversionSavedEvent = Schemas["ConversionSavedEvent"];
 export type ConversionDoneEvent = Schemas["ConversionDoneEvent"];
 
@@ -332,7 +331,6 @@ export type PresentationErrorEvent = Schemas["PresentationErrorEvent"];
 
 export type ConversionEvent =
   | { event: "conversion_start"; data: ConversionStartEventData }
-  | { event: "conversion_research"; data: ConversionResearchEventData }
   | { event: "token"; data: { text: string } }
   | { event: "conversion_saved"; data: ConversionSavedEvent }
   | { event: "presentation_error"; data: PresentationErrorEvent }
@@ -346,17 +344,9 @@ type ConversionStartEventData = {
   title: string;
 };
 
-type ConversionResearchEventData = {
-  presentation_index: number;
-  queries: string[];
-  results: WebResearchResult[];
-  warning?: string | null;
-};
-
 type ConversionDoneEventData = {
   saved: ConversionSavedEvent[];
   failed: PresentationErrorEvent[];
-  research_count: number;
 };
 
 export function streamSlideConversion(

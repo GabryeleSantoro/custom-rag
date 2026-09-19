@@ -7,7 +7,6 @@ import {
   CheckCircle2Icon,
   ChevronRightIcon,
   FileUpIcon,
-  Globe2Icon,
   LoaderCircleIcon,
   LockKeyholeIcon,
   SearchIcon,
@@ -32,20 +31,16 @@ import {
   type ConversionEvent,
   type Document,
   type StreamHandle,
-  type WebResearchResult,
 } from "@/lib/ipc";
 import { connectionsQuery, keys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-type PresentationStatus = "pending" | "researching" | "generating" | "saved" | "error";
+type PresentationStatus = "generating" | "saved" | "error";
 type PresentationRow = {
   index: number;
   title: string;
   status: PresentationStatus;
   output: string;
-  queries: string[];
-  researchResults: WebResearchResult[];
-  researchWarning: string | null;
   savedPath: string | null;
   errorMessage: string | null;
 };
@@ -180,21 +175,12 @@ export function ConverterView() {
         {
           index: event.data.presentation_index,
           title: event.data.title,
-          status: "researching",
+          status: "generating",
           output: "",
-          queries: [],
-          researchResults: [],
-          researchWarning: null,
           savedPath: null,
           errorMessage: null,
         },
       ]);
-    } else if (event.event === "conversion_research") {
-      updateRow(event.data.presentation_index, {
-        queries: event.data.queries,
-        researchResults: event.data.results,
-        researchWarning: event.data.warning ?? null,
-      });
     } else if (event.event === "token") {
       setRows((current) => {
         const last = current[current.length - 1];
@@ -217,9 +203,6 @@ export function ConverterView() {
             title: event.data.title,
             status: "error",
             output: "",
-            queries: [],
-            researchResults: [],
-            researchWarning: null,
             savedPath: null,
             errorMessage: event.data.message,
           },
@@ -387,7 +370,7 @@ export function ConverterView() {
             <section className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2">
                 <span className="grid size-6 place-items-center rounded-md bg-primary/12 font-mono text-[0.65rem] font-semibold text-primary">B</span>
-                <h2 className="text-sm font-semibold">Brief di ricerca</h2>
+                <h2 className="text-sm font-semibold">Brief di approfondimento</h2>
               </div>
               <div className="mt-5 space-y-4">
                 <div className="space-y-1.5">
@@ -396,11 +379,11 @@ export function ConverterView() {
                     id="research-query"
                     value={researchQuery}
                     onChange={(event) => setResearchQuery(event.target.value)}
-                    placeholder="Es. stato dell'arte, casi d'uso e implicazioni per il mercato…"
+                    placeholder="Es. dimostrazioni dei teoremi, esempi numerici, confronto fra gli algoritmi…"
                     className="min-h-24 resize-none text-sm"
                     disabled={!active || running}
                   />
-                  <p className="text-[0.68rem] leading-4 text-muted-foreground">Lascia vuoto per ricavare la ricerca dal titolo delle slide.</p>
+                  <p className="text-[0.68rem] leading-4 text-muted-foreground">Lascia vuoto per lasciare al modello la scelta degli approfondimenti.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="output-title">Titolo del documento</Label>
@@ -446,7 +429,7 @@ export function ConverterView() {
           {rows.length ? (
             <div className="space-y-5">
               {rows.map((row) => (
-                <section key={row.index} className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.5fr)]">
+                <section key={row.index} className="space-y-3">
                   <article className="overflow-hidden rounded-xl border border-border bg-card">
                     <div className="flex items-center justify-between border-b border-border px-4 py-3">
                       <div className="flex items-center gap-2"><SparklesIcon className="size-4 text-primary" /><h2 className="text-sm font-semibold">{row.title}</h2></div>
@@ -464,27 +447,14 @@ export function ConverterView() {
                       )}
                     </div>
                   </article>
-
-                  <aside className="space-y-5">
-                    <div className="rounded-xl border border-border bg-card p-4">
-                      <div className="flex items-center gap-2"><Globe2Icon className="size-4 text-primary" /><h2 className="text-sm font-semibold">Ricerca web</h2></div>
-                      {row.queries.length ? (
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">{row.queries.join(" · ")}</p>
-                      ) : null}
-                      {row.researchWarning ? <p className="mt-3 rounded-md bg-status-warn/10 px-2.5 py-2 text-xs leading-5 text-status-warn">{row.researchWarning}</p> : null}
-                      <div className="mt-3 space-y-2">
-                        {row.researchResults.map((result) => <a key={result.url} href={result.url} target="_blank" rel="noreferrer" className="block rounded-md border border-border/70 p-2.5 transition-colors hover:border-primary/45 hover:bg-muted/30"><p className="line-clamp-2 text-xs font-medium">{result.title}</p><p className="mt-1 truncate font-mono text-[0.6rem] text-muted-foreground">{result.url}</p></a>)}
-                      </div>
-                    </div>
-                    {row.savedPath ? <div className="rounded-xl border border-status-ok/25 bg-status-ok/6 p-4"><div className="flex items-center gap-2 text-status-ok"><CheckCircle2Icon className="size-4" /><p className="text-sm font-semibold">File pronto</p></div><p className="mt-2 break-all font-mono text-[0.65rem] leading-5 text-muted-foreground">{row.savedPath}</p><Link to="/library" className="mt-3 inline-flex text-xs font-medium text-primary underline underline-offset-4">Apri nella Libreria</Link></div> : null}
-                  </aside>
+                  {row.savedPath ? <div className="rounded-xl border border-status-ok/25 bg-status-ok/6 p-4"><div className="flex items-center gap-2 text-status-ok"><CheckCircle2Icon className="size-4" /><p className="text-sm font-semibold">File pronto</p></div><p className="mt-2 break-all font-mono text-[0.65rem] leading-5 text-muted-foreground">{row.savedPath}</p><Link to="/library" className="mt-3 inline-flex text-xs font-medium text-primary underline underline-offset-4">Apri nella Libreria</Link></div> : null}
                 </section>
               ))}
             </div>
           ) : null}
 
           <div className="flex items-center gap-2 border-t border-border pt-4 text-[0.68rem] text-muted-foreground">
-            <Globe2Icon className="size-3.5" /> La ricerca web viene usata come contesto aggiuntivo; il risultato viene salvato sempre come file Markdown nella cartella globale.
+            <BookOpenTextIcon className="size-3.5" /> Il modello riscrive le slide come capitolo di manuale e approfondisce gli argomenti con la propria conoscenza; il risultato viene salvato sempre come file Markdown nella cartella globale.
           </div>
         </main>
       </PageBody>

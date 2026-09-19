@@ -47,6 +47,8 @@ def create_connection(payload: ConnectionInput, store: StoreDep) -> Connection:
         **data,
     )
     store.connections[connection.id] = connection
+    if payload.api_key:
+        store.secrets[connection.id] = payload.api_key
     if connection.active:
         store.settings.active_connection_id = connection.id
     return connection
@@ -64,6 +66,10 @@ def update_connection(
     connection.is_remote = _is_remote(payload.kind, payload.base_url)
     if payload.api_key is not None:
         connection.has_api_key = bool(payload.api_key)
+        if payload.api_key:
+            store.secrets[connection_id] = payload.api_key
+        else:
+            store.secrets.pop(connection_id, None)
     return connection
 
 
@@ -83,6 +89,7 @@ def delete_connection(connection_id: str, store: StoreDep) -> Ok:
     if connection_id not in store.connections:
         raise HTTPException(404, "connection not found")
     store.connections.pop(connection_id)
+    store.secrets.pop(connection_id, None)
     if store.settings.active_connection_id == connection_id:
         store.settings.active_connection_id = next(iter(store.connections), None)
     return Ok()
@@ -163,11 +170,14 @@ async def test_connection(payload: ConnectionTestRequest, store: StoreDep) -> Co
     kind = payload.kind
     base_url = payload.base_url
     model_id = payload.model_id
+    api_key = payload.api_key
 
     if payload.connection_id:
         connection = store.connections.get(payload.connection_id)
         if connection is None:
             raise HTTPException(404, "connection not found")
         kind, base_url, model_id = connection.kind, connection.base_url, connection.model_id
+        # Testing a saved connection must not require retyping its key.
+        api_key = api_key or store.secrets.get(connection.id)
 
-    return await probe_connection(store, kind, base_url, model_id, payload.api_key)
+    return await probe_connection(store, kind, base_url, model_id, api_key)

@@ -1,7 +1,8 @@
-"""Runtime configuration, assembled from CLI flags with env fallbacks.
+"""Runtime configuration, assembled from CLI flags.
 
-The Rust shell passes everything explicitly at spawn time. The env fallbacks
-exist so `uv run ragcore serve` on its own is still usable during development.
+The Rust shell passes everything explicitly at spawn time. Nothing about
+generation lives here: which model answers, where it lives and with which key
+is decided entirely by the connection the user activates in the app.
 """
 
 from __future__ import annotations
@@ -31,21 +32,3 @@ class Config:
     vram_mb: int = 0
     gpu_backend: str = "cpu"
     backend: Literal["stub", "real"] = "stub"
-    """An OpenAI-compatible base URL. Set it and /query streams from a real model."""
-    llm_base_url: str | None = None
-    llm_model: str | None = None
-    llm_api_key: str | None = None
-
-    @classmethod
-    def from_env(cls) -> Config:
-        return cls(
-            host=os.getenv("RAGCORE_HOST", "127.0.0.1"),
-            port=int(os.getenv("RAGCORE_PORT", "8765")),
-            token=os.getenv("RAGCORE_TOKEN", ""),
-            data_dir=Path(os.getenv("RAGCORE_DATA_DIR", str(Path.home() / ".custom-rag"))),
-            dev_mode=os.getenv("RAGCORE_DEV", "1") != "0",
-            llm_base_url=os.getenv("RAGCORE_LLM") or None,
-            llm_model=os.getenv("RAGCORE_LLM_MODEL") or None,
-            llm_api_key=os.getenv("RAGCORE_LLM_API_KEY") or None,
-            backend=os.getenv("RAGCORE_BACKEND", "stub"),  # type: ignore[arg-type]
-        )

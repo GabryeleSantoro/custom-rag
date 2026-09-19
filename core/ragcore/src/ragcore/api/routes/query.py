@@ -138,7 +138,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
             )
         )
 
-        connection = store.connections.get(store.settings.active_connection_id or "")
+        connection = store.active_connection()
         stream = answerer.stream(question, chunks, directives)
 
         answer: list[str] = []

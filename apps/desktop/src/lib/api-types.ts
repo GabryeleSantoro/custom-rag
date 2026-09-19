@@ -859,8 +859,6 @@ export interface components {
             base_url?: string | null;
             /** Model Id */
             model_id: string;
-            /** Context Window */
-            context_window: number;
             /** Max Output Tokens */
             max_output_tokens: number;
             /**
@@ -879,6 +877,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Provider Sort */
+            provider_sort?: ("price" | "throughput" | "latency") | null;
+            /** Provider Order */
+            provider_order?: string[] | null;
         };
         /** ConnectionInput */
         ConnectionInput: {
@@ -893,11 +895,6 @@ export interface components {
             base_url?: string | null;
             /** Model Id */
             model_id: string;
-            /**
-             * Context Window
-             * @default 8192
-             */
-            context_window: number;
             /**
              * Max Output Tokens
              * @default 1024
@@ -916,9 +913,19 @@ export interface components {
             is_remote: boolean;
             /**
              * Api Key
-             * @description Write-only. Stored in the OS keychain by the Rust shell, never here.
+             * @description Write-only. The durable copy lives in the OS keychain, held by the Rust shell; ragcore keeps one in memory for this process' lifetime because ragcore is what calls the provider. Never returned by any endpoint.
              */
             api_key?: string | null;
+            /**
+             * Provider Sort
+             * @description OpenRouter provider routing: rank candidate providers by price, throughput or latency. Ignored outside OpenRouter.
+             */
+            provider_sort?: ("price" | "throughput" | "latency") | null;
+            /**
+             * Provider Order
+             * @description OpenRouter provider routing: try these providers first, in order. Ignored outside OpenRouter.
+             */
+            provider_order?: string[] | null;
         };
         /** ConnectionTestRequest */
         ConnectionTestRequest: {
@@ -956,19 +963,6 @@ export interface components {
             saved: components["schemas"]["ConversionSavedEvent"][];
             /** Failed */
             failed: components["schemas"]["PresentationErrorEvent"][];
-            /** Research Count */
-            research_count: number;
-        };
-        /** ConversionResearchEvent */
-        ConversionResearchEvent: {
-            /** Presentation Index */
-            presentation_index: number;
-            /** Queries */
-            queries: string[];
-            /** Results */
-            results: components["schemas"]["WebResearchResult"][];
-            /** Warning */
-            warning?: string | null;
         };
         /** ConversionSavedEvent */
         ConversionSavedEvent: {
@@ -1674,7 +1668,7 @@ export interface components {
         };
         /**
          * SlideConversionRequest
-         * @description Input for the research-backed slide conversion stream.
+         * @description Input for the slide conversion stream.
          */
         SlideConversionRequest: {
             /** Slide Ids */
@@ -1838,7 +1832,6 @@ export interface components {
             eval_progress?: components["schemas"]["EvalProgressEvent"] | null;
             eval_result?: components["schemas"]["EvalResult"] | null;
             conversion_start?: components["schemas"]["ConversionStartEvent"] | null;
-            conversion_research?: components["schemas"]["ConversionResearchEvent"] | null;
             conversion_saved?: components["schemas"]["ConversionSavedEvent"] | null;
             presentation_error?: components["schemas"]["PresentationErrorEvent"] | null;
             conversion_done?: components["schemas"]["ConversionDoneEvent"] | null;
@@ -1860,15 +1853,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /** WebResearchResult */
-        WebResearchResult: {
-            /** Title */
-            title: string;
-            /** Url */
-            url: string;
-            /** Snippet */
-            snippet: string;
         };
         /** WipeRequest */
         WipeRequest: {

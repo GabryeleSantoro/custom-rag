@@ -53,6 +53,9 @@ class Store:
         self.documents: dict[str, Document] = {}
         self.loaded: dict[str, LoadedDoc] = {}
         self.connections: dict[str, Connection] = {}
+        # Connection id -> API key. In memory only, for this process' lifetime:
+        # the durable copy lives in the OS keychain, held by the Rust shell.
+        self.secrets: dict[str, str] = {}
         self.models: dict[str, InstalledModel] = {}
         self.sessions: dict[str, ChatSession] = {}
         self.projects: dict[str, ChatProject] = {}
@@ -280,3 +283,9 @@ class Store:
 
     def new_id(self, prefix: str) -> str:
         return _id(prefix)
+
+    # ------------------------------------------------------------- connections
+
+    def active_connection(self) -> Connection | None:
+        """The one connection that answers, chosen by the user in the app."""
+        return self.connections.get(self.settings.active_connection_id or "")

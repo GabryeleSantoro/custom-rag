@@ -270,11 +270,11 @@ class ErrorEvent(BaseModel):
 
 
 class SlideConversionRequest(BaseModel):
-    """Input for the research-backed slide conversion stream."""
+    """Input for the slide conversion stream."""
 
     slide_ids: list[str] = Field(default_factory=list)
     file_paths: list[str] = Field(default_factory=list)
-    research_query: str | None = None
+    research_query: str | None = None  # topics the model should dig into
     output_title: str | None = None
     language: Literal["it", "en"] = "it"
     depth: Literal["standard", "deep"] = "deep"
@@ -286,24 +286,11 @@ class SlideConversionRequest(BaseModel):
         return self
 
 
-class WebResearchResult(BaseModel):
-    title: str
-    url: str
-    snippet: str
-
-
 class ConversionStartEvent(BaseModel):
     presentation_index: int
     presentation_total: int
     slide_id: str | None
     title: str
-
-
-class ConversionResearchEvent(BaseModel):
-    presentation_index: int
-    queries: list[str]
-    results: list[WebResearchResult]
-    warning: str | None = None
 
 
 class ConversionSavedEvent(BaseModel):
@@ -323,7 +310,6 @@ class PresentationErrorEvent(BaseModel):
 class ConversionDoneEvent(BaseModel):
     saved: list[ConversionSavedEvent]
     failed: list[PresentationErrorEvent]
-    research_count: int
 
 
 # --------------------------------------------------------------------- connections
@@ -331,6 +317,7 @@ class ConversionDoneEvent(BaseModel):
 
 ConnectionKind = Literal["openai-compatible", "anthropic", "local-inapp"]
 ThinkingLevel = Literal["off", "low", "medium", "high"]
+ProviderSort = Literal["price", "throughput", "latency"]
 
 
 class ConnectionInput(BaseModel):
@@ -338,13 +325,24 @@ class ConnectionInput(BaseModel):
     kind: ConnectionKind
     base_url: str | None = None
     model_id: str
-    context_window: int = 8192
     max_output_tokens: int = 1024
     thinking: ThinkingLevel = "off"
     is_remote: bool = True
     api_key: str | None = Field(
         default=None,
-        description="Write-only. Stored in the OS keychain by the Rust shell, never here.",
+        description="Write-only. The durable copy lives in the OS keychain, held by the "
+        "Rust shell; ragcore keeps one in memory for this process' lifetime because "
+        "ragcore is what calls the provider. Never returned by any endpoint.",
+    )
+    provider_sort: ProviderSort | None = Field(
+        default=None,
+        description="OpenRouter provider routing: rank candidate providers by price, "
+        "throughput or latency. Ignored outside OpenRouter.",
+    )
+    provider_order: list[str] | None = Field(
+        default=None,
+        description="OpenRouter provider routing: try these providers first, in order. "
+        "Ignored outside OpenRouter.",
     )
 
 
@@ -354,13 +352,14 @@ class Connection(BaseModel):
     kind: ConnectionKind
     base_url: str | None = None
     model_id: str
-    context_window: int
     max_output_tokens: int
     thinking: ThinkingLevel
     is_remote: bool
     has_api_key: bool
     active: bool
     created_at: datetime
+    provider_sort: ProviderSort | None = None
+    provider_order: list[str] | None = None
 
 
 class ConnectionTestRequest(BaseModel):
@@ -637,7 +636,6 @@ class StreamEnvelope(BaseModel):
     eval_progress: EvalProgressEvent | None = None
     eval_result: EvalResult | None = None
     conversion_start: ConversionStartEvent | None = None
-    conversion_research: ConversionResearchEvent | None = None
     conversion_saved: ConversionSavedEvent | None = None
     presentation_error: PresentationErrorEvent | None = None
     conversion_done: ConversionDoneEvent | None = None

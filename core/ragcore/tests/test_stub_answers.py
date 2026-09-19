@@ -1,22 +1,21 @@
-"""llm_stream() must use whatever system prompt the caller gives it, and fall
-back to the chat SYSTEM_PROMPT when the caller gives none."""
+"""llm_stream() must talk to whatever connection the user activated: its URL,
+its model, its key, its provider routing — and never the environment."""
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import asyncio
+from datetime import UTC, datetime
 
-import httpx
-from ragcore.config import Config
+import pytest
+from ragcore.api.schemas import Connection
 from ragcore.stub import answers
 
 
 class _FakeStreamResponse:
+    status_code = 200
+
     def __init__(self, lines: list[str]) -> None:
         self._lines = lines
-
-    def raise_for_status(self) -> None:
-        return None
 
     async def aiter_lines(self):
         for line in self._lines:
@@ -24,70 +23,127 @@ class _FakeStreamResponse:
 
 
 class _FakeStreamContext:
+    def __init__(self, lines: list[str]) -> None:
+        self._lines = lines
+
     async def __aenter__(self) -> _FakeStreamResponse:
-        return _FakeStreamResponse(
-            ['data: {"choices": [{"delta": {"content": "hello"}}]}', "data: [DONE]"]
-        )
+        return _FakeStreamResponse(self._lines)
 
     async def __aexit__(self, *exc) -> None:
         return None
 
 
 class _FakeClient:
-    def __init__(self, captured: dict) -> None:
+    def __init__(self, captured: dict, lines: list[str]) -> None:
         self._captured = captured
+        self._lines = lines
 
-    async def __aenter__(self) -> "_FakeClient":
+    async def __aenter__(self) -> _FakeClient:
         return self
 
     async def __aexit__(self, *exc) -> None:
         return None
 
     def stream(self, method: str, url: str, *, json: dict, headers: dict):
-        self._captured["method"] = method
         self._captured["url"] = url
         self._captured["payload"] = json
-        return _FakeStreamContext()
+        self._captured["headers"] = headers
+        return _FakeStreamContext(self._lines)
 
 
-def _run(config: Config, system_prompt: str | None) -> tuple[list[str], dict]:
-    import asyncio
+OPENAI_LINES = ['data: {"choices": [{"delta": {"content": "hello"}}]}', "data: [DONE]"]
+ANTHROPIC_LINES = [
+    'data: {"type": "content_block_delta", "delta": {"type": "thinking_delta", "thinking": "hm"}}',
+    'data: {"type": "content_block_delta", "delta": {"type": "text_delta", "text": "hello"}}',
+    'data: {"type": "message_stop"}',
+]
 
+
+def connection(**overrides) -> Connection:
+    fields = {
+        "id": "conn_1",
+        "name": "Test",
+        "kind": "openai-compatible",
+        "base_url": "http://x/v1",
+        "model_id": "gemma-3-27b",
+        "max_output_tokens": 4096,
+        "thinking": "off",
+        "is_remote": True,
+        "has_api_key": True,
+        "active": True,
+        "created_at": datetime.now(tz=UTC),
+    }
+    return Connection(**{**fields, **overrides})
+
+
+def run(conn: Connection, api_key: str | None = "sk-test", lines=OPENAI_LINES, **kwargs):
     captured: dict = {}
 
     async def collect() -> list[str]:
         return [
             piece
             async for piece in answers.llm_stream(
-                config, "What is reranking?", [], system_prompt=system_prompt
+                conn, api_key, "What is reranking?", [], **kwargs
             )
         ]
 
-    original_client = answers.httpx.AsyncClient
-    answers.httpx.AsyncClient = lambda **_: _FakeClient(captured)
+    original = answers.httpx.AsyncClient
+    answers.httpx.AsyncClient = lambda **_: _FakeClient(captured, lines)
     try:
-        pieces = asyncio.run(collect())
+        return asyncio.run(collect()), captured
     finally:
-        answers.httpx.AsyncClient = original_client
-    return pieces, captured
+        answers.httpx.AsyncClient = original
 
 
-def test_llm_stream_uses_the_given_system_prompt(tmp_path: Path) -> None:
-    config = Config(
-        host="127.0.0.1", port=0, token="", data_dir=tmp_path, llm_base_url="http://x/v1"
-    )
-
-    pieces, captured = _run(config, "CUSTOM PROMPT")
+def test_openai_compatible_uses_the_connection_url_model_and_key() -> None:
+    pieces, captured = run(connection())
 
     assert pieces == ["hello"]
+    assert captured["url"] == "http://x/v1/chat/completions"
+    assert captured["payload"]["model"] == "gemma-3-27b"
+    assert captured["headers"]["Authorization"] == "Bearer sk-test"
+
+
+def test_max_tokens_defaults_to_the_connections_output_budget() -> None:
+    _, captured = run(connection(max_output_tokens=32000))
+    assert captured["payload"]["max_tokens"] == 32000
+
+    _, captured = run(connection(max_output_tokens=32000), max_tokens=512)
+    assert captured["payload"]["max_tokens"] == 512
+
+
+def test_the_given_system_prompt_wins_over_the_chat_default() -> None:
+    _, captured = run(connection(), system_prompt="CUSTOM PROMPT")
     assert captured["payload"]["messages"][0] == {"role": "system", "content": "CUSTOM PROMPT"}
 
+    _, captured = run(connection())
+    assert captured["payload"]["messages"][0] == {
+        "role": "system",
+        "content": answers.SYSTEM_PROMPT,
+    }
 
-def test_llm_stream_falls_back_to_the_chat_system_prompt_when_none_given(tmp_path: Path) -> None:
-    config = Config(
-        host="127.0.0.1", port=0, token="", data_dir=tmp_path, llm_base_url="http://x/v1"
+
+def test_openrouter_provider_routing_is_sent_only_when_the_user_set_it() -> None:
+    _, captured = run(connection(provider_sort="price", provider_order=["together"]))
+    assert captured["payload"]["provider"] == {"sort": "price", "order": ["together"]}
+
+    _, captured = run(connection())
+    assert "provider" not in captured["payload"]
+
+
+def test_anthropic_uses_its_native_messages_endpoint_and_headers() -> None:
+    pieces, captured = run(
+        connection(kind="anthropic", base_url=None), lines=ANTHROPIC_LINES
     )
 
-    _, captured = _run(config, None)
+    assert pieces == ["hello"]  # the thinking_delta never reaches the UI
+    assert captured["url"] == "https://api.anthropic.com/v1/messages"
+    assert captured["headers"]["x-api-key"] == "sk-test"
+    assert "Authorization" not in captured["headers"]
+    assert captured["payload"]["system"] == answers.SYSTEM_PROMPT
 
-    assert captured["payload"]["messages"][0] == {"role": "system", "content": answers.SYSTEM_PROMPT}
+
+def test_a_connection_that_cannot_generate_fails_loudly_instead_of_scripting() -> None:
+    for conn in (connection(kind="local-inapp"), connection(base_url=None)):
+        with pytest.raises(RuntimeError):
+            run(conn)

@@ -139,7 +139,6 @@ function ConnectionsSection() {
               {connection.base_url ? ` · ${connection.base_url}` : ""}
             </p>
             <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-              {connection.context_window.toLocaleString()} ctx ·{" "}
               {connection.max_output_tokens.toLocaleString()} out
               {connection.has_api_key ? " · key in keychain" : ""}
             </p>

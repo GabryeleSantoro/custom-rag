@@ -42,7 +42,6 @@ def main(argv: list[str] | None = None) -> int:
         build_parser().print_help()
         return 1
 
-    env = Config.from_env()
     config = Config(
         host=args.host,
         port=args.port,
@@ -52,9 +51,6 @@ def main(argv: list[str] | None = None) -> int:
         vram_mb=args.vram_mb,
         gpu_backend=args.gpu_backend,
         backend=args.backend,
-        llm_base_url=env.llm_base_url,
-        llm_model=env.llm_model,
-        llm_api_key=env.llm_api_key,
     )
     if args.ram_mb:
         config.ram_mb = args.ram_mb

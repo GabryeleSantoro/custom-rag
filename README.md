@@ -14,6 +14,9 @@ Applicazione desktop **local-first** per interrogare una raccolta di documenti c
 
 ## Architettura
 
+La mappa completa dei confini runtime e dei flussi di ingestione/query è in
+[docs/architecture.md](docs/architecture.md).
+
 ```text
 React + TypeScript (apps/desktop)
           │ Tauri commands / Channel
@@ -57,6 +60,14 @@ uv run --directory core/ragcore ragcore serve --port 8765
 ```
 
 La documentazione interattiva sarà disponibile su `http://127.0.0.1:8765/docs`. Se si passa `--token`, tutti gli endpoint tranne `/health` e OpenAPI richiedono `Authorization: Bearer <token>`.
+
+## Modello generativo (es. OpenRouter)
+
+Il modello che risponde si sceglie **solo** dalla pagina Impostazioni → Connessioni: nessuna variabile d'ambiente lo configura. Si crea una connessione (OpenRouter, OpenAI, Anthropic, o un endpoint compatibile OpenAI come LM Studio/Ollama/vLLM), si incolla la API key e la si attiva. Da quel momento `/query` e la conversione delle slide parlano con quella connessione: il suo URL, il suo modello, il suo tetto di token in uscita e — su OpenRouter — le sue preferenze di routing dei provider.
+
+Per gli endpoint compatibili OpenAI `ragcore` usa `/chat/completions` in streaming; per le connessioni Anthropic usa l'API nativa `/v1/messages`. La API key resta nel portachiavi di sistema, tenuto dalla shell Rust, e nel processo `ragcore` vive solo in memoria.
+
+Finché nessuna connessione è attiva, `/query` risponde con lo stub scriptato (nessuna chiamata esterna) e la conversione delle slide rifiuta la richiesta con `409`.
 
 ## Modelli locali (sviluppo)
 

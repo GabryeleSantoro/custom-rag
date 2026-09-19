@@ -19,10 +19,10 @@ class Backend:
 
 
 class StubAnswerEngine:
-    """Scripted by default; streams from a real model when RAGCORE_LLM is set."""
+    """Scripted until the user activates a connection; then that connection answers."""
 
-    def __init__(self, config: Config) -> None:
-        self.config = config
+    def __init__(self, store: StorePort) -> None:
+        self.store = store
 
     def stream(
         self,
@@ -35,11 +35,17 @@ class StubAnswerEngine:
     ) -> AsyncIterator[str]:
         from ragcore.stub.answers import llm_stream, scripted_stream
 
-        if self.config.llm_base_url:
-            return llm_stream(
-                self.config, question, chunks, system_prompt=system_prompt, max_tokens=max_tokens
-            )
-        return scripted_stream(question, chunks, directives)
+        connection = self.store.active_connection()
+        if connection is None:
+            return scripted_stream(question, chunks, directives)
+        return llm_stream(
+            connection,
+            self.store.secrets.get(connection.id),
+            question,
+            chunks,
+            system_prompt=system_prompt,
+            max_tokens=max_tokens,
+        )
 
 
 def build_backend(config: Config) -> Backend:
@@ -48,10 +54,11 @@ def build_backend(config: Config) -> Backend:
         from ragcore.stub.jobs import JobManager
         from ragcore.stub.store import Store
 
+        store = Store(config)
         return Backend(
-            store=Store(config),
+            store=store,
             jobs=JobManager(),
             hub=HubClient(config),
-            answerer=StubAnswerEngine(config),
+            answerer=StubAnswerEngine(store),
         )
     raise ValueError(f"unknown backend: {config.backend!r}")

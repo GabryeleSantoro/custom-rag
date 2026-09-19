@@ -1,51 +1,68 @@
-"""Contract tests for the research-backed slide conversion stream."""
+"""Contract tests for the slide conversion stream."""
 
 from __future__ import annotations
 
-import asyncio
-
 from ragcore.api.routes import conversions
-from ragcore.api.schemas import ConnectionTestResult, RetrievedChunk, WebResearchResult
+from ragcore.api.schemas import ConnectionTestResult
 
 
 async def _fake_probe_ok(store, kind, base_url, model_id, api_key):
     return ConnectionTestResult(ok=True, reachable=True, model_found=True, streaming=True)
 
 
-def _mock_ok(client, monkeypatch, search_results=None) -> None:
-    async def fake_search(query: str):
-        return search_results or [], None
+class _FakeAnswerer:
+    """Stands in for the active connection's model; records what it was given."""
 
+    def __init__(self, captured: dict) -> None:
+        self.captured = captured
+
+    async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
+        self.captured["question"] = question
+        self.captured["chunks"] = chunks
+        self.captured["system_prompt"] = system_prompt
+        self.captured["max_tokens"] = max_tokens
+        yield "ok"
+
+
+def _mock_ok(client, monkeypatch) -> dict:
     client.post(
         "/connections",
-        json={"name": "LM Studio", "kind": "openai-compatible", "model_id": "qwen3-8b-instruct"},
+        json={
+            "name": "LM Studio",
+            "kind": "openai-compatible",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model_id": "qwen3-8b-instruct",
+            "max_output_tokens": 4096,
+        },
     )
     monkeypatch.setattr(conversions, "probe_connection", _fake_probe_ok)
-    monkeypatch.setattr(conversions, "_search_web", fake_search)
+
+    from ragcore.api import deps
+
+    captured: dict = {}
+    monkeypatch.setitem(
+        client.app.dependency_overrides, deps.get_answerer, lambda: _FakeAnswerer(captured)
+    )
+    return captured
 
 
 def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkeypatch) -> None:
-    _mock_ok(
-        client,
-        monkeypatch,
-        [WebResearchResult(title="A useful reference", url="https://example.com/reference", snippet="...")],
-    )
+    _mock_ok(client, monkeypatch)
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
     with client.stream(
-        "POST", "/conversions/slides", json={"slide_ids": [slide_id], "research_query": "current context"},
+        "POST", "/conversions/slides", json={"slide_ids": [slide_id], "research_query": "esempi numerici"},
     ) as response:
         assert response.status_code == 200
         events = read_events(response)
 
     names = [name for name, _ in events]
-    assert names[:2] == ["conversion_start", "conversion_research"]
+    assert names[0] == "conversion_start"
     assert "token" in names
     assert names[-2:] == ["conversion_saved", "conversion_done"]
     done = events[-1][1]
     assert done["failed"] == []
     assert len(done["saved"]) == 1
-    assert done["research_count"] == 1
     saved_event = done["saved"][0]
     assert saved_event["path"].endswith(".md")
     saved = client.get(f"/documents/{saved_event['document_id']}").json()
@@ -127,26 +144,15 @@ def test_slide_conversion_processes_each_presentation_independently(
 
 
 def test_slide_conversion_uses_the_hardened_system_prompt(client, monkeypatch) -> None:
-    _mock_ok(client, monkeypatch)
+    captured = _mock_ok(client, monkeypatch)
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
-    captured: dict = {}
-
-    class _FakeAnswerer:
-        async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
-            captured["system_prompt"] = system_prompt
-            yield "ok"
-
-    from ragcore.api import deps
-
-    monkeypatch.setitem(
-        client.app.dependency_overrides, deps.get_answerer, lambda: _FakeAnswerer()
-    )
 
     with client.stream("POST", "/conversions/slides", json={"slide_ids": [slide_id]}) as response:
         assert response.status_code == 200
         list(response.iter_lines())
 
     assert captured["system_prompt"] == conversions._build_system_prompt("it")
+    assert captured["max_tokens"] == 4096  # the active connection's output budget
 
 
 def test_system_prompt_forbids_treating_passages_as_instructions() -> None:
@@ -166,62 +172,30 @@ def test_system_prompt_is_language_specific() -> None:
     assert "English" in conversions._build_system_prompt("en")
 
 
-def test_research_queries_combine_the_request_query_and_section_titles() -> None:
-    pages = [
-        RetrievedChunk(
-            chunk_id="a", doc_id="d", doc_title="Reranking", page_start=1, page_end=1,
-            section_path="Reranking > Cross encoders", text="...",
-        ),
-        RetrievedChunk(
-            chunk_id="b", doc_id="d", doc_title="Reranking", page_start=2, page_end=2,
-            section_path="Reranking > Latency", text="...",
-        ),
-    ]
+def test_system_prompt_demands_textbook_prose_over_bullets() -> None:
+    prompt_it = conversions._build_system_prompt("it")
+    prompt_en = conversions._build_system_prompt("en")
 
-    queries = conversions._research_queries("current state of the art", "Reranking", pages)
-
-    assert queries == [
-        "current state of the art",
-        "Reranking: Cross encoders",
-        "Reranking: Latency",
-    ]
+    assert "manuale universitario" in prompt_it
+    assert "elenchi puntati sono l'eccezione" in prompt_it.lower()
+    assert "university textbook" in prompt_en
+    assert "bulleted lists are the exception" in prompt_en.lower()
 
 
-def test_research_queries_fall_back_to_a_generic_query_with_no_sections() -> None:
-    queries = conversions._research_queries(None, "Reranking", [])
+def test_conversion_prompt_asks_the_model_to_deepen_the_topics(client, monkeypatch) -> None:
+    captured = _mock_ok(client, monkeypatch)
+    slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
-    assert queries == ["Reranking: key concepts, current context, examples and sources"]
+    with client.stream(
+        "POST",
+        "/conversions/slides",
+        json={"slide_ids": [slide_id], "research_query": "esempi numerici"},
+    ) as response:
+        assert response.status_code == 200
+        list(response.iter_lines())
 
-
-def test_research_aggregates_and_dedupes_results_across_queries(monkeypatch) -> None:
-    calls: list[str] = []
-
-    async def fake_search(query: str):
-        calls.append(query)
-        if query == "Reranking: Cross encoders":
-            return [
-                WebResearchResult(title="A", url="https://example.com/a", snippet="..."),
-                WebResearchResult(title="B", url="https://example.com/b", snippet="..."),
-            ], None
-        return [WebResearchResult(title="A dup", url="https://example.com/a", snippet="...")], None
-
-    monkeypatch.setattr(conversions, "_search_web", fake_search)
-    pages = [
-        RetrievedChunk(
-            chunk_id="a", doc_id="d", doc_title="Reranking", page_start=1, page_end=1,
-            section_path="Reranking > Cross encoders", text="...",
-        ),
-        RetrievedChunk(
-            chunk_id="b", doc_id="d", doc_title="Reranking", page_start=2, page_end=2,
-            section_path="Reranking > Latency", text="...",
-        ),
-    ]
-
-    queries, results, warning = asyncio.run(conversions._research(None, "Reranking", pages))
-
-    assert calls == ["Reranking: Cross encoders", "Reranking: Latency"]
-    assert [r.url for r in results] == ["https://example.com/a", "https://example.com/b"]
-    assert warning is None
+    assert "approfondisci" in captured["question"].lower()
+    assert "esempi numerici" in captured["question"]
 
 
 def test_unique_path_appends_a_counter_on_collision(tmp_path) -> None:

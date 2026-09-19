@@ -32,30 +32,72 @@ import {
 } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
 
-const KINDS: { value: ConnectionKind; label: string; hint: string }[] = [
+type ProviderId = "openrouter" | "openai" | "anthropic" | "local-inapp" | "custom";
+
+/** A preset prefills kind + base_url; "custom" is the only one with an editable URL. */
+const PROVIDERS: { id: ProviderId; label: string; kind: ConnectionKind; baseUrl: string | null; hint: string }[] = [
   {
-    value: "openai-compatible",
-    label: "OpenAI-compatible",
-    hint: "LM Studio, Ollama, llama.cpp, vLLM, OpenAI, OpenRouter",
+    id: "openrouter",
+    label: "OpenRouter",
+    kind: "openai-compatible",
+    baseUrl: "https://openrouter.ai/api/v1",
+    hint: "Routes to any model OpenRouter offers",
   },
-  { value: "anthropic", label: "Anthropic", hint: "Claude models, native API" },
   {
-    value: "local-inapp",
+    id: "openai",
+    label: "OpenAI",
+    kind: "openai-compatible",
+    baseUrl: "https://api.openai.com/v1",
+    hint: "GPT models, native OpenAI API",
+  },
+  { id: "anthropic", label: "Anthropic", kind: "anthropic", baseUrl: null, hint: "Claude models, native API" },
+  {
+    id: "local-inapp",
     label: "In-app model",
+    kind: "local-inapp",
+    baseUrl: null,
     hint: "A GGUF downloaded here, served by the app itself",
   },
+  {
+    id: "custom",
+    label: "Custom / localhost",
+    kind: "openai-compatible",
+    baseUrl: null,
+    hint: "LM Studio, Ollama, llama.cpp, vLLM, or any other OpenAI-compatible server",
+  },
 ];
+
+function isRemoteUrl(url: string) {
+  return !/localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]/.test(url);
+}
+
+function matchProvider(kind: ConnectionKind, base_url: string | null | undefined) {
+  const normalized = (base_url ?? "").replace(/\/+$/, "");
+  return (
+    PROVIDERS.find((p) => p.baseUrl && p.kind === kind && p.baseUrl.replace(/\/+$/, "") === normalized) ??
+    PROVIDERS.find((p) => p.baseUrl === null && p.kind === kind) ??
+    PROVIDERS[PROVIDERS.length - 1]
+  );
+}
 
 const BLANK = {
   name: "",
   kind: "openai-compatible" as ConnectionKind,
   base_url: "http://localhost:1234/v1",
   model_id: "",
-  context_window: 8192,
   max_output_tokens: 1024,
   thinking: "off" as const,
   is_remote: false,
+  provider_sort: null as "price" | "throughput" | "latency" | null,
+  provider_order: null as string[] | null,
 };
+
+const SORT_MODES: { value: "auto" | "price" | "throughput" | "latency"; label: string }[] = [
+  { value: "auto", label: "Auto (OpenRouter default)" },
+  { value: "price", label: "Cheapest" },
+  { value: "throughput", label: "Fastest (throughput)" },
+  { value: "latency", label: "Fastest (first token)" },
+];
 
 function TestResult({ result }: { result: ConnectionTestResult }) {
   const Icon = result.ok ? CheckCircle2Icon : XCircleIcon;
@@ -91,6 +133,10 @@ export function ConnectionDialog({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => ({ ...BLANK, ...(connection ?? {}) }));
+  const [provider, setProvider] = useState(() => matchProvider(form.kind, form.base_url));
+  const [providerOrderText, setProviderOrderText] = useState(() =>
+    (form.provider_order ?? []).join(", "),
+  );
   const [apiKey, setApiKey] = useState("");
   const [result, setResult] = useState<ConnectionTestResult | null>(null);
 
@@ -114,18 +160,26 @@ export function ConnectionDialog({
       const payload = {
         name: form.name || form.model_id,
         kind: form.kind,
-        base_url: form.kind === "local-inapp" ? null : form.base_url,
+        base_url: form.kind === "local-inapp" || form.kind === "anthropic" ? null : form.base_url,
         model_id: form.model_id,
-        context_window: form.context_window,
         max_output_tokens: form.max_output_tokens,
         thinking: form.thinking,
         is_remote: form.is_remote,
         api_key: apiKey || null,
+        provider_sort: provider.id === "openrouter" ? form.provider_sort : null,
+        provider_order:
+          provider.id === "openrouter" && providerOrderText.trim()
+            ? providerOrderText
+                .split(",")
+                .map((entry) => entry.trim())
+                .filter(Boolean)
+            : null,
       };
       const saved = connection
         ? await api.updateConnection(connection.id, payload)
         : await api.createConnection(payload);
-      // The key itself never reaches the sidecar: only the OS keychain.
+      // The keychain is the durable copy; the sidecar got a memory-only one in
+      // the payload above, because the sidecar is what calls the provider.
       if (apiKey) await shell.keychainSet(saved.id, apiKey);
       return saved;
     },
@@ -138,8 +192,7 @@ export function ConnectionDialog({
     onError: (error: Error) => toast.error("Could not save", { description: error.message }),
   });
 
-  const kindMeta = KINDS.find((entry) => entry.value === form.kind)!;
-  const needsUrl = form.kind === "openai-compatible";
+  const needsUrl = provider.id === "custom";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -158,21 +211,38 @@ export function ConnectionDialog({
             <div className="space-y-1.5">
               <Label htmlFor="conn-kind">Provider</Label>
               <Select
-                value={form.kind}
-                onValueChange={(value) => set("kind", value as ConnectionKind)}
+                value={provider.id}
+                onValueChange={(value) => {
+                  const next = PROVIDERS.find((entry) => entry.id === value)!;
+                  setProvider(next);
+                  setForm((current) => ({
+                    ...current,
+                    kind: next.kind,
+                    base_url: next.baseUrl ?? (next.id === "custom" ? current.base_url : null),
+                    is_remote:
+                      next.id === "local-inapp"
+                        ? false
+                        : next.id === "custom"
+                          ? isRemoteUrl(current.base_url ?? "")
+                          : true,
+                  }));
+                }}
               >
                 <SelectTrigger id="conn-kind">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {KINDS.map((entry) => (
-                    <SelectItem key={entry.value} value={entry.value}>
+                  {PROVIDERS.map((entry) => (
+                    <SelectItem key={entry.id} value={entry.id}>
                       {entry.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[0.6875rem] text-muted-foreground">{kindMeta.hint}</p>
+              <p className="text-[0.6875rem] text-muted-foreground">
+                {provider.hint}
+                {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -185,6 +255,46 @@ export function ConnectionDialog({
               />
             </div>
           </div>
+
+          {provider.id === "openrouter" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="conn-provider-sort">Provider routing</Label>
+                <Select
+                  value={form.provider_sort ?? "auto"}
+                  onValueChange={(value) =>
+                    set(
+                      "provider_sort",
+                      value === "auto" ? null : (value as "price" | "throughput" | "latency"),
+                    )
+                  }
+                >
+                  <SelectTrigger id="conn-provider-sort">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_MODES.map((mode) => (
+                      <SelectItem key={mode.value} value={mode.value}>
+                        {mode.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="conn-provider-order">Preferred providers</Label>
+                <Input
+                  id="conn-provider-order"
+                  value={providerOrderText}
+                  placeholder="e.g. together, fireworks"
+                  onChange={(event) => setProviderOrderText(event.target.value)}
+                />
+                <p className="text-[0.6875rem] text-muted-foreground">
+                  Comma-separated, tried in order. Leave empty to let OpenRouter pick.
+                </p>
+              </div>
+            </div>
+          ) : null}
 
           {needsUrl ? (
             <div className="space-y-1.5">
@@ -240,18 +350,6 @@ export function ConnectionDialog({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="conn-context">Context window</Label>
-              <Input
-                id="conn-context"
-                type="number"
-                value={form.context_window}
-                onChange={(event) => set("context_window", Number(event.target.value) || 0)}
-              />
-              <p className="text-[0.6875rem] text-muted-foreground">
-                The passage budget is derived from this. Too high and the model truncates silently.
-              </p>
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="conn-output">Max output tokens</Label>
               <Input

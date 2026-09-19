@@ -50,6 +50,7 @@ class StorePort(Protocol):
     sources: dict[str, Source]
     documents: dict[str, Document]
     connections: dict[str, Connection]
+    secrets: dict[str, str]
     models: dict[str, InstalledModel]
     sessions: dict[str, ChatSession]
     projects: dict[str, ChatProject]
@@ -73,6 +74,7 @@ class StorePort(Protocol):
     ) -> ChatSession: ...
     def append_message(self, message: ChatMessage) -> None: ...
     def new_id(self, prefix: str) -> str: ...
+    def active_connection(self) -> Connection | None: ...
 
 
 @runtime_checkable
