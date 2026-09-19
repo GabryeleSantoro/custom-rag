@@ -26,7 +26,6 @@ MIME_BY_EXT = {
     ".csv": "text/csv",
 }
 
-_HEADING = re.compile(r"^(#{1,3})\s+(.*)$", re.MULTILINE)
 _WORD = re.compile(r"[a-z0-9]+")
 SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf", ".pptx"}
 
@@ -77,26 +76,6 @@ def find_fixture_dir(start: Path | None = None) -> Path | None:
         if candidate.is_dir():
             return candidate
     return None
-
-
-def _split_pages(text: str) -> list[Page]:
-    """One page per `##` section, with anything before the first one as page 1."""
-    matches = [m for m in _HEADING.finditer(text) if len(m.group(1)) == 2]
-    if not matches:
-        return [Page(page=1, section_path="", text=text.strip())]
-
-    pages: list[Page] = []
-    preamble = text[: matches[0].start()].strip()
-    title_line = preamble.splitlines()[0] if preamble else ""
-    doc_title = title_line.lstrip("# ").strip()
-
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        body = text[match.end() : end].strip()
-        heading = match.group(2).strip()
-        section = f"{doc_title} > {heading}" if doc_title else heading
-        pages.append(Page(page=index + 1, section_path=section, text=f"## {heading}\n\n{body}"))
-    return pages
 
 
 def _split_chunks(doc_id: str, doc_title: str, pages: list[Page]) -> list[Chunk]:

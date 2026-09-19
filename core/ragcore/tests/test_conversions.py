@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ragcore.api.routes import conversions
 from ragcore.api.schemas import ConnectionTestResult
 
@@ -51,7 +53,9 @@ def test_slide_conversion_saves_and_indexes_markdown(client, read_events, monkey
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
     with client.stream(
-        "POST", "/conversions/slides", json={"slide_ids": [slide_id], "research_query": "esempi numerici"},
+        "POST",
+        "/conversions/slides",
+        json={"slide_ids": [slide_id], "research_query": "esempi numerici"},
     ) as response:
         assert response.status_code == 200
         events = read_events(response)
@@ -108,7 +112,9 @@ def test_slide_conversion_accepts_a_local_file_without_indexing_the_input(
     slide.write_text("# Local slide\n\n## Context\n\nThis file is only used for conversion.\n")
 
     with client.stream(
-        "POST", "/conversions/slides", json={"file_paths": [str(slide)], "output_title": "Local conversion"},
+        "POST",
+        "/conversions/slides",
+        json={"file_paths": [str(slide)], "output_title": "Local conversion"},
     ) as response:
         assert response.status_code == 200
         events = read_events(response)
@@ -211,3 +217,195 @@ def test_unique_path_appends_a_counter_on_collision(tmp_path) -> None:
 
 def test_unique_path_uses_the_plain_name_when_free(tmp_path) -> None:
     assert conversions._unique_path(tmp_path, "fresh-title") == tmp_path / "fresh-title.md"
+
+
+# ------------------------------------------------------- per-presentation errors
+
+
+class _FailingAnswerer:
+    async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
+        yield "partial"
+        raise RuntimeError("model dropped the connection")
+
+
+def test_a_generation_failure_is_reported_per_presentation(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    from ragcore.api import deps
+
+    monkeypatch.setitem(client.app.dependency_overrides, deps.get_answerer, _FailingAnswerer)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# Deck\n\n## Context\n\nReadable content.\n")
+
+    with client.stream("POST", "/conversions/slides", json={"file_paths": [str(slide)]}) as r:
+        events = read_events(r)
+
+    names = [name for name, _ in events]
+    assert "presentation_error" in names
+    assert names[-1] == "conversion_done"
+    done = events[-1][1]
+    assert done["saved"] == []
+    assert "model dropped the connection" in done["failed"][0]["message"]
+
+
+def test_an_indexed_slide_id_that_does_not_exist_is_reported(
+    client, read_events, monkeypatch
+) -> None:
+    _mock_ok(client, monkeypatch)
+
+    with client.stream("POST", "/conversions/slides", json={"slide_ids": ["doc_nope"]}) as r:
+        events = read_events(r)
+
+    assert events[0][0] == "presentation_error"
+    assert events[0][1]["title"] == "doc_nope"
+    assert "not found" in events[0][1]["message"]
+
+
+def test_a_slide_file_with_no_text_is_reported(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    empty = tmp_path / "hollow.md"
+    empty.write_text("## First\n\n## Second\n")
+
+    with client.stream("POST", "/conversions/slides", json={"file_paths": [str(empty)]}) as r:
+        events = read_events(r)
+
+    assert events[0][0] == "presentation_error"
+    assert "does not contain any slide text" in events[0][1]["message"]
+
+
+def test_a_format_the_parser_does_not_handle_is_reported(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    odd = tmp_path / "notes.rtf"
+    odd.write_text("{\\rtf1 hello}")
+
+    with client.stream("POST", "/conversions/slides", json={"file_paths": [str(odd)]}) as r:
+        events = read_events(r)
+
+    assert events[0][0] == "presentation_error"
+    assert "Could not read slide file notes.rtf" in events[0][1]["message"]
+
+
+def test_a_request_naming_no_slides_at_all_is_rejected(client) -> None:
+    assert client.post("/conversions/slides", json={}).status_code == 422
+
+
+# -------------------------------------------------------------- output shaping
+
+
+def test_the_converted_file_is_titled_even_when_the_model_forgets(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# Deck\n\n## Context\n\nReadable content.\n")
+
+    with client.stream(
+        "POST",
+        "/conversions/slides",
+        json={"file_paths": [str(slide)], "output_title": "Chapter One"},
+    ) as r:
+        done = read_events(r)[-1][1]
+
+    saved = Path(done["saved"][0]["path"]).read_text()
+    # The fake answerer emits a bare "ok"; a chapter with no heading is unreadable.
+    assert saved.startswith("# Chapter One\n\n")
+    assert saved.endswith("\n")
+
+
+def test_an_output_title_is_ignored_for_a_batch(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    """One title cannot name two chapters, so the per-deck titles win."""
+    _mock_ok(client, monkeypatch)
+    first = tmp_path / "one.md"
+    first.write_text("# Alpha\n\n## Context\n\nBody.\n")
+    second = tmp_path / "two.md"
+    second.write_text("# Beta\n\n## Context\n\nBody.\n")
+
+    with client.stream(
+        "POST",
+        "/conversions/slides",
+        json={"file_paths": [str(first), str(second)], "output_title": "Ignored"},
+    ) as r:
+        done = read_events(r)[-1][1]
+
+    assert sorted(event["title"] for event in done["saved"]) == ["Alpha", "Beta"]
+
+
+def test_converted_files_all_land_in_one_reused_source(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    for name in ("one", "two"):
+        slide = tmp_path / f"{name}.md"
+        slide.write_text(f"# {name.title()}\n\n## Context\n\nBody.\n")
+
+    for name in ("one", "two"):
+        with client.stream(
+            "POST", "/conversions/slides", json={"file_paths": [str(tmp_path / f"{name}.md")]}
+        ) as r:
+            read_events(r)
+
+    global_sources = [
+        source for source in client.get("/sources").json()
+        if source["path"].endswith("global-files")
+    ]
+    assert len(global_sources) == 1
+    assert global_sources[0]["document_count"] == 2
+
+
+def test_the_english_prompt_is_used_when_asked_for(client, monkeypatch, tmp_path) -> None:
+    captured = _mock_ok(client, monkeypatch)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# Deck\n\n## Context\n\nBody.\n")
+
+    with client.stream(
+        "POST", "/conversions/slides", json={"file_paths": [str(slide)], "language": "en"}
+    ) as response:
+        list(response.iter_lines())
+
+    assert captured["system_prompt"] == conversions._build_system_prompt("en")
+    assert "university textbook chapter" in captured["question"]
+
+
+def test_standard_depth_drops_the_maximum_depth_instruction(
+    client, monkeypatch, tmp_path
+) -> None:
+    captured = _mock_ok(client, monkeypatch)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# Deck\n\n## Context\n\nBody.\n")
+
+    with client.stream(
+        "POST",
+        "/conversions/slides",
+        json={"file_paths": [str(slide)], "language": "en", "depth": "standard"},
+    ) as response:
+        list(response.iter_lines())
+
+    assert "Maximum depth" not in captured["question"]
+
+
+def test_a_title_of_only_punctuation_still_gets_a_filename(client, monkeypatch, tmp_path) -> None:
+    _mock_ok(client, monkeypatch)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# ??? !!!\n\n## Context\n\nBody.\n")
+
+    with client.stream("POST", "/conversions/slides", json={"file_paths": [str(slide)]}) as r:
+        done = [line for line in r.iter_lines()]
+
+    assert any("conversione-slide" in str(line) for line in done)
+
+
+def test_slug_shortens_a_very_long_title() -> None:
+    assert len(conversions._slug("word " * 40)) <= 72
+
+
+def test_clean_markdown_strips_a_code_fence_the_model_wrapped_it_in() -> None:
+    assert conversions._clean_markdown("```# Title\n\nBody.```", "Fallback") == (
+        "# Title\n\nBody.\n"
+    )

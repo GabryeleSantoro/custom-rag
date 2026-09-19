@@ -372,3 +372,110 @@ unsafe fn libc_kill(pid: i32) {
     }
     unsafe { kill(pid, 9) };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_session_token_is_long_and_never_repeats() {
+        let first = session_token();
+
+        assert_eq!(first.len(), 64);
+        assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(first, session_token());
+    }
+
+    #[test]
+    fn the_reserved_port_is_free_and_local() {
+        let port = free_port().expect("the OS always has a free ephemeral port");
+
+        assert!(port > 0);
+        // Released again, so the child can bind it.
+        assert!(TcpListener::bind(("127.0.0.1", port)).is_ok());
+    }
+
+    #[test]
+    fn a_new_supervisor_starts_stopped_on_its_own_port() {
+        let supervisor = Supervisor::new().expect("a port");
+        let status = supervisor.status();
+
+        assert_eq!(status.state, ProcState::Stopped);
+        assert_eq!(status.port, Some(supervisor.port));
+        assert_eq!(status.restarts, 0);
+        assert!(status.pid.is_none());
+        assert_eq!(supervisor.base_url(), format!("http://127.0.0.1:{}", supervisor.port));
+    }
+
+    #[test]
+    fn the_log_ring_buffer_drops_the_oldest_line() {
+        let supervisor = Supervisor::new().expect("a port");
+        for i in 0..LOG_CAPACITY + 10 {
+            supervisor.log(format!("line {i}"));
+        }
+
+        let logs = supervisor.logs();
+
+        assert_eq!(logs.len(), LOG_CAPACITY);
+        assert_eq!(logs[0], "line 10");
+        assert_eq!(logs[LOG_CAPACITY - 1], format!("line {}", LOG_CAPACITY + 9));
+    }
+
+    #[test]
+    fn uptime_is_counted_only_while_ready() {
+        let supervisor = Supervisor::new().expect("a port");
+
+        supervisor.set_state(ProcState::Ready, None);
+        assert!(supervisor.status().uptime_s >= 0.0);
+
+        supervisor.set_state(ProcState::Restarting, Some("crashed".into()));
+        let status = supervisor.status();
+        assert_eq!(status.uptime_s, 0.0);
+        assert_eq!(status.detail.as_deref(), Some("crashed"));
+    }
+
+    #[test]
+    fn killing_a_child_that_never_started_is_a_no_op() {
+        Supervisor::new().expect("a port").kill_child();
+    }
+
+    #[test]
+    fn the_serve_args_carry_the_port_token_and_hardware_budget() {
+        let hw = HardwareInfo {
+            os: "macos".into(),
+            arch: "aarch64".into(),
+            cpu_count: 10,
+            ram_mb: 32768,
+            vram_mb: 32768,
+            gpu_backend: "metal".into(),
+            gpu_name: None,
+            profile: "gpu".into(),
+        };
+        let mut command = Command::new("true");
+        push_serve_args(&mut command, 8765, "deadbeef", &hw);
+
+        let args: Vec<String> = command
+            .as_std()
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+
+        assert_eq!(args[0], "serve");
+        assert!(args.windows(2).any(|w| w == ["--port", "8765"]));
+        assert!(args.windows(2).any(|w| w == ["--token", "deadbeef"]));
+        assert!(args.windows(2).any(|w| w == ["--ram-mb", "32768"]));
+        assert!(args.windows(2).any(|w| w == ["--vram-mb", "32768"]));
+        assert!(args.windows(2).any(|w| w == ["--gpu-backend", "metal"]));
+    }
+
+    #[test]
+    fn a_status_serialises_its_state_in_lowercase_for_the_ui() {
+        let supervisor = Supervisor::new().expect("a port");
+        supervisor.set_state(ProcState::Restarting, None);
+
+        let json = serde_json::to_value(supervisor.status()).unwrap();
+
+        assert_eq!(json["state"], "restarting");
+        assert_eq!(json["role"], "ragcore");
+    }
+}

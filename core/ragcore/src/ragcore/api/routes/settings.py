@@ -15,8 +15,11 @@ def get_settings(store: StoreDep) -> AppSettings:
 
 @router.patch("", response_model=AppSettings)
 def patch_settings(payload: AppSettingsPatch, store: StoreDep) -> AppSettings:
-    for field, value in payload.model_dump(exclude_none=True).items():
-        setattr(store.settings, field, value)
+    # The value off the model, not off model_dump: dumping would turn the nested
+    # retrieval/performance models into plain dicts, which the retriever then
+    # attribute-accesses and blows up on.
+    for field in payload.model_dump(exclude_none=True):
+        setattr(store.settings, field, getattr(payload, field))
     return store.settings
 
 

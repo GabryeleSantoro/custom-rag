@@ -165,7 +165,7 @@ def _slug(value: str) -> str:
 
 
 def _unique_path(directory: Path, stem: str) -> Path:
-    """Never clobber a file an earlier presentation in this batch (or a previous run) already claimed."""
+    """Never clobber a file an earlier presentation in this batch, or a previous run, claimed."""
     candidate = directory / f"{stem}.md"
     suffix = 2
     while candidate.exists():
@@ -295,7 +295,10 @@ async def convert_slides(
         )
 
     refs = [_PresentationRef(slide_id=slide_id, file_path=None) for slide_id in payload.slide_ids]
-    refs += [_PresentationRef(slide_id=None, file_path=file_path) for file_path in payload.file_paths]
+    refs += [
+        _PresentationRef(slide_id=None, file_path=file_path)
+        for file_path in payload.file_paths
+    ]
     total = len(refs)
     system_prompt = _build_system_prompt(payload.language)
 

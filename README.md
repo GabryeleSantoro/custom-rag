@@ -94,10 +94,18 @@ uv run ruff check .
 uv run pytest -v -m requires_models
 ```
 
-Per controllare il frontend:
+Per la shell Rust:
+
+```bash
+cd apps/desktop/src-tauri
+cargo test --lib
+```
+
+Per il frontend:
 
 ```bash
 cd apps/desktop
+bun run test        # vitest: formatter e confine IPC
 bun run typecheck
 bun run build
 ```

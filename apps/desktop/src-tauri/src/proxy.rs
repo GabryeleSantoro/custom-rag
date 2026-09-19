@@ -223,3 +223,135 @@ fn parse_frame(raw: &str) -> Option<StreamFrame> {
 }
 
 pub type CancelSet = Arc<Mutex<HashSet<String>>>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn event(raw: &str) -> (String, Value) {
+        match parse_frame(raw) {
+            Some(StreamFrame::Event { event, data }) => (event, data),
+            other => panic!("expected an Event frame, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_event_and_data_pair_becomes_a_typed_frame() {
+        let (name, data) = event("event: token\ndata: {\"text\":\"hello\"}");
+
+        assert_eq!(name, "token");
+        assert_eq!(data["text"], "hello");
+    }
+
+    #[test]
+    fn a_frame_without_an_event_line_defaults_to_message() {
+        assert_eq!(event("data: {\"text\":\"hi\"}").0, "message");
+    }
+
+    #[test]
+    fn whitespace_after_the_field_name_is_trimmed() {
+        let (name, data) = event("event:   token   \ndata:   {\"text\":\"hi\"}");
+
+        assert_eq!(name, "token");
+        assert_eq!(data["text"], "hi");
+    }
+
+    #[test]
+    fn a_comment_only_frame_carries_no_data() {
+        // The heartbeat on /jobs/stream. Forwarding it would confuse the UI.
+        assert!(parse_frame(": heartbeat").is_none());
+    }
+
+    #[test]
+    fn an_event_line_with_no_data_is_dropped() {
+        assert!(parse_frame("event: token").is_none());
+    }
+
+    #[test]
+    fn an_empty_frame_is_dropped() {
+        assert!(parse_frame("").is_none());
+    }
+
+    #[test]
+    fn several_data_lines_are_rejoined_with_newlines() {
+        let (_, data) = event("event: token\ndata: {\"text\":\ndata: \"hi\"}");
+
+        assert_eq!(data["text"], "hi");
+    }
+
+    #[test]
+    fn data_that_is_not_json_is_forwarded_as_a_string() {
+        let (name, data) = event("event: note\ndata: plain text");
+
+        assert_eq!(name, "note");
+        assert_eq!(data, Value::String("plain text".into()));
+    }
+
+    #[test]
+    fn leading_whitespace_inside_the_payload_survives() {
+        // Token frames carry the space between words; trimming it would glue
+        // the answer together.
+        let (_, data) = event("event: token\ndata: {\"text\":\" world\"}");
+
+        assert_eq!(data["text"], " world");
+    }
+
+    #[test]
+    fn the_error_frame_is_an_ordinary_event_not_a_transport_failure() {
+        let (name, data) = event("event: error\ndata: {\"message\":\"boom\",\"retryable\":true}");
+
+        assert_eq!(name, "error");
+        assert_eq!(data["retryable"], true);
+    }
+
+    #[test]
+    fn frames_serialise_with_a_kind_tag_the_ui_can_switch_on() {
+        let event = serde_json::to_value(StreamFrame::Event {
+            event: "token".into(),
+            data: Value::Null,
+        })
+        .unwrap();
+        let closed = serde_json::to_value(StreamFrame::Closed {
+            reason: "cancelled".into(),
+        })
+        .unwrap();
+        let failed = serde_json::to_value(StreamFrame::Failed {
+            message: "ragcore unreachable".into(),
+        })
+        .unwrap();
+
+        assert_eq!(event["kind"], "event");
+        assert_eq!(closed["kind"], "closed");
+        assert_eq!(failed["kind"], "failed");
+        assert_eq!(failed["message"], "ragcore unreachable");
+    }
+
+    #[test]
+    fn an_api_request_body_is_optional() {
+        let without: ApiRequest = serde_json::from_str(r#"{"method":"GET","path":"/health"}"#)
+            .expect("body must be optional");
+
+        assert!(without.body.is_none());
+        assert_eq!(without.path, "/health");
+    }
+
+    #[test]
+    fn a_buffer_yields_whole_frames_and_keeps_the_partial_tail() {
+        // Mirrors the split loop in api_stream: a chunk boundary must not eat
+        // half a frame.
+        let mut buffer =
+            String::from("event: a\ndata: 1\n\nevent: b\ndata: 2\n\nevent: c\ndata: ");
+        let mut names = Vec::new();
+
+        while let Some(split) = buffer.find("\n\n") {
+            let raw = buffer[..split].to_string();
+            buffer.drain(..split + 2);
+            if let Some(StreamFrame::Event { event, .. }) = parse_frame(&raw) {
+                names.push(event);
+            }
+        }
+
+        assert_eq!(names, ["a", "b"]);
+        assert_eq!(buffer, "event: c\ndata: ");
+    }
+}

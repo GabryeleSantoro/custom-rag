@@ -57,3 +57,34 @@ def test_the_active_connection_decides_who_answers(tmp_path: Path, monkeypatch) 
 def _generator_name(answerer) -> str:
     """Which coroutine the engine handed back. Never iterated, so nothing runs."""
     return answerer.stream("q", [], set()).__qualname__
+
+
+def test_the_ram_probe_falls_back_when_the_platform_will_not_say(monkeypatch) -> None:
+    """Windows has no sysconf; a missing figure must not stop the sidecar booting."""
+    from ragcore import config as config_module
+
+    monkeypatch.setattr(
+        config_module.os, "sysconf", lambda _: (_ for _ in ()).throw(AttributeError())
+    )
+
+    assert config_module._default_ram_mb() == 8192
+
+
+def test_the_ram_probe_reports_a_plausible_figure() -> None:
+    from ragcore.config import _default_ram_mb
+
+    assert _default_ram_mb() >= 512
+
+
+def test_the_backend_hands_the_api_layer_one_of_everything(tmp_path: Path) -> None:
+    built = build_backend(config_for(tmp_path, "stub"))
+
+    assert built.store is not None and built.jobs is not None
+    assert built.hub is not None and built.answerer is not None
+
+
+def test_the_store_the_answerer_reads_is_the_one_the_api_layer_gets(tmp_path: Path) -> None:
+    """A second store would answer from a different index than /documents lists."""
+    built = build_backend(config_for(tmp_path, "stub"))
+
+    assert built.answerer.store is built.store
