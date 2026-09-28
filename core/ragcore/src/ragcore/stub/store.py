@@ -6,6 +6,7 @@ store will do; nothing above this layer knows the data is fake.
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -73,6 +74,7 @@ class Store:
         ]
 
         self._seed()
+        self.load_connections()
 
     # ------------------------------------------------------------------ seeding
 
@@ -285,6 +287,30 @@ class Store:
         return _id(prefix)
 
     # ------------------------------------------------------------- connections
+
+    # Connections (never their keys) are the one thing the stub keeps on disk:
+    # without them every restart sends the user back to the connection dialog.
+    def _connections_path(self) -> Path:
+        return self.config.data_dir / "connections.json"
+
+    def load_connections(self) -> None:
+        path = self._connections_path()
+        if not path.is_file():
+            return
+        data = json.loads(path.read_text())
+        self.connections = {
+            c.id: c for c in (Connection.model_validate(raw) for raw in data["connections"])
+        }
+        self.settings.active_connection_id = data.get("active_connection_id")
+
+    def save_connections(self) -> None:
+        path = self._connections_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "connections": [c.model_dump(mode="json") for c in self.connections.values()],
+            "active_connection_id": self.settings.active_connection_id,
+        }
+        path.write_text(json.dumps(payload, indent=2))
 
     def active_connection(self) -> Connection | None:
         """The one connection that answers, chosen by the user in the app."""

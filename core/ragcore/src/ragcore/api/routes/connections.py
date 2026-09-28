@@ -11,6 +11,7 @@ from ragcore.api.deps import StoreDep
 from ragcore.api.schemas import (
     Connection,
     ConnectionInput,
+    ConnectionSecret,
     ConnectionTestRequest,
     ConnectionTestResult,
     Ok,
@@ -49,6 +50,7 @@ def create_connection(payload: ConnectionInput, store: StoreDep) -> Connection:
         store.secrets[connection.id] = payload.api_key
     if connection.active:
         store.settings.active_connection_id = connection.id
+    store.save_connections()
     return connection
 
 
@@ -68,6 +70,7 @@ def update_connection(
             store.secrets[connection_id] = payload.api_key
         else:
             store.secrets.pop(connection_id, None)
+    store.save_connections()
     return connection
 
 
@@ -79,6 +82,7 @@ def activate(connection_id: str, store: StoreDep) -> Connection:
     for other in store.connections.values():
         other.active = other.id == connection_id
     store.settings.active_connection_id = connection_id
+    store.save_connections()
     return connection
 
 
@@ -90,6 +94,16 @@ def delete_connection(connection_id: str, store: StoreDep) -> Ok:
     store.secrets.pop(connection_id, None)
     if store.settings.active_connection_id == connection_id:
         store.settings.active_connection_id = next(iter(store.connections), None)
+    store.save_connections()
+    return Ok()
+
+
+@router.put("/{connection_id}/secret", response_model=Ok)
+def restore_secret(connection_id: str, payload: ConnectionSecret, store: StoreDep) -> Ok:
+    """The shell hands back a key from the OS keychain after a restart."""
+    if connection_id not in store.connections:
+        raise HTTPException(404, "connection not found")
+    store.secrets[connection_id] = payload.api_key
     return Ok()
 
 

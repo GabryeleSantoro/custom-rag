@@ -265,6 +265,9 @@ impl Supervisor {
             match self.await_ready(&http, &mut shutdown_rx).await {
                 Ok(true) => {
                     attempt = 0;
+                    if let Err(err) = self.restore_secrets(&http).await {
+                        self.log(format!("could not restore API keys: {err}"));
+                    }
                     self.set_state(ProcState::Ready, None);
                 }
                 Ok(false) => {} // shutting down
@@ -349,6 +352,37 @@ impl Supervisor {
             "ragcore did not become healthy within {}s",
             READY_TIMEOUT.as_secs()
         ))
+    }
+
+    /// ragcore keeps API keys in memory only, so every fresh process gets them
+    /// back from the keychain before the UI is told it is ready.
+    async fn restore_secrets(&self, http: &reqwest::Client) -> Result<(), String> {
+        let connections: Vec<serde_json::Value> = http
+            .get(format!("{}/connections", self.base_url()))
+            .bearer_auth(&self.token)
+            .send()
+            .await
+            .and_then(|r| r.error_for_status())
+            .map_err(|e| e.to_string())?
+            .json()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        for connection in connections {
+            let Some(id) = connection["id"].as_str() else { continue };
+            if connection["has_api_key"] != true {
+                continue;
+            }
+            let Some(secret) = crate::keychain::get(id)? else { continue };
+            http.put(format!("{}/connections/{id}/secret", self.base_url()))
+                .bearer_auth(&self.token)
+                .json(&serde_json::json!({ "api_key": secret }))
+                .send()
+                .await
+                .and_then(|r| r.error_for_status())
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(())
     }
 
     /// Exponential backoff, capped. Returns true when shutdown was requested

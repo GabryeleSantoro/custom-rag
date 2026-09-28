@@ -362,6 +362,10 @@ class Connection(BaseModel):
     provider_order: list[str] | None = None
 
 
+class ConnectionSecret(BaseModel):
+    api_key: str
+
+
 class ConnectionTestRequest(BaseModel):
     connection_id: str | None = None
     kind: ConnectionKind | None = None

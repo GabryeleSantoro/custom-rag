@@ -332,3 +332,25 @@ def test_a_body_that_is_not_a_model_list_does_not_crash_the_probe(client, monkey
     ).json()
 
     assert (result["ok"], result["reachable"]) == (False, True)
+
+
+def test_connections_survive_a_restart_but_their_keys_do_not(client, tmp_path) -> None:
+    from fastapi.testclient import TestClient
+    from ragcore.api.app import create_app
+
+    created = client.post("/connections", json={**_LM_STUDIO, "api_key": "sk-1"}).json()
+
+    with TestClient(create_app(client.app.state.config)) as restarted:
+        restarted.headers["Authorization"] = client.headers["Authorization"]
+        [reloaded] = restarted.get("/connections").json()
+        store = restarted.app.state.store
+
+        assert reloaded == created
+        assert store.active_connection().id == created["id"]
+        assert created["id"] not in store.secrets
+        assert "sk-1" not in (tmp_path / "connections.json").read_text()
+
+        response = restarted.put(f"/connections/{created['id']}/secret", json={"api_key": "sk-1"})
+
+        assert response.status_code == 200
+        assert store.secrets[created["id"]] == "sk-1"

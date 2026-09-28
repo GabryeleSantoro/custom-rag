@@ -20,6 +20,8 @@ def patch_settings(payload: AppSettingsPatch, store: StoreDep) -> AppSettings:
     # attribute-accesses and blows up on.
     for field in payload.model_dump(exclude_none=True):
         setattr(store.settings, field, getattr(payload, field))
+    if payload.active_connection_id is not None:
+        store.save_connections()
     return store.settings
 
 
@@ -37,5 +39,7 @@ def wipe(payload: WipeRequest, store: StoreDep) -> Ok:
     if not payload.keep_connections:
         store.connections.clear()
         store.settings.active_connection_id = None
+        store.secrets.clear()
+        store.save_connections()
     store.settings.onboarded = False
     return Ok()
