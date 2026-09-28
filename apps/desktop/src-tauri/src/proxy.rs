@@ -39,6 +39,7 @@ pub struct ApiRequest {
 /// safe to show in the UI.
 #[tauri::command]
 pub async fn api_request(state: State<'_, AppState>, req: ApiRequest) -> Result<Value, String> {
+    state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), req.path);
     let method = reqwest::Method::from_bytes(req.method.to_uppercase().as_bytes())
         .map_err(|_| format!("unsupported method {}", req.method))?;
@@ -86,6 +87,7 @@ pub async fn api_stream(
     body: Option<Value>,
     channel: Channel<StreamFrame>,
 ) -> Result<(), String> {
+    state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), path);
     let http_method = reqwest::Method::from_bytes(method.to_uppercase().as_bytes())
         .map_err(|_| format!("unsupported method {method}"))?;

@@ -191,6 +191,18 @@ impl Supervisor {
         }
     }
 
+    /// Hold a UI call until ragcore is up. The window
+    /// opens seconds before the frozen binary is healthy, and a query that fails
+    /// then leaves the UI empty until something refetches it. Gives up after
+    /// READY_TIMEOUT and lets the call fail on its own.
+    pub async fn wait_ready(&self) {
+        // ponytail: polls the state; a watch channel if this ever shows up in profiles.
+        let deadline = Instant::now() + READY_TIMEOUT;
+        while self.status().state != ProcState::Ready && Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    }
+
     pub fn request_shutdown(&self) {
         let _ = self.shutdown.send(true);
     }
@@ -265,10 +277,12 @@ impl Supervisor {
             match self.await_ready(&http, &mut shutdown_rx).await {
                 Ok(true) => {
                     attempt = 0;
+                    // Ready first: reading the keychain can sit behind a macOS
+                    // password prompt, and the UI must not wait on that.
+                    self.set_state(ProcState::Ready, None);
                     if let Err(err) = self.restore_secrets(&http).await {
                         self.log(format!("could not restore API keys: {err}"));
                     }
-                    self.set_state(ProcState::Ready, None);
                 }
                 Ok(false) => {} // shutting down
                 Err(message) => {
