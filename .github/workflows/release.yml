@@ -2,7 +2,7 @@ name: release
 
 on:
   push:
-    branches: [master]
+    tags: ['v*']
 
 concurrency: release
 
@@ -16,9 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Next patch version
+      - name: Version from tag
         id: version
-        run: echo "next=$(./scripts/next-version.sh)" >> "$GITHUB_OUTPUT"
+        run: echo "next=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       # Cargo.toml is the single source of the app version; tauri.conf.json inherits it.
       - name: Stamp version

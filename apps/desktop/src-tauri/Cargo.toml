@@ -1,6 +1,6 @@
 [package]
 name = "custom-rag-desktop"
-version = "0.0.3"
+version = "0.0.5"
 description = "Local-first RAG desktop app"
 authors = ["GabryeleSantoro"]
 edition = "2021"
