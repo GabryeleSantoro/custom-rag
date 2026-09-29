@@ -1,105 +1,106 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Palette: warm paper + ink in light, graphite in dark, one copper accent.
-  Deliberately not the shadcn default neutral — this is a reading tool, so the
-  surfaces carry a slight warm cast and the accent is used sparingly.
+  Palette: cool graphite + one cobalt accent (dark-tech workbench).
+  Dark is the home theme; light is a cold paper counterpart with the same hue
+  family so hierarchy carries across. Hue 255 is reserved for the accent, and
+  "running" status moved to cyan so it never reads as the brand color.
 */
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  --background: oklch(0.985 0.004 85);
-  --foreground: oklch(0.21 0.008 75);
+  --background: oklch(0.984 0.003 250);
+  --foreground: oklch(0.2 0.015 258);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.008 75);
+  --card-foreground: oklch(0.2 0.015 258);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.008 75);
-  --primary: oklch(0.55 0.13 55);
-  --primary-foreground: oklch(0.99 0.005 85);
-  --secondary: oklch(0.955 0.006 85);
-  --secondary-foreground: oklch(0.28 0.008 75);
-  --muted: oklch(0.955 0.006 85);
-  --muted-foreground: oklch(0.52 0.012 75);
-  --accent: oklch(0.94 0.02 70);
-  --accent-foreground: oklch(0.28 0.03 60);
+  --popover-foreground: oklch(0.2 0.015 258);
+  --primary: oklch(0.52 0.21 259);
+  --primary-foreground: oklch(0.985 0.005 250);
+  --secondary: oklch(0.955 0.005 250);
+  --secondary-foreground: oklch(0.26 0.015 258);
+  --muted: oklch(0.955 0.005 250);
+  --muted-foreground: oklch(0.5 0.02 258);
+  --accent: oklch(0.94 0.025 259);
+  --accent-foreground: oklch(0.3 0.08 259);
   --destructive: oklch(0.55 0.2 27);
   --destructive-foreground: oklch(0.99 0.005 85);
-  --border: oklch(0.9 0.006 85);
-  --input: oklch(0.9 0.006 85);
-  --ring: oklch(0.55 0.13 55);
+  --border: oklch(0.91 0.006 250);
+  --input: oklch(0.9 0.008 250);
+  --ring: oklch(0.52 0.21 259);
 
-  /* App chrome: the rail and the contextual sidebar sit a step back from content. */
-  --rail: oklch(0.945 0.007 85);
-  --rail-foreground: oklch(0.42 0.01 75);
-  --sidebar: oklch(0.968 0.005 85);
-  --sidebar-foreground: oklch(0.28 0.008 75);
-  --sidebar-primary: oklch(0.55 0.13 55);
-  --sidebar-primary-foreground: oklch(0.99 0.005 85);
-  --sidebar-accent: oklch(0.93 0.008 85);
-  --sidebar-accent-foreground: oklch(0.24 0.008 75);
-  --sidebar-border: oklch(0.9 0.006 85);
-  --sidebar-ring: oklch(0.55 0.13 55);
+  --rail: oklch(0.955 0.005 250);
+  --rail-foreground: oklch(0.44 0.02 258);
+  --sidebar: oklch(0.972 0.004 250);
+  --sidebar-foreground: oklch(0.28 0.015 258);
+  --sidebar-primary: oklch(0.52 0.21 259);
+  --sidebar-primary-foreground: oklch(0.985 0.005 250);
+  --sidebar-accent: oklch(0.93 0.01 255);
+  --sidebar-accent-foreground: oklch(0.24 0.015 258);
+  --sidebar-border: oklch(0.91 0.006 250);
+  --sidebar-ring: oklch(0.52 0.21 259);
 
-  /* Pipeline status. Used by document rows, job chips and sidecar cards. */
-  --status-idle: oklch(0.6 0.01 75);
-  --status-running: oklch(0.6 0.13 240);
+  --status-idle: oklch(0.6 0.012 258);
+  --status-running: oklch(0.62 0.12 215);
   --status-ok: oklch(0.55 0.13 150);
   --status-warn: oklch(0.65 0.14 75);
   --status-error: oklch(0.55 0.2 27);
 
-  --chart-1: oklch(0.55 0.13 55);
-  --chart-2: oklch(0.6 0.13 240);
+  --chart-1: oklch(0.52 0.21 259);
+  --chart-2: oklch(0.62 0.12 215);
   --chart-3: oklch(0.55 0.13 150);
-  --chart-4: oklch(0.65 0.14 320);
+  --chart-4: oklch(0.65 0.14 45);
   --chart-5: oklch(0.65 0.14 100);
 }
 
 .dark {
-  --background: oklch(0.17 0.006 70);
-  --foreground: oklch(0.93 0.005 85);
-  --card: oklch(0.205 0.007 70);
-  --card-foreground: oklch(0.93 0.005 85);
-  --popover: oklch(0.225 0.008 70);
-  --popover-foreground: oklch(0.93 0.005 85);
-  --primary: oklch(0.72 0.14 62);
-  --primary-foreground: oklch(0.2 0.03 60);
-  --secondary: oklch(0.26 0.008 70);
-  --secondary-foreground: oklch(0.93 0.005 85);
-  --muted: oklch(0.25 0.007 70);
-  --muted-foreground: oklch(0.69 0.012 75);
-  --accent: oklch(0.3 0.02 60);
-  --accent-foreground: oklch(0.92 0.02 70);
-  --destructive: oklch(0.62 0.19 25);
+  --background: oklch(0.155 0.012 262);
+  --foreground: oklch(0.94 0.005 250);
+  --card: oklch(0.19 0.014 262);
+  --card-foreground: oklch(0.94 0.005 250);
+  --popover: oklch(0.21 0.015 262);
+  --popover-foreground: oklch(0.94 0.005 250);
+  --primary: oklch(0.68 0.19 259);
+  --primary-foreground: oklch(0.14 0.03 262);
+  --secondary: oklch(0.25 0.014 262);
+  --secondary-foreground: oklch(0.94 0.005 250);
+  --muted: oklch(0.24 0.013 262);
+  --muted-foreground: oklch(0.68 0.018 258);
+  --accent: oklch(0.27 0.045 259);
+  --accent-foreground: oklch(0.9 0.04 259);
+  --destructive: oklch(0.64 0.19 25);
   --destructive-foreground: oklch(0.98 0.005 85);
-  --border: oklch(0.285 0.008 70);
-  --input: oklch(0.3 0.008 70);
-  --ring: oklch(0.72 0.14 62);
+  --border: oklch(0.28 0.014 262);
+  --input: oklch(0.3 0.015 262);
+  --ring: oklch(0.68 0.19 259);
 
-  --rail: oklch(0.145 0.006 70);
-  --rail-foreground: oklch(0.7 0.01 75);
-  --sidebar: oklch(0.185 0.006 70);
-  --sidebar-foreground: oklch(0.88 0.005 85);
-  --sidebar-primary: oklch(0.72 0.14 62);
-  --sidebar-primary-foreground: oklch(0.2 0.03 60);
-  --sidebar-accent: oklch(0.26 0.008 70);
-  --sidebar-accent-foreground: oklch(0.93 0.005 85);
-  --sidebar-border: oklch(0.26 0.008 70);
-  --sidebar-ring: oklch(0.72 0.14 62);
+  --rail: oklch(0.125 0.012 262);
+  --rail-foreground: oklch(0.7 0.018 258);
+  --sidebar: oklch(0.175 0.013 262);
+  --sidebar-foreground: oklch(0.88 0.008 250);
+  --sidebar-primary: oklch(0.68 0.19 259);
+  --sidebar-primary-foreground: oklch(0.14 0.03 262);
+  --sidebar-accent: oklch(0.255 0.018 262);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250);
+  --sidebar-border: oklch(0.255 0.014 262);
+  --sidebar-ring: oklch(0.68 0.19 259);
 
-  --status-idle: oklch(0.6 0.01 75);
-  --status-running: oklch(0.7 0.13 240);
-  --status-ok: oklch(0.72 0.14 155);
+  --status-idle: oklch(0.62 0.012 258);
+  --status-running: oklch(0.75 0.12 215);
+  --status-ok: oklch(0.74 0.15 155);
   --status-warn: oklch(0.78 0.14 80);
   --status-error: oklch(0.68 0.18 25);
 
-  --chart-1: oklch(0.72 0.14 62);
-  --chart-2: oklch(0.7 0.13 240);
-  --chart-3: oklch(0.72 0.14 155);
-  --chart-4: oklch(0.72 0.14 320);
-  --chart-5: oklch(0.75 0.14 100);
+  --chart-1: oklch(0.68 0.19 259);
+  --chart-2: oklch(0.75 0.12 215);
+  --chart-3: oklch(0.74 0.15 155);
+  --chart-4: oklch(0.75 0.14 50);
+  --chart-5: oklch(0.78 0.14 100);
 }
 
 @theme inline {
@@ -151,8 +152,8 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-sans: "Geist Variable", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
   --font-reader: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
 
   /* Chrome geometry, referenced by the shell layout. */
@@ -174,6 +175,8 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    letter-spacing: -0.006em;
+    font-feature-settings: "ss01", "cv11";
     /* A desktop app should not rubber-band or select chrome text like a web page. */
     overscroll-behavior: none;
     -webkit-user-select: none;
@@ -233,4 +236,34 @@
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* Soft accent bloom behind the app. Fixed + non-interactive so scrolling never repaints it. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 28rem at 70% -8rem, color-mix(in oklch, var(--primary) 9%, transparent), transparent 70%);
+}
+
+/* Glass panel approximation (backdrop-filter, not an official material). */
+@utility glass {
+  background: color-mix(in oklch, var(--card) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, white 8%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Button tactile press. */
+button:not(:disabled):active {
+  transform: translateY(0.5px) scale(0.985);
 }
