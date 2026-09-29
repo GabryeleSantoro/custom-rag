@@ -216,24 +216,39 @@ class Store:
         }
         path.write_text(json.dumps(payload, indent=2))
 
-    def ingest_source(self, source_id: str) -> list[Document]:
-        """Load every file under a source and mark it indexed."""
-        source = self.sources.get(source_id)
-        if source is None:
-            return []
+    @staticmethod
+    def scan(source: Source) -> list[LoadedDoc] | None:
+        """Parse a source's files. Touches no store state, so it may run in a thread."""
         directory = Path(source.path)
         if not directory.is_dir():
             logger.warning("source folder missing, nothing indexed: %s", directory)
-            return []
-        started = time.perf_counter()
-
-        docs: list[Document] = []
-        for loaded in load_corpus(
+            return None
+        return load_corpus(
             directory,
             include_globs=source.include_globs,
             exclude_globs=source.exclude_globs,
             max_file_mb=source.max_file_mb,
-        ):
+        )
+
+    def ingest_source(
+        self, source_id: str, scanned: list[LoadedDoc] | None = None
+    ) -> list[Document]:
+        """Load every file under a source and mark it indexed.
+
+        Pass ``scanned`` (from ``scan``, run off the event loop) to skip the parse.
+        """
+        source = self.sources.get(source_id)
+        if source is None:
+            return []
+        directory = Path(source.path)
+        if scanned is None:
+            scanned = self.scan(source)
+            if scanned is None:
+                return []
+        started = time.perf_counter()
+
+        docs: list[Document] = []
+        for loaded in scanned:
             if str(loaded.path) in self.removed_paths:
                 continue
             document = Document(

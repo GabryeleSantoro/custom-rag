@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -12,8 +13,8 @@ from typing import Literal
 from fastapi import APIRouter
 
 from ragcore.api.deps import AnswererDep, ConfigDep, StoreDep
-from ragcore.api.routes.connections import probe_connection
 from ragcore.api.errors import api_error
+from ragcore.api.routes.connections import probe_connection
 from ragcore.api.schemas import (
     ConversionDoneEvent,
     ConversionSavedEvent,
@@ -168,8 +169,8 @@ def _build_system_prompt(language: Literal["it", "en", "fr", "de", "es"]) -> str
     name = _LANGUAGE_NAMES[language]
     return text.replace("Valid Markdown in English", f"Valid Markdown in {name}")
 
-# Slides per model call: a long deck in one call outlives provider stream limits.
 
+# Slides per model call: a long deck in one call outlives provider stream limits.
 BATCH_SLIDES = 15
 BATCH_ATTEMPTS = 2
 
@@ -480,9 +481,9 @@ async def convert_slides(
                     presentation_total=total,
                     title=title,
                     message=str(exc),
-                )
                     code=getattr(exc, "code", None),
                     params=getattr(exc, "params", {}),
+                )
                 failed.append(error)
                 yield frame("presentation_error", error)
                 continue
@@ -496,7 +497,9 @@ async def convert_slides(
             )
 
             source = _global_source(store, global_dir)
-            indexed = store.ingest_source(source.id)
+            # Parsing walks the whole output folder: keep it off the event loop.
+            scanned = await asyncio.to_thread(store.scan, source)
+            indexed = store.ingest_source(source.id, scanned)
             saved_document = next(
                 (document for document in indexed if Path(document.path) == output_path), None
             )
