@@ -154,7 +154,7 @@ function ConnectionsSection() {
             <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
               {connection.max_output_tokens
                 ? t("settings.connections.outputLimit", {
-                    count: connection.max_output_tokens.toLocaleString(currentLanguage()),
+                    value: connection.max_output_tokens.toLocaleString(currentLanguage()),
                   })
                 : t("settings.connections.noOutputLimit")}
               {connection.has_api_key ? ` · ${t("settings.connections.keyInKeychain")}` : ""}

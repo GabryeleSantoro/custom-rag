@@ -165,7 +165,7 @@ export function ModelDetailSheet({
               <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-[0.6875rem] text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <DownloadIcon className="size-3" />
-                  {t("models.downloads", { count: count(detail.data.model.downloads) })}
+                  {t("models.downloads", { value: count(detail.data.model.downloads) })}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <HeartIcon className="size-3" />

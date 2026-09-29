@@ -26,6 +26,7 @@ from ragcore.api.schemas import (
 )
 from ragcore.api.sse import frame, sse_response
 from ragcore.ingest.parse import UnsupportedFormat, parse
+from ragcore.stub.answers import LlmError
 
 router = APIRouter(prefix="/conversions", tags=["conversions"])
 logger = logging.getLogger("ragcore.conversions")
@@ -481,8 +482,8 @@ async def convert_slides(
                     presentation_total=total,
                     title=title,
                     message=str(exc),
-                    code=getattr(exc, "code", None),
-                    params=getattr(exc, "params", {}),
+                    code=exc.code if isinstance(exc, LlmError) else None,
+                    params=exc.params if isinstance(exc, LlmError) else {},
                 )
                 failed.append(error)
                 yield frame("presentation_error", error)

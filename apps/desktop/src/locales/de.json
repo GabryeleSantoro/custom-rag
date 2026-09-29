@@ -36,7 +36,6 @@
     "model_not_installed": "Modell nicht installiert",
     "reindex_required": "Ein Wechsel des Embedders macht den Index ungültig. Die Neuindizierung bestätigen, um fortzufahren.",
     "model_shipped": "Mitgelieferte Modelle können nicht entfernt werden",
-    "model_role_needs_other": "Zuerst ein anderes Modell für diese Rolle aktivieren",
     "no_active_connection": "Vor dem Konvertieren von Folien ein Generierungsmodell verbinden",
     "eval_dev_only": "Evaluierungen laufen nur in Entwicklungs-Builds",
     "wipe_confirm_required": "Zum Löschen der Daten ist eine Bestätigung nötig",
@@ -52,7 +51,8 @@
     "llm_idle_timeout": "{{name}} hat {{seconds}} s lang nichts gesendet ({{chars}} Zeichen Text, bisher {{reasoning}} Denkaufwand). Denkaufwand senken, ein Modell ohne Denkmodus verwenden oder erneut versuchen.",
     "llm_budget_spent": "{{name}} hat das gesamte Ausgabebudget verbraucht, ohne Text zu schreiben, vermutlich durch Denkaufwand. Max. Ausgabe-Token erhöhen oder entfernen, oder Denkaufwand senken.",
     "llm_stream_cut": "{{name}} hat den Stream nach {{seconds}} s ohne Text beendet, vermutlich noch im Denkmodus, als der Anbieter abbrach. Denkaufwand senken, ein Modell ohne Denkmodus verwenden oder weniger Folien auf einmal konvertieren.",
-    "llm_empty_answer": "{{name}} lieferte eine leere Antwort (Abschlussgrund: {{finish}})"
+    "llm_empty_answer": "{{name}} lieferte eine leere Antwort (Abschlussgrund: {{finish}})",
+    "model_role_active": "Zuerst ein anderes Modell für diese Rolle aktivieren"
   },
   "settings": {
     "language": {
@@ -91,7 +91,7 @@
     "connections": {
       "removed": "Verbindung entfernt",
       "remote": "Entfernt",
-      "outputLimit": "{{count}} Ausgabe",
+      "outputLimit": "{{value}} Ausgabe",
       "noOutputLimit": "kein Ausgabelimit",
       "keyInKeychain": "Schlüssel im Schlüsselbund",
       "add": "Verbindung hinzufügen"
@@ -210,7 +210,7 @@
     "reindexWarning_other": "Ein Wechsel des Embedders macht alle gespeicherten Vektoren wertlos. Alle {{count}} Dokumente müssen neu indiziert werden, bevor die Suche wieder funktioniert.",
     "reindexConfirm": "Zur Bestätigung REINDEX eingeben",
     "pickQuant": "Eine Quantisierung wählen. Kleinere Dateien verlieren etwas Qualität; das Eignungs-Badge bezieht sich auf diesen Rechner, als {{role}}.",
-    "downloads": "{{count}} Downloads",
+    "downloads": "{{value}} Downloads",
     "noGguf": "Dieses Repository veröffentlicht keine GGUF-Dateien und läuft daher nicht in llama.cpp.",
     "searchHub": "Auf Hugging Face nach {{role}}-Modellen im GGUF-Format suchen",
     "sort": {
@@ -399,7 +399,12 @@
     "openInReader": "Im Leser öffnen",
     "includeAllIn": "Alle Dateien in {{path}} einbeziehen",
     "folderStats": "{{selected}}/{{files}} Dateien einbezogen · {{indexed}}/{{total}} indiziert",
-    "includeFile": "{{title}} einbeziehen"
+    "includeFile": "{{title}} einbeziehen",
+    "suggestion": {
+      "0": "Was sagt das Dokument zu „{{topic}}“?",
+      "1": "Kannst du „{{topic}}“ erklären?",
+      "2": "Was sind die wichtigsten Punkte zu „{{topic}}“?"
+    }
   },
   "documentStatus": {
     "queued": "in Warteschlange",

@@ -6,9 +6,11 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import "@/lib/i18n";
+import { detectSystemLocale } from "@/lib/i18n";
 import { routeTree } from "./routeTree.gen";
 import "./app.css";
+
+void detectSystemLocale();
 
 const queryClient = new QueryClient({
   defaultOptions: {

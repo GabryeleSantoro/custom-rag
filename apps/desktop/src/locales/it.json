@@ -36,7 +36,6 @@
     "model_not_installed": "Modello non installato",
     "reindex_required": "Cambiare l'embedder invalida l'indice. Confermare la reindicizzazione per continuare.",
     "model_shipped": "I modelli inclusi non possono essere rimossi",
-    "model_role_needs_other": "Prima attivare un altro modello per questo ruolo",
     "no_active_connection": "Collegare un modello di generazione prima di convertire le slide",
     "eval_dev_only": "Le valutazioni funzionano solo nelle build di sviluppo",
     "wipe_confirm_required": "Serve una conferma per cancellare i dati",
@@ -52,7 +51,8 @@
     "llm_idle_timeout": "{{name}} non ha inviato nulla per {{seconds}} s ({{chars}} caratteri di testo, {{reasoning}} di ragionamento finora). Abbassare il ragionamento, usare un modello senza ragionamento o riprovare.",
     "llm_budget_spent": "{{name}} ha esaurito l'intero budget di output senza scrivere testo, probabilmente per il ragionamento. Aumentare o rimuovere i token massimi in uscita, o abbassare il ragionamento.",
     "llm_stream_cut": "{{name}} ha chiuso il flusso dopo {{seconds}} s senza testo, probabilmente ancora in fase di ragionamento quando il provider l'ha interrotto. Abbassare il ragionamento, usare un modello senza ragionamento o convertire meno slide alla volta.",
-    "llm_empty_answer": "{{name}} ha restituito una risposta vuota (motivo di fine: {{finish}})"
+    "llm_empty_answer": "{{name}} ha restituito una risposta vuota (motivo di fine: {{finish}})",
+    "model_role_active": "Prima attivare un altro modello per questo ruolo"
   },
   "settings": {
     "language": {
@@ -91,7 +91,7 @@
     "connections": {
       "removed": "Connessione rimossa",
       "remote": "Remota",
-      "outputLimit": "{{count}} in uscita",
+      "outputLimit": "{{value}} in uscita",
       "noOutputLimit": "nessun limite di output",
       "keyInKeychain": "chiave nel portachiavi",
       "add": "Aggiungi connessione"
@@ -210,7 +210,7 @@
     "reindexWarning_other": "Cambiare l'embedder rende inutili tutti i vettori memorizzati. Tutti i {{count}} documenti vanno reindicizzati prima che la ricerca funzioni di nuovo.",
     "reindexConfirm": "Digitare REINDEX per confermare",
     "pickQuant": "Scegliere una quantizzazione. I file più piccoli perdono un po' di qualità; il badge di compatibilità è calcolato su questo computer, come {{role}}.",
-    "downloads": "{{count}} download",
+    "downloads": "{{value}} download",
     "noGguf": "Questo repository non pubblica file GGUF, quindi non può girare in llama.cpp.",
     "searchHub": "Cerca su Hugging Face modelli {{role}} in GGUF",
     "sort": {
@@ -399,7 +399,12 @@
     "openInReader": "Apri nel lettore",
     "includeAllIn": "Includi tutti i file in {{path}}",
     "folderStats": "{{selected}}/{{files}} file inclusi · {{indexed}}/{{total}} indicizzati",
-    "includeFile": "Includi {{title}}"
+    "includeFile": "Includi {{title}}",
+    "suggestion": {
+      "0": "Cosa dice il documento su «{{topic}}»?",
+      "1": "Puoi spiegare «{{topic}}»?",
+      "2": "Quali sono i punti chiave di «{{topic}}»?"
+    }
   },
   "documentStatus": {
     "queued": "in coda",

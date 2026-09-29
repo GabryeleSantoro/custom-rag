@@ -36,7 +36,6 @@
     "model_not_installed": "Modèle non installé",
     "reindex_required": "Changer l'embedder invalide l'index. Confirmer la réindexation pour continuer.",
     "model_shipped": "Les modèles fournis ne peuvent pas être retirés",
-    "model_role_needs_other": "Activer d'abord un autre modèle pour ce rôle",
     "no_active_connection": "Connecter un modèle de génération avant de convertir des diapositives",
     "eval_dev_only": "Les évaluations ne fonctionnent que dans les builds de développement",
     "wipe_confirm_required": "Confirmation requise pour effacer les données",
@@ -52,7 +51,8 @@
     "llm_idle_timeout": "{{name}} n'a rien envoyé pendant {{seconds}} s ({{chars}} caractères de texte, {{reasoning}} de réflexion jusqu'ici). Réduire la réflexion, utiliser un modèle sans réflexion ou réessayer.",
     "llm_budget_spent": "{{name}} a épuisé tout son budget de sortie sans écrire de texte, probablement à cause de la réflexion. Augmenter ou retirer les jetons de sortie max., ou réduire la réflexion.",
     "llm_stream_cut": "{{name}} a fermé le flux après {{seconds}} s sans texte, probablement encore en réflexion quand le fournisseur l'a coupé. Réduire la réflexion, utiliser un modèle sans réflexion ou convertir moins de diapositives à la fois.",
-    "llm_empty_answer": "{{name}} a renvoyé une réponse vide (motif de fin : {{finish}})"
+    "llm_empty_answer": "{{name}} a renvoyé une réponse vide (motif de fin : {{finish}})",
+    "model_role_active": "Activer d'abord un autre modèle pour ce rôle"
   },
   "settings": {
     "language": {
@@ -91,7 +91,7 @@
     "connections": {
       "removed": "Connexion retirée",
       "remote": "Distante",
-      "outputLimit": "{{count}} en sortie",
+      "outputLimit": "{{value}} en sortie",
       "noOutputLimit": "aucune limite de sortie",
       "keyInKeychain": "clé dans le trousseau",
       "add": "Ajouter une connexion"
@@ -210,7 +210,7 @@
     "reindexWarning_other": "Changer l'embedder rend tous les vecteurs stockés inutilisables. Les {{count}} documents doivent être réindexés avant que la recherche refonctionne.",
     "reindexConfirm": "Saisir REINDEX pour confirmer",
     "pickQuant": "Choisir une quantification. Les fichiers plus petits perdent un peu en qualité ; le badge d'adéquation est évalué pour cette machine, comme {{role}}.",
-    "downloads": "{{count}} téléchargements",
+    "downloads": "{{value}} téléchargements",
     "noGguf": "Ce dépôt ne publie aucun fichier GGUF et ne peut donc pas tourner dans llama.cpp.",
     "searchHub": "Rechercher sur Hugging Face des modèles {{role}} au format GGUF",
     "sort": {
@@ -399,7 +399,12 @@
     "openInReader": "Ouvrir dans le lecteur",
     "includeAllIn": "Inclure tous les fichiers de {{path}}",
     "folderStats": "{{selected}}/{{files}} fichiers inclus · {{indexed}}/{{total}} indexés",
-    "includeFile": "Inclure {{title}}"
+    "includeFile": "Inclure {{title}}",
+    "suggestion": {
+      "0": "Que dit le document sur « {{topic}} » ?",
+      "1": "Peux-tu expliquer « {{topic}} » ?",
+      "2": "Quels sont les points clés de « {{topic}} » ?"
+    }
   },
   "documentStatus": {
     "queued": "en file d'attente",

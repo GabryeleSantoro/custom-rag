@@ -9,6 +9,7 @@ import { StatusChip } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { LogPane } from "@/components/log-pane";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorText } from "@/lib/errors";
 import { bytes, count, duration, relativeTime } from "@/lib/format";
 import { shell, type Health, type HardwareInfo, type ProcessStatus } from "@/lib/ipc";
 import { hardwareQuery, healthQuery, keys, logsQuery, sidecarsQuery } from "@/lib/queries";
@@ -308,7 +309,7 @@ export function DiagnosticsView() {
       void queryClient.invalidateQueries({ queryKey: keys.sidecars });
       void queryClient.invalidateQueries({ queryKey: keys.health });
     } catch (error) {
-      toast.error(t("diagnostics.restartFailed"), { description: String(error) });
+      toast.error(t("diagnostics.restartFailed"), { description: errorText(error) });
     }
   }
 

@@ -33,7 +33,7 @@ from ragcore.api.schemas import (
 )
 from ragcore.api.sse import frame, sse_response
 from ragcore.citations import extract_citations, parse_directives
-from ragcore.stub.answers import system_prompt_for
+from ragcore.stub.answers import LlmError, system_prompt_for
 
 router = APIRouter(tags=["query"])
 
@@ -164,8 +164,8 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
                 ErrorEvent(
                     message=str(exc),
                     retryable=True,
-                    code=getattr(exc, "code", None),
-                    params=getattr(exc, "params", {}),
+                    code=exc.code if isinstance(exc, LlmError) else None,
+                    params=exc.params if isinstance(exc, LlmError) else {},
                 ),
             )
             return

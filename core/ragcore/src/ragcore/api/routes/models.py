@@ -191,6 +191,6 @@ def remove_model(model_id: str, store: StoreDep) -> Ok:
     if model.shipped:
         raise api_error(409, "model_shipped", "Shipped models cannot be removed")
     if model.active:
-        raise api_error(409, "model_role_needs_other", "Activate another model for this role first")
+        raise api_error(409, "model_role_active", "Activate another model for this role first")
     store.models.pop(model_id)
     return Ok()

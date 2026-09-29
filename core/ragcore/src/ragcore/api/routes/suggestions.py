@@ -25,7 +25,10 @@ class SuggestionRequest(BaseModel):
 
 
 class Suggestions(BaseModel):
+    # `topics` is what the UI phrases in its own language; `questions` stays as the
+    # English fallback for clients that do not.
     questions: list[str]
+    topics: list[str]
 
 
 @router.post("", response_model=Suggestions)
@@ -45,5 +48,6 @@ def suggest(payload: SuggestionRequest, store: StoreDep):
     # Round-robin so one big document doesn't crowd out the others.
     topics = list(dict.fromkeys(t for row in zip_longest(*per_doc) for t in row if t))[:3]
     return Suggestions(
-        questions=[TEMPLATES[i].format(f"“{t}”") for i, t in enumerate(topics)]
+        questions=[TEMPLATES[i].format(f"“{t}”") for i, t in enumerate(topics)],
+        topics=topics,
     )

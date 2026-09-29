@@ -1,4 +1,5 @@
 import i18n from "i18next";
+import { isTauri } from "@tauri-apps/api/core";
 import { initReactI18next } from "react-i18next";
 
 import de from "@/locales/de.json";
@@ -40,8 +41,29 @@ export function getLanguagePref(): LanguagePref {
   }
 }
 
+// The webview's own language follows the app bundle's localizations on macOS, so it
+// can say "en" on an Italian Mac. The shell reports the real OS locale instead.
+let systemLocale: string | undefined;
+
 export function currentLanguage(): Language {
-  return resolveLanguage(getLanguagePref(), globalThis.navigator?.language);
+  return resolveLanguage(getLanguagePref(), systemLocale ?? globalThis.navigator?.language);
+}
+
+export function setSystemLocale(locale: string | undefined): void {
+  systemLocale = locale;
+  if (typeof document !== "undefined") document.documentElement.lang = currentLanguage();
+  void i18n.changeLanguage(currentLanguage());
+}
+
+/** Asks the Rust shell for the OS locale. A plain browser keeps `navigator.language`. */
+export async function detectSystemLocale(): Promise<void> {
+  if (!isTauri()) return;
+  try {
+    const { locale } = await import("@tauri-apps/plugin-os");
+    setSystemLocale((await locale()) ?? undefined);
+  } catch {
+    // Permission missing or plugin absent: the webview language stays in charge.
+  }
 }
 
 export function setLanguagePref(pref: LanguagePref): void {

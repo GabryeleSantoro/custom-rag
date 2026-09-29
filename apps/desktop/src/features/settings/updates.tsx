@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { errorText } from "@/lib/errors";
 import i18n from "@/lib/i18n";
 
 const AUTO_KEY = "updates.auto";
@@ -47,7 +48,7 @@ export function UpdatesSection() {
     setChecking(true);
     runUpdate(false)
       .catch((error: unknown) =>
-        toast.error(t("settings.updates.failed"), { description: String(error) }),
+        toast.error(t("settings.updates.failed"), { description: errorText(error) }),
       )
       .finally(() => setChecking(false));
   }, [t]);

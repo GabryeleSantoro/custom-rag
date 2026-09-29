@@ -36,7 +36,6 @@
     "model_not_installed": "Model not installed",
     "reindex_required": "Switching the embedder invalidates the index. Confirm the re-index to continue.",
     "model_shipped": "Shipped models cannot be removed",
-    "model_role_needs_other": "Activate another model for this role first",
     "no_active_connection": "Connect a generation model before converting slides",
     "eval_dev_only": "Evaluation runs only in dev builds",
     "wipe_confirm_required": "Confirmation required to wipe data",
@@ -52,7 +51,8 @@
     "llm_idle_timeout": "{{name}} sent nothing for {{seconds}}s ({{chars}} chars of text, {{reasoning}} of reasoning so far). Lower Thinking, use a non-reasoning model, or try again.",
     "llm_budget_spent": "{{name}} used its whole output budget without writing any text, most likely on reasoning. Raise or clear Max output tokens, or lower Thinking.",
     "llm_stream_cut": "{{name}} closed the stream after {{seconds}}s with no text, most likely still reasoning when the provider cut it off. Lower Thinking, use a non-reasoning model, or convert fewer slides at a time.",
-    "llm_empty_answer": "{{name}} returned an empty answer (finish reason: {{finish}})"
+    "llm_empty_answer": "{{name}} returned an empty answer (finish reason: {{finish}})",
+    "model_role_active": "Activate another model for this role first"
   },
   "settings": {
     "language": {
@@ -91,7 +91,7 @@
     "connections": {
       "removed": "Connection removed",
       "remote": "Remote",
-      "outputLimit": "{{count}} out",
+      "outputLimit": "{{value}} out",
       "noOutputLimit": "no output limit",
       "keyInKeychain": "key in keychain",
       "add": "Add connection"
@@ -210,7 +210,7 @@
     "reindexWarning_other": "Switching the embedder makes every stored vector meaningless. All {{count}} documents must be re-indexed before search works again.",
     "reindexConfirm": "Type REINDEX to confirm",
     "pickQuant": "Pick a quantisation. Smaller files lose some quality; the fit badge is measured against this machine, as the {{role}}.",
-    "downloads": "{{count}} downloads",
+    "downloads": "{{value}} downloads",
     "noGguf": "This repository publishes no GGUF files, so it cannot run in llama.cpp.",
     "searchHub": "Search Hugging Face for {{role}} models in GGUF",
     "sort": {
@@ -399,7 +399,12 @@
     "openInReader": "Open in reader",
     "includeAllIn": "Include all files in {{path}}",
     "folderStats": "{{selected}}/{{files}} files included · {{indexed}}/{{total}} indexed",
-    "includeFile": "Include {{title}}"
+    "includeFile": "Include {{title}}",
+    "suggestion": {
+      "0": "What does the document say about “{{topic}}”?",
+      "1": "Can you explain “{{topic}}”?",
+      "2": "What are the key points of “{{topic}}”?"
+    }
   },
   "documentStatus": {
     "queued": "queued",

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { resolveLanguage } from "./i18n";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { currentLanguage, resolveLanguage, setSystemLocale } from "./i18n";
 
 describe("resolveLanguage", () => {
   it("system follows the OS base language", () => {
@@ -19,5 +19,29 @@ describe("resolveLanguage", () => {
   it("garbage preferences behave like system", () => {
     expect(resolveLanguage("klingon", "it-IT")).toBe("it");
     expect(resolveLanguage(null, "de")).toBe("de");
+  });
+});
+
+describe("system locale from the shell", () => {
+  afterEach(() => {
+    setSystemLocale(undefined);
+    vi.unstubAllGlobals();
+  });
+
+  it("wins over the webview language when the preference is system", () => {
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
+    vi.stubGlobal("navigator", { language: "en-US" });
+
+    setSystemLocale("it-IT");
+
+    expect(currentLanguage()).toBe("it");
+  });
+
+  it("does not override an explicit choice", () => {
+    vi.stubGlobal("localStorage", { getItem: () => "fr", setItem: () => {}, removeItem: () => {} });
+
+    setSystemLocale("it-IT");
+
+    expect(currentLanguage()).toBe("fr");
   });
 });

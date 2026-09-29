@@ -135,7 +135,9 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
     staleTime: Infinity,
     retry: false,
   });
-  const questions = suggestions.data?.questions ?? [];
+  const questions = (suggestions.data?.topics ?? []).map((topic, index) =>
+    t(`chat.suggestion.${index}`, { topic }),
+  );
 
   const onSend = (text: string) => {
     send(text, {
