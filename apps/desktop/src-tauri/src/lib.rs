@@ -9,7 +9,7 @@ mod keychain;
 mod proxy;
 mod sidecars;
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -89,7 +89,7 @@ pub fn run() {
     let state = AppState {
         supervisor: Arc::clone(&supervisor),
         http: http.clone(),
-        cancels: Arc::new(Mutex::new(HashSet::new())),
+        cancels: Arc::new(Mutex::new(HashMap::new())),
         hardware: hardware.clone(),
     };
 

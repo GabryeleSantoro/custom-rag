@@ -4,7 +4,7 @@
 //! stay on the Rust side. Streaming answers arrive as SSE and leave as frames
 //! on a Tauri `Channel`.
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use futures_util::StreamExt;
@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::ipc::Channel;
 use tauri::State;
+use tokio::sync::Notify;
 
 use crate::AppState;
 
@@ -171,8 +172,6 @@ pub async fn api_stream(
     channel: Channel<StreamFrame>,
 ) -> Result<(), String> {
     check_path(&path)?;
-    state.supervisor.wait_ready().await;
-    let url = format!("{}{}", state.supervisor.base_url(), path);
     let http_method = reqwest::Method::from_bytes(method.to_uppercase().as_bytes())
         .map_err(|_| {
             shell_error(
@@ -182,11 +181,27 @@ pub async fn api_stream(
             )
         })?;
 
-    let cancels = Arc::clone(&state.cancels);
-    cancels
+    // Registered before any await so a cancel that lands while we wait for the
+    // sidecar is not lost; the guard removes it on every exit path.
+    let notify = Arc::new(Notify::new());
+    state
+        .cancels
         .lock()
         .expect("cancel set poisoned")
-        .remove(&stream_id);
+        .insert(stream_id.clone(), Arc::clone(&notify));
+    let _registration = Registration {
+        set: Arc::clone(&state.cancels),
+        id: stream_id,
+    };
+
+    tokio::select! {
+        _ = state.supervisor.wait_ready() => {}
+        _ = notify.notified() => {
+            let _ = channel.send(StreamFrame::Closed { reason: "cancelled".to_string() });
+            return Ok(());
+        }
+    }
+    let url = format!("{}{}", state.supervisor.base_url(), path);
 
     let mut builder = state
         .http
@@ -201,7 +216,14 @@ pub async fn api_stream(
     let started = std::time::Instant::now();
     state.supervisor.log(format!("[shell] stream {label} opened"));
 
-    let response = match builder.send().await {
+    let sent = tokio::select! {
+        sent = builder.send() => sent,
+        _ = notify.notified() => {
+            let _ = channel.send(StreamFrame::Closed { reason: "cancelled".to_string() });
+            return Ok(());
+        }
+    };
+    let response = match sent {
         Ok(response) => response,
         Err(err) => {
             let reason = describe(&err);
@@ -232,15 +254,16 @@ pub async fn api_stream(
     let mut buffer: Vec<u8> = Vec::new();
     let mut reason = "complete";
 
-    while let Some(chunk) = stream.next().await {
-        if cancels
-            .lock()
-            .expect("cancel set poisoned")
-            .contains(&stream_id)
-        {
-            reason = "cancelled";
-            break;
-        }
+    loop {
+        // Cancel must interrupt an idle stream, not wait for the next chunk.
+        let chunk = tokio::select! {
+            chunk = stream.next() => chunk,
+            _ = notify.notified() => {
+                reason = "cancelled";
+                break;
+            }
+        };
+        let Some(chunk) = chunk else { break };
 
         let bytes = match chunk {
             Ok(bytes) => bytes,
@@ -275,10 +298,6 @@ pub async fn api_stream(
         }
     }
 
-    cancels
-        .lock()
-        .expect("cancel set poisoned")
-        .remove(&stream_id);
     state.supervisor.log(format!(
         "[shell] stream {label} closed ({reason}) after {:.0}s",
         started.elapsed().as_secs_f64()
@@ -296,11 +315,17 @@ pub async fn api_cancel(
     stream_id: String,
     cancel_path: Option<String>,
 ) -> Result<(), String> {
-    state
+    // No entry means the stream already ended (or never started): nothing to
+    // stop, and nothing to record, so the set cannot grow.
+    let notify = state
         .cancels
         .lock()
         .expect("cancel set poisoned")
-        .insert(stream_id);
+        .get(&stream_id)
+        .cloned();
+    if let Some(notify) = notify {
+        notify.notify_one();
+    }
 
     if let Some(path) = cancel_path {
         check_path(&path)?;
@@ -341,7 +366,21 @@ fn parse_frame(raw: &str) -> Option<StreamFrame> {
     })
 }
 
-pub type CancelSet = Arc<Mutex<HashSet<String>>>;
+pub type CancelSet = Arc<Mutex<HashMap<String, Arc<Notify>>>>;
+
+/// Removes a stream's cancel entry when `api_stream` exits, however it exits.
+struct Registration {
+    set: CancelSet,
+    id: String,
+}
+
+impl Drop for Registration {
+    fn drop(&mut self) {
+        if let Ok(mut set) = self.set.lock() {
+            set.remove(&self.id);
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -452,6 +491,16 @@ mod tests {
 
         assert!(without.body.is_none());
         assert_eq!(without.path, "/health");
+    }
+
+    #[test]
+    fn a_finished_stream_leaves_nothing_in_the_cancel_set() {
+        let set: CancelSet = Arc::default();
+        set.lock().unwrap().insert("s_1".into(), Arc::new(Notify::new()));
+
+        drop(Registration { set: Arc::clone(&set), id: "s_1".into() });
+
+        assert!(set.lock().unwrap().is_empty());
     }
 
     #[test]
