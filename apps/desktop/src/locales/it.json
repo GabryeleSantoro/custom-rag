@@ -6,7 +6,11 @@
     "close": "Chiudi",
     "retry": "Riprova",
     "never": "mai",
-    "longAgo": "molto tempo fa"
+    "longAgo": "molto tempo fa",
+    "download": "Scarica",
+    "active": "Attiva",
+    "edit": "Modifica",
+    "back": "Indietro"
   },
   "errors": {
     "ragcore_unreachable": "ragcore non raggiungibile: {{reason}}",
@@ -66,6 +70,90 @@
     "fitVram": "Entra nella VRAM",
     "fitRam": "Entra nella RAM",
     "fitTooLarge": "Troppo grande",
-    "fitUnknown": "Sconosciuto"
+    "fitUnknown": "Sconosciuto",
+    "roles": {
+      "embedding": "embedding",
+      "reranking": "reranking",
+      "llm": "LLM"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": "Benvenuto",
+      "hardware": "Il tuo computer",
+      "models": "Modelli di base",
+      "connection": "Modello per le risposte",
+      "library": "Prima cartella",
+      "done": "Pronto"
+    },
+    "welcome": {
+      "title": "Un bibliotecario per i tuoi file",
+      "lead": "Indicare le cartelle già esistenti. Il programma le legge, le indicizza in locale e risponde alle domande mostrando accanto alla risposta il passaggio utilizzato.",
+      "privateTitle": "I documenti restano su questo computer",
+      "privateBody": "Analisi, embedding e ricerca avvengono qui. Solo la domanda e i passaggi recuperati raggiungono il modello scelto, che può essere anche locale.",
+      "citedTitle": "Ogni affermazione rimanda a una pagina",
+      "citedBody": "Le risposte riportano citazioni. Un clic apre il lettore sul punto esatto di provenienza, così una risposta sbagliata è evidentemente sbagliata.",
+      "stepsTitle": "Quattro brevi passaggi",
+      "stepsBody": "Controllare l'hardware, scaricare i due modelli di recupero, scegliere chi scrive le risposte, aggiungere una cartella."
+    },
+    "hardware": {
+      "loadingTitle": "Analisi del computer",
+      "loadingLead": "Lettura di CPU, memoria e GPU.",
+      "title": "Il tuo computer",
+      "lead": "I valori predefiniti derivano da ciò che è realmente presente. Tutto può essere modificato in seguito in Impostazioni → Prestazioni.",
+      "noGpu": "Nessun backend GPU rilevato",
+      "gpu": "{{backend}}{{name}} · {{vram}} GB di VRAM",
+      "cpuBody": "{{threads}} thread · {{ram}} GB di RAM",
+      "graphics": "Grafica",
+      "profile": "Profilo:",
+      "profileName": {
+        "gpu": "GPU",
+        "balanced": "bilanciato",
+        "cpu": "CPU"
+      },
+      "profileGpu": "VRAM abbondante. I modelli girano sulla GPU, i batch sono grandi e l'analisi è molto parallela.",
+      "profileBalanced": "Memoria sufficiente per tenere residenti i modelli di recupero mentre si lavora.",
+      "profileCpu": "Nessuna GPU utilizzabile. Tutto gira sulla CPU con batch piccoli: più lento, ma corretto."
+    },
+    "models": {
+      "title": "I due modelli necessari al recupero",
+      "lead": "Entrambi girano in locale e sono abbastanza piccoli da restare in memoria. I download riprendono da dove si erano interrotti e vengono verificati con sha256 prima dell'uso.",
+      "embeddingWhy": "Trasforma ogni frammento e ogni domanda in un vettore. Cambiarlo in seguito richiede una nuova indicizzazione.",
+      "rerankingWhy": "Legge insieme la domanda e ogni candidato, poi li riordina. È ciò che mantiene le risposte pertinenti.",
+      "downloadFailed": "Impossibile avviare il download del modello {{role}}",
+      "verified": "verificato"
+    },
+    "connection": {
+      "title": "Chi scrive le risposte",
+      "lead": "Il recupero è comunque locale. Questa scelta stabilisce solo quale modello trasforma i passaggi recuperati in testo.",
+      "add": "Aggiungi una connessione",
+      "addAnother": "Aggiungine un'altra",
+      "remoteWarning": "La connessione attiva è remota. La domanda e i passaggi recuperati lasciano questo computer a ogni richiesta. La chat mostra un avviso ogni volta che accade."
+    },
+    "library": {
+      "title": "Indicare una cartella",
+      "lead": "I file vengono letti dove si trovano: nulla viene copiato o spostato. Iniziare con una cartella; le altre si aggiungono dalla Libreria quando si vuole.",
+      "indexed": "{{indexed}} documenti su {{total}} indicizzati",
+      "failed_one": "{{count}} non riuscito",
+      "failed_other": "{{count}} non riusciti",
+      "choose": "Scegli una cartella",
+      "addAnother": "Aggiungi un'altra cartella"
+    },
+    "done": {
+      "title": "Configurazione completata",
+      "lead": "Fare una domanda in Chat. Se una risposta non ha citazioni lo dichiara invece di inventarne: è il punto centrale.",
+      "documents_one": "{{count}} documento nell'indice",
+      "documents_other": "{{count}} documenti nell'indice",
+      "documentsBody": "La Libreria mostra ogni file, il suo stato e il motivo di eventuali errori.",
+      "citationTitle": "Fai clic su una citazione",
+      "citationBody": "Apre il Lettore sulla pagina di provenienza del passaggio, con il tratto evidenziato.",
+      "diagnosticsTitle": "La Diagnostica sa cosa è in esecuzione",
+      "diagnosticsBody": "Schede dei processi, le ultime righe del log del core e un rapporto di debug da incollare in una segnalazione."
+    },
+    "saveFailed": "Impossibile salvare la configurazione",
+    "later": "Si può fare più tardi.",
+    "openChat": "Apri la chat",
+    "skip": "Salta per ora",
+    "continue": "Continua"
   }
 }

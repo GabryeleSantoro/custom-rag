@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
@@ -36,12 +37,12 @@ import {
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { id: "welcome", label: "Welcome" },
-  { id: "hardware", label: "Your machine" },
-  { id: "models", label: "Core models" },
-  { id: "connection", label: "Answer model" },
-  { id: "library", label: "First folder" },
-  { id: "done", label: "Ready" },
+  { id: "welcome" },
+  { id: "hardware" },
+  { id: "models" },
+  { id: "connection" },
+  { id: "library" },
+  { id: "done" },
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
@@ -55,28 +56,28 @@ const CORE_MODELS: {
   name: string;
   repo_id: string;
   filename: string;
-  why: string;
+  whyKey: string;
 }[] = [
   {
     role: "embedding",
     name: "Qwen3 Embedding 0.6B",
     repo_id: "Qwen/Qwen3-Embedding-0.6B-GGUF",
     filename: "Qwen3-Embedding-0.6B-Q8_0.gguf",
-    why: "Turns every chunk and every question into a vector. Swapping it later means re-indexing.",
+    whyKey: "onboarding.models.embeddingWhy",
   },
   {
     role: "reranking",
     name: "Qwen3 Reranker 0.6B",
     repo_id: "Qwen/Qwen3-Reranker-0.6B-GGUF",
     filename: "Qwen3-Reranker-0.6B-Q8_0.gguf",
-    why: "Reads the question and each candidate together, then reorders them. This is what keeps answers on topic.",
+    whyKey: "onboarding.models.rerankingWhy",
   },
 ];
 
 const PROFILE_NOTE: Record<HardwareInfo["profile"], string> = {
-  gpu: "Plenty of VRAM. Models run on the GPU, batches are large, parsing runs wide.",
-  balanced: "Enough memory to keep the retrieval models resident while you work.",
-  cpu: "No usable GPU found. Everything runs on CPU with small batches — slower, still correct.",
+  gpu: "onboarding.hardware.profileGpu",
+  balanced: "onboarding.hardware.profileBalanced",
+  cpu: "onboarding.hardware.profileCpu",
 };
 
 function StepFrame({
@@ -136,26 +137,27 @@ function Row({
 }
 
 function WelcomeStep() {
+  const { t } = useTranslation();
   return (
     <StepFrame
-      title="A librarian for your own files"
-      lead="Point it at folders you already have. It reads them, indexes them locally, and answers questions with the passage it used sitting next to the answer."
+      title={t("onboarding.welcome.title")}
+      lead={t("onboarding.welcome.lead")}
     >
       <div className="space-y-2">
         <Row
           icon={LockIcon}
-          title="Your documents stay on this machine"
-          body="Parsing, embedding and search all run here. Only the question and the retrieved passages ever reach a model you choose — and that model can be a local one."
+          title={t("onboarding.welcome.privateTitle")}
+          body={t("onboarding.welcome.privateBody")}
         />
         <Row
           icon={QuoteIcon}
-          title="Every claim points at a page"
-          body="Answers carry citations. Click one and the reader opens on the exact span it came from, so a wrong answer is visibly wrong."
+          title={t("onboarding.welcome.citedTitle")}
+          body={t("onboarding.welcome.citedBody")}
         />
         <Row
           icon={BookOpenIcon}
-          title="Four short steps"
-          body="Check your hardware, get the two retrieval models, pick who writes the answers, add a folder."
+          title={t("onboarding.welcome.stepsTitle")}
+          body={t("onboarding.welcome.stepsBody")}
         />
       </div>
     </StepFrame>
@@ -163,9 +165,13 @@ function WelcomeStep() {
 }
 
 function HardwareStep({ hardware }: { hardware: HardwareInfo | undefined }) {
+  const { t } = useTranslation();
   if (!hardware) {
     return (
-      <StepFrame title="Looking at your machine" lead="Reading CPU, memory and GPU.">
+      <StepFrame
+        title={t("onboarding.hardware.loadingTitle")}
+        lead={t("onboarding.hardware.loadingLead")}
+      >
         <Skeleton className="h-24 w-full" />
       </StepFrame>
     );
@@ -173,31 +179,37 @@ function HardwareStep({ hardware }: { hardware: HardwareInfo | undefined }) {
 
   const gpu =
     hardware.gpu_backend === "cpu"
-      ? "No GPU backend detected"
-      : `${hardware.gpu_backend}${hardware.gpu_name ? ` · ${hardware.gpu_name}` : ""} · ${(
-          hardware.vram_mb / 1024
-        ).toFixed(1)} GB VRAM`;
+      ? t("onboarding.hardware.noGpu")
+      : t("onboarding.hardware.gpu", {
+          backend: hardware.gpu_backend,
+          name: hardware.gpu_name ? ` · ${hardware.gpu_name}` : "",
+          vram: (hardware.vram_mb / 1024).toFixed(1),
+        });
 
   return (
     <StepFrame
-      title="Your machine"
-      lead="Defaults come from what is actually here. Everything below is changeable later in Settings → Performance."
+      title={t("onboarding.hardware.title")}
+      lead={t("onboarding.hardware.lead")}
     >
       <div className="grid gap-2 sm:grid-cols-2">
         <Row
           icon={CpuIcon}
           title={`${hardware.os} · ${hardware.arch}`}
-          body={`${hardware.cpu_count} threads · ${(hardware.ram_mb / 1024).toFixed(1)} GB RAM`}
+          body={t("onboarding.hardware.cpuBody", {
+            threads: hardware.cpu_count,
+            ram: (hardware.ram_mb / 1024).toFixed(1),
+          })}
         />
-        <Row icon={ServerIcon} title="Graphics" body={gpu} />
+        <Row icon={ServerIcon} title={t("onboarding.hardware.graphics")} body={gpu} />
       </div>
 
       <div className="rounded-lg border border-primary/35 bg-primary/5 p-3">
         <p className="text-[0.8125rem] font-medium">
-          Profile: <span className="capitalize">{hardware.profile}</span>
+          {t("onboarding.hardware.profile")}{" "}
+          <span className="capitalize">{t(`onboarding.hardware.profileName.${hardware.profile}`)}</span>
         </p>
         <p className="mt-0.5 text-[0.6875rem] leading-[1.5] text-muted-foreground">
-          {PROFILE_NOTE[hardware.profile]}
+          {t(PROFILE_NOTE[hardware.profile])}
         </p>
       </div>
     </StepFrame>
@@ -211,6 +223,7 @@ function ModelRow({
   spec: (typeof CORE_MODELS)[number];
   installed: InstalledModel | undefined;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { byModel } = useJobs();
   const [startedModelId, setStartedModelId] = useState<string | null>(null);
@@ -231,7 +244,9 @@ function ModelRow({
       void queryClient.invalidateQueries({ queryKey: keys.jobs });
     },
     onError: (error: Error) =>
-      toast.error(`Could not start the ${spec.role} download`, { description: error.message }),
+      toast.error(t("onboarding.models.downloadFailed", { role: t(`models.roles.${spec.role}`) }), {
+        description: error.message,
+      }),
   });
 
   if (installed) {
@@ -242,7 +257,7 @@ function ModelRow({
         title={installed.name}
         body={
           <>
-            {spec.why}
+            {t(spec.whyKey)}
             <span className="mt-1 block font-mono text-[0.625rem]">
               {bytes(installed.size_bytes)}
               {installed.quant ? ` · ${installed.quant}` : ""}
@@ -250,7 +265,7 @@ function ModelRow({
             </span>
           </>
         }
-        aside={<StatusChip tone="ok" label="verified" />}
+        aside={<StatusChip tone="ok" label={t("onboarding.models.verified")} />}
       />
     );
   }
@@ -261,7 +276,7 @@ function ModelRow({
       title={spec.name}
       body={
         <>
-          {spec.why}
+          {t(spec.whyKey)}
           {job ? (
             <span className="mt-2 block space-y-1">
               <Progress value={Math.round(job.progress * 100)} className="h-1" />
@@ -284,7 +299,7 @@ function ModelRow({
           ) : (
             <DownloadIcon className="size-3.5" />
           )}
-          Download
+          {t("common.download")}
         </Button>
       }
     />
@@ -292,10 +307,11 @@ function ModelRow({
 }
 
 function ModelsStep({ installed }: { installed: InstalledModel[] }) {
+  const { t } = useTranslation();
   return (
     <StepFrame
-      title="The two models retrieval needs"
-      lead="Both run locally and are small enough to stay resident. Downloads resume where they stopped and are checked against their sha256 before being used."
+      title={t("onboarding.models.title")}
+      lead={t("onboarding.models.lead")}
     >
       <div className="space-y-2">
         {CORE_MODELS.map((spec) => (
@@ -311,13 +327,14 @@ function ModelsStep({ installed }: { installed: InstalledModel[] }) {
 }
 
 function ConnectionStep() {
+  const { t } = useTranslation();
   const connections = useQuery(connectionsQuery);
   const list = connections.data ?? [];
 
   return (
     <StepFrame
-      title="Who writes the answers"
-      lead="Retrieval is local either way. This only decides which model turns the retrieved passages into prose."
+      title={t("onboarding.connection.title")}
+      lead={t("onboarding.connection.lead")}
     >
       {connections.isLoading ? <Skeleton className="h-20 w-full" /> : null}
 
@@ -332,7 +349,7 @@ function ConnectionStep() {
                 {connection.name}
                 {connection.active ? (
                   <span className="rounded-full bg-primary/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-primary">
-                    Active
+                    {t("common.active")}
                   </span>
                 ) : null}
               </span>
@@ -348,7 +365,7 @@ function ConnectionStep() {
                 connection={connection}
                 trigger={
                   <Button variant="ghost" size="sm" className="h-7">
-                    Edit
+                    {t("common.edit")}
                   </Button>
                 }
               />
@@ -360,15 +377,14 @@ function ConnectionStep() {
       <ConnectionDialog
         trigger={
           <Button variant={list.length === 0 ? "default" : "secondary"} size="sm" className="h-7">
-            {list.length === 0 ? "Add a connection" : "Add another"}
+            {list.length === 0 ? t("onboarding.connection.add") : t("onboarding.connection.addAnother")}
           </Button>
         }
       />
 
       {list.some((connection) => connection.is_remote && connection.active) ? (
         <p className="rounded-md border border-status-warn/30 bg-status-warn/8 px-2.5 py-2 text-[0.6875rem] text-status-warn">
-          The active connection is remote. Your question and the retrieved passages leave this
-          machine when you ask something. Chat shows a banner whenever that is the case.
+          {t("onboarding.connection.remoteWarning")}
         </p>
       ) : null}
     </StepFrame>
@@ -376,14 +392,15 @@ function ConnectionStep() {
 }
 
 function LibraryStep() {
+  const { t } = useTranslation();
   const sources = useQuery(sourcesQuery);
   const { bySource } = useJobs();
   const list = sources.data ?? [];
 
   return (
     <StepFrame
-      title="Point it at a folder"
-      lead="Files are read in place — nothing is copied or moved. Start with one folder; add the rest from the Library whenever you like."
+      title={t("onboarding.library.title")}
+      lead={t("onboarding.library.lead")}
     >
       {sources.isLoading ? <Skeleton className="h-20 w-full" /> : null}
 
@@ -405,8 +422,13 @@ function LibraryStep() {
                     <span className="mt-1 block">{job.detail ?? job.label}</span>
                   </>
                 ) : (
-                  `${source.indexed_count} of ${source.document_count} documents indexed` +
-                  (source.error_count ? ` · ${source.error_count} failed` : "")
+                  t("onboarding.library.indexed", {
+                    indexed: source.indexed_count,
+                    total: source.document_count,
+                  }) +
+                  (source.error_count
+                    ? ` · ${t("onboarding.library.failed", { count: source.error_count })}`
+                    : "")
                 )
               }
             />
@@ -418,7 +440,7 @@ function LibraryStep() {
         trigger={
           <Button variant={list.length === 0 ? "default" : "secondary"} size="sm" className="h-7">
             <FolderPlusIcon className="size-3.5" />
-            {list.length === 0 ? "Choose a folder" : "Add another folder"}
+            {list.length === 0 ? t("onboarding.library.choose") : t("onboarding.library.addAnother")}
           </Button>
         }
       />
@@ -427,27 +449,28 @@ function LibraryStep() {
 }
 
 function DoneStep({ documents }: { documents: number }) {
+  const { t } = useTranslation();
   return (
     <StepFrame
-      title="Set up"
-      lead="Ask something in Chat. If an answer has no citation it says so rather than making one up — that is the whole point."
+      title={t("onboarding.done.title")}
+      lead={t("onboarding.done.lead")}
     >
       <div className="space-y-2">
         <Row
           icon={CheckIcon}
           tone="ok"
-          title={`${documents} document${documents === 1 ? "" : "s"} in the index`}
-          body="The Library shows every file, its status, and why anything failed."
+          title={t("onboarding.done.documents", { count: documents })}
+          body={t("onboarding.done.documentsBody")}
         />
         <Row
           icon={QuoteIcon}
-          title="Click a citation"
-          body="It opens the Reader on the page the passage came from, with the span highlighted."
+          title={t("onboarding.done.citationTitle")}
+          body={t("onboarding.done.citationBody")}
         />
         <Row
           icon={CpuIcon}
-          title="Diagnostics knows what is running"
-          body="Process cards, the core's log tail and a debug report you can paste into an issue."
+          title={t("onboarding.done.diagnosticsTitle")}
+          body={t("onboarding.done.diagnosticsBody")}
         />
       </div>
     </StepFrame>
@@ -455,6 +478,7 @@ function DoneStep({ documents }: { documents: number }) {
 }
 
 export function OnboardingView() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [index, setIndex] = useState(0);
@@ -475,7 +499,7 @@ export function OnboardingView() {
       void navigate({ to: "/chat", replace: true });
     },
     onError: (error: Error) =>
-      toast.error("Could not save the setup", { description: error.message }),
+      toast.error(t("onboarding.saveFailed"), { description: error.message }),
   });
 
   const coreReady = CORE_MODELS.every((spec) =>
@@ -529,7 +553,7 @@ export function OnboardingView() {
                 >
                   {state === "past" ? <CheckIcon className="size-2.5" /> : position + 1}
                 </span>
-                {entry.label}
+                {t(`onboarding.steps.${entry.id}`)}
               </button>
             );
           })}
@@ -558,18 +582,22 @@ export function OnboardingView() {
             disabled={index === 0}
             onClick={() => setIndex((current) => Math.max(current - 1, 0))}
           >
-            Back
+            {t("common.back")}
           </Button>
 
           <div className="flex items-center gap-2">
             {optional ? (
               <span className="text-[0.6875rem] text-muted-foreground">
-                You can do this later.
+                {t("onboarding.later")}
               </span>
             ) : null}
             <Button size="sm" className="h-8" disabled={blocked || finish.isPending} onClick={next}>
               {finish.isPending ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
-              {step === "done" ? "Open chat" : optional ? "Skip for now" : "Continue"}
+              {step === "done"
+                ? t("onboarding.openChat")
+                : optional
+                  ? t("onboarding.skip")
+                  : t("onboarding.continue")}
               {step === "done" ? null : <ArrowRightIcon className="size-3.5" />}
             </Button>
           </div>

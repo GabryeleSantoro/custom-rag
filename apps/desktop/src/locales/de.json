@@ -6,7 +6,11 @@
     "close": "Schließen",
     "retry": "Erneut versuchen",
     "never": "nie",
-    "longAgo": "vor langer Zeit"
+    "longAgo": "vor langer Zeit",
+    "download": "Herunterladen",
+    "active": "Aktiv",
+    "edit": "Bearbeiten",
+    "back": "Zurück"
   },
   "errors": {
     "ragcore_unreachable": "ragcore nicht erreichbar: {{reason}}",
@@ -66,6 +70,90 @@
     "fitVram": "Passt in den VRAM",
     "fitRam": "Passt in den RAM",
     "fitTooLarge": "Zu groß",
-    "fitUnknown": "Unbekannt"
+    "fitUnknown": "Unbekannt",
+    "roles": {
+      "embedding": "Embedding",
+      "reranking": "Reranking",
+      "llm": "LLM"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": "Willkommen",
+      "hardware": "Ihr Rechner",
+      "models": "Basismodelle",
+      "connection": "Antwortmodell",
+      "library": "Erster Ordner",
+      "done": "Fertig"
+    },
+    "welcome": {
+      "title": "Ein Bibliothekar für Ihre eigenen Dateien",
+      "lead": "Vorhandene Ordner angeben. Die Dateien werden gelesen, lokal indiziert, und Fragen werden beantwortet, mit der verwendeten Passage direkt neben der Antwort.",
+      "privateTitle": "Ihre Dokumente bleiben auf diesem Rechner",
+      "privateBody": "Analyse, Embedding und Suche laufen hier. Nur die Frage und die gefundenen Passagen erreichen ein Modell Ihrer Wahl, und das kann auch ein lokales sein.",
+      "citedTitle": "Jede Aussage verweist auf eine Seite",
+      "citedBody": "Antworten enthalten Zitate. Ein Klick öffnet den Leser an der genauen Stelle, sodass eine falsche Antwort sichtbar falsch ist.",
+      "stepsTitle": "Vier kurze Schritte",
+      "stepsBody": "Hardware prüfen, die beiden Abrufmodelle laden, das Antwortmodell wählen, einen Ordner hinzufügen."
+    },
+    "hardware": {
+      "loadingTitle": "Rechner wird untersucht",
+      "loadingLead": "CPU, Speicher und GPU werden gelesen.",
+      "title": "Ihr Rechner",
+      "lead": "Die Vorgaben richten sich nach dem, was tatsächlich vorhanden ist. Alles lässt sich später unter Einstellungen → Leistung ändern.",
+      "noGpu": "Kein GPU-Backend erkannt",
+      "gpu": "{{backend}}{{name}} · {{vram}} GB VRAM",
+      "cpuBody": "{{threads}} Threads · {{ram}} GB RAM",
+      "graphics": "Grafik",
+      "profile": "Profil:",
+      "profileName": {
+        "gpu": "GPU",
+        "balanced": "ausgewogen",
+        "cpu": "CPU"
+      },
+      "profileGpu": "Reichlich VRAM. Modelle laufen auf der GPU, Batches sind groß, die Analyse läuft stark parallel.",
+      "profileBalanced": "Genug Speicher, um die Abrufmodelle während der Arbeit geladen zu halten.",
+      "profileCpu": "Keine nutzbare GPU gefunden. Alles läuft auf der CPU mit kleinen Batches: langsamer, aber korrekt."
+    },
+    "models": {
+      "title": "Die beiden Modelle für den Abruf",
+      "lead": "Beide laufen lokal und sind klein genug, um geladen zu bleiben. Downloads werden fortgesetzt und vor der Nutzung per sha256 geprüft.",
+      "embeddingWhy": "Wandelt jeden Abschnitt und jede Frage in einen Vektor um. Ein späterer Wechsel erfordert eine Neuindizierung.",
+      "rerankingWhy": "Liest die Frage und jeden Kandidaten gemeinsam und sortiert neu. Das hält die Antworten beim Thema.",
+      "downloadFailed": "Der Download des Modells {{role}} konnte nicht gestartet werden",
+      "verified": "geprüft"
+    },
+    "connection": {
+      "title": "Wer die Antworten schreibt",
+      "lead": "Der Abruf bleibt in jedem Fall lokal. Hier wird nur entschieden, welches Modell aus den gefundenen Passagen Text macht.",
+      "add": "Verbindung hinzufügen",
+      "addAnother": "Weitere hinzufügen",
+      "remoteWarning": "Die aktive Verbindung ist entfernt. Ihre Frage und die gefundenen Passagen verlassen bei jeder Anfrage diesen Rechner. Der Chat zeigt dann jeweils einen Hinweis."
+    },
+    "library": {
+      "title": "Einen Ordner angeben",
+      "lead": "Dateien werden an Ort und Stelle gelesen, nichts wird kopiert oder verschoben. Mit einem Ordner beginnen, weitere lassen sich jederzeit über die Bibliothek hinzufügen.",
+      "indexed": "{{indexed}} von {{total}} Dokumenten indiziert",
+      "failed_one": "{{count}} fehlgeschlagen",
+      "failed_other": "{{count}} fehlgeschlagen",
+      "choose": "Ordner wählen",
+      "addAnother": "Weiteren Ordner hinzufügen"
+    },
+    "done": {
+      "title": "Einrichtung abgeschlossen",
+      "lead": "Im Chat eine Frage stellen. Hat eine Antwort kein Zitat, wird das gesagt, statt eines zu erfinden. Genau darum geht es.",
+      "documents_one": "{{count}} Dokument im Index",
+      "documents_other": "{{count}} Dokumente im Index",
+      "documentsBody": "Die Bibliothek zeigt jede Datei, ihren Status und den Grund für Fehler.",
+      "citationTitle": "Auf ein Zitat klicken",
+      "citationBody": "Öffnet den Leser auf der Seite der Passage, mit hervorgehobener Stelle.",
+      "diagnosticsTitle": "Die Diagnose weiß, was läuft",
+      "diagnosticsBody": "Prozesskarten, das Log-Ende des Kerns und ein Debug-Bericht zum Einfügen in ein Issue."
+    },
+    "saveFailed": "Die Einrichtung konnte nicht gespeichert werden",
+    "later": "Das lässt sich später erledigen.",
+    "openChat": "Chat öffnen",
+    "skip": "Vorerst überspringen",
+    "continue": "Weiter"
   }
 }

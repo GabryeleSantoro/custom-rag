@@ -6,7 +6,11 @@
     "close": "Close",
     "retry": "Retry",
     "never": "never",
-    "longAgo": "long ago"
+    "longAgo": "long ago",
+    "download": "Download",
+    "active": "Active",
+    "edit": "Edit",
+    "back": "Back"
   },
   "errors": {
     "ragcore_unreachable": "ragcore unreachable: {{reason}}",
@@ -66,6 +70,90 @@
     "fitVram": "Fits in VRAM",
     "fitRam": "Fits in RAM",
     "fitTooLarge": "Too large",
-    "fitUnknown": "Unknown"
+    "fitUnknown": "Unknown",
+    "roles": {
+      "embedding": "embedding",
+      "reranking": "reranking",
+      "llm": "LLM"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": "Welcome",
+      "hardware": "Your machine",
+      "models": "Core models",
+      "connection": "Answer model",
+      "library": "First folder",
+      "done": "Ready"
+    },
+    "welcome": {
+      "title": "A librarian for your own files",
+      "lead": "Point it at folders you already have. It reads them, indexes them locally, and answers questions with the passage it used sitting next to the answer.",
+      "privateTitle": "Your documents stay on this machine",
+      "privateBody": "Parsing, embedding and search all run here. Only the question and the retrieved passages ever reach a model you choose — and that model can be a local one.",
+      "citedTitle": "Every claim points at a page",
+      "citedBody": "Answers carry citations. Click one and the reader opens on the exact span it came from, so a wrong answer is visibly wrong.",
+      "stepsTitle": "Four short steps",
+      "stepsBody": "Check your hardware, get the two retrieval models, pick who writes the answers, add a folder."
+    },
+    "hardware": {
+      "loadingTitle": "Looking at your machine",
+      "loadingLead": "Reading CPU, memory and GPU.",
+      "title": "Your machine",
+      "lead": "Defaults come from what is actually here. Everything below is changeable later in Settings → Performance.",
+      "noGpu": "No GPU backend detected",
+      "gpu": "{{backend}}{{name}} · {{vram}} GB VRAM",
+      "cpuBody": "{{threads}} threads · {{ram}} GB RAM",
+      "graphics": "Graphics",
+      "profile": "Profile:",
+      "profileName": {
+        "gpu": "GPU",
+        "balanced": "balanced",
+        "cpu": "CPU"
+      },
+      "profileGpu": "Plenty of VRAM. Models run on the GPU, batches are large, parsing runs wide.",
+      "profileBalanced": "Enough memory to keep the retrieval models resident while you work.",
+      "profileCpu": "No usable GPU found. Everything runs on CPU with small batches — slower, still correct."
+    },
+    "models": {
+      "title": "The two models retrieval needs",
+      "lead": "Both run locally and are small enough to stay resident. Downloads resume where they stopped and are checked against their sha256 before being used.",
+      "embeddingWhy": "Turns every chunk and every question into a vector. Swapping it later means re-indexing.",
+      "rerankingWhy": "Reads the question and each candidate together, then reorders them. This is what keeps answers on topic.",
+      "downloadFailed": "Could not start the {{role}} download",
+      "verified": "verified"
+    },
+    "connection": {
+      "title": "Who writes the answers",
+      "lead": "Retrieval is local either way. This only decides which model turns the retrieved passages into prose.",
+      "add": "Add a connection",
+      "addAnother": "Add another",
+      "remoteWarning": "The active connection is remote. Your question and the retrieved passages leave this machine when you ask something. Chat shows a banner whenever that is the case."
+    },
+    "library": {
+      "title": "Point it at a folder",
+      "lead": "Files are read in place — nothing is copied or moved. Start with one folder; add the rest from the Library whenever you like.",
+      "indexed": "{{indexed}} of {{total}} documents indexed",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "choose": "Choose a folder",
+      "addAnother": "Add another folder"
+    },
+    "done": {
+      "title": "Set up",
+      "lead": "Ask something in Chat. If an answer has no citation it says so rather than making one up — that is the whole point.",
+      "documents_one": "{{count}} document in the index",
+      "documents_other": "{{count}} documents in the index",
+      "documentsBody": "The Library shows every file, its status, and why anything failed.",
+      "citationTitle": "Click a citation",
+      "citationBody": "It opens the Reader on the page the passage came from, with the span highlighted.",
+      "diagnosticsTitle": "Diagnostics knows what is running",
+      "diagnosticsBody": "Process cards, the core's log tail and a debug report you can paste into an issue."
+    },
+    "saveFailed": "Could not save the setup",
+    "later": "You can do this later.",
+    "openChat": "Open chat",
+    "skip": "Skip for now",
+    "continue": "Continue"
   }
 }

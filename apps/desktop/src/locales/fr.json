@@ -6,7 +6,11 @@
     "close": "Fermer",
     "retry": "Réessayer",
     "never": "jamais",
-    "longAgo": "il y a longtemps"
+    "longAgo": "il y a longtemps",
+    "download": "Télécharger",
+    "active": "Active",
+    "edit": "Modifier",
+    "back": "Retour"
   },
   "errors": {
     "ragcore_unreachable": "ragcore injoignable : {{reason}}",
@@ -66,6 +70,90 @@
     "fitVram": "Tient dans la VRAM",
     "fitRam": "Tient dans la RAM",
     "fitTooLarge": "Trop volumineux",
-    "fitUnknown": "Inconnu"
+    "fitUnknown": "Inconnu",
+    "roles": {
+      "embedding": "embedding",
+      "reranking": "reranking",
+      "llm": "LLM"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": "Bienvenue",
+      "hardware": "Votre machine",
+      "models": "Modèles de base",
+      "connection": "Modèle de réponse",
+      "library": "Premier dossier",
+      "done": "Prêt"
+    },
+    "welcome": {
+      "title": "Un bibliothécaire pour vos propres fichiers",
+      "lead": "Indiquer les dossiers déjà présents. Le programme les lit, les indexe en local et répond aux questions en affichant à côté de la réponse le passage utilisé.",
+      "privateTitle": "Vos documents restent sur cette machine",
+      "privateBody": "L'analyse, l'embedding et la recherche s'exécutent ici. Seuls la question et les passages retrouvés parviennent au modèle choisi, qui peut être local.",
+      "citedTitle": "Chaque affirmation renvoie à une page",
+      "citedBody": "Les réponses comportent des citations. Un clic ouvre le lecteur à l'endroit exact d'où elle provient, si bien qu'une réponse fausse se voit.",
+      "stepsTitle": "Quatre courtes étapes",
+      "stepsBody": "Vérifier le matériel, obtenir les deux modèles de recherche, choisir qui rédige les réponses, ajouter un dossier."
+    },
+    "hardware": {
+      "loadingTitle": "Analyse de la machine",
+      "loadingLead": "Lecture du CPU, de la mémoire et du GPU.",
+      "title": "Votre machine",
+      "lead": "Les valeurs par défaut découlent de ce qui est réellement présent. Tout est modifiable plus tard dans Réglages → Performances.",
+      "noGpu": "Aucun backend GPU détecté",
+      "gpu": "{{backend}}{{name}} · {{vram}} Go de VRAM",
+      "cpuBody": "{{threads}} threads · {{ram}} Go de RAM",
+      "graphics": "Graphismes",
+      "profile": "Profil :",
+      "profileName": {
+        "gpu": "GPU",
+        "balanced": "équilibré",
+        "cpu": "CPU"
+      },
+      "profileGpu": "Beaucoup de VRAM. Les modèles tournent sur le GPU, les lots sont grands et l'analyse est très parallèle.",
+      "profileBalanced": "Assez de mémoire pour garder les modèles de recherche résidents pendant le travail.",
+      "profileCpu": "Aucun GPU utilisable. Tout tourne sur le CPU avec de petits lots : plus lent, mais correct."
+    },
+    "models": {
+      "title": "Les deux modèles nécessaires à la recherche",
+      "lead": "Les deux tournent en local et sont assez petits pour rester résidents. Les téléchargements reprennent là où ils se sont arrêtés et sont vérifiés par sha256 avant utilisation.",
+      "embeddingWhy": "Transforme chaque fragment et chaque question en vecteur. Le changer plus tard impose de réindexer.",
+      "rerankingWhy": "Lit ensemble la question et chaque candidat, puis les réordonne. C'est ce qui garde les réponses pertinentes.",
+      "downloadFailed": "Impossible de lancer le téléchargement du modèle {{role}}",
+      "verified": "vérifié"
+    },
+    "connection": {
+      "title": "Qui rédige les réponses",
+      "lead": "La recherche reste locale dans tous les cas. Ce choix détermine seulement quel modèle transforme les passages retrouvés en texte.",
+      "add": "Ajouter une connexion",
+      "addAnother": "Ajouter une autre",
+      "remoteWarning": "La connexion active est distante. Votre question et les passages retrouvés quittent cette machine à chaque demande. Le chat affiche une bannière dans ce cas."
+    },
+    "library": {
+      "title": "Indiquer un dossier",
+      "lead": "Les fichiers sont lus sur place : rien n'est copié ni déplacé. Commencer par un dossier ; ajouter les autres depuis la Bibliothèque quand on veut.",
+      "indexed": "{{indexed}} documents sur {{total}} indexés",
+      "failed_one": "{{count}} échec",
+      "failed_other": "{{count}} échecs",
+      "choose": "Choisir un dossier",
+      "addAnother": "Ajouter un autre dossier"
+    },
+    "done": {
+      "title": "Configuration terminée",
+      "lead": "Poser une question dans le Chat. Si une réponse n'a pas de citation, elle le dit au lieu d'en inventer une : c'est tout l'intérêt.",
+      "documents_one": "{{count}} document dans l'index",
+      "documents_other": "{{count}} documents dans l'index",
+      "documentsBody": "La Bibliothèque montre chaque fichier, son état et la raison d'un éventuel échec.",
+      "citationTitle": "Cliquer sur une citation",
+      "citationBody": "Ouvre le Lecteur sur la page d'où vient le passage, avec l'extrait surligné.",
+      "diagnosticsTitle": "Le Diagnostic sait ce qui tourne",
+      "diagnosticsBody": "Cartes de processus, fin du journal du cœur et rapport de débogage à coller dans un ticket."
+    },
+    "saveFailed": "Impossible d'enregistrer la configuration",
+    "later": "Cela peut se faire plus tard.",
+    "openChat": "Ouvrir le chat",
+    "skip": "Passer pour l'instant",
+    "continue": "Continuer"
   }
 }

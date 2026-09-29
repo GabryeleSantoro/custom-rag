@@ -6,7 +6,11 @@
     "close": "Cerrar",
     "retry": "Reintentar",
     "never": "nunca",
-    "longAgo": "hace mucho tiempo"
+    "longAgo": "hace mucho tiempo",
+    "download": "Descargar",
+    "active": "Activa",
+    "edit": "Editar",
+    "back": "Atrás"
   },
   "errors": {
     "ragcore_unreachable": "ragcore inaccesible: {{reason}}",
@@ -66,6 +70,90 @@
     "fitVram": "Cabe en la VRAM",
     "fitRam": "Cabe en la RAM",
     "fitTooLarge": "Demasiado grande",
-    "fitUnknown": "Desconocido"
+    "fitUnknown": "Desconocido",
+    "roles": {
+      "embedding": "embedding",
+      "reranking": "reranking",
+      "llm": "LLM"
+    }
+  },
+  "onboarding": {
+    "steps": {
+      "welcome": "Bienvenida",
+      "hardware": "Tu equipo",
+      "models": "Modelos base",
+      "connection": "Modelo de respuesta",
+      "library": "Primera carpeta",
+      "done": "Listo"
+    },
+    "welcome": {
+      "title": "Un bibliotecario para tus propios archivos",
+      "lead": "Indicar las carpetas que ya existen. Se leen, se indexan en local y se responde a las preguntas mostrando junto a la respuesta el pasaje utilizado.",
+      "privateTitle": "Los documentos permanecen en este equipo",
+      "privateBody": "El análisis, los embeddings y la búsqueda se ejecutan aquí. Solo la pregunta y los pasajes recuperados llegan al modelo elegido, que puede ser local.",
+      "citedTitle": "Cada afirmación remite a una página",
+      "citedBody": "Las respuestas incluyen citas. Un clic abre el lector en el fragmento exacto de origen, de modo que una respuesta errónea se nota.",
+      "stepsTitle": "Cuatro pasos breves",
+      "stepsBody": "Comprobar el hardware, obtener los dos modelos de recuperación, elegir quién escribe las respuestas y añadir una carpeta."
+    },
+    "hardware": {
+      "loadingTitle": "Analizando el equipo",
+      "loadingLead": "Leyendo CPU, memoria y GPU.",
+      "title": "Tu equipo",
+      "lead": "Los valores predeterminados dependen de lo que realmente hay. Todo se puede cambiar después en Ajustes → Rendimiento.",
+      "noGpu": "No se detectó ningún backend de GPU",
+      "gpu": "{{backend}}{{name}} · {{vram}} GB de VRAM",
+      "cpuBody": "{{threads}} hilos · {{ram}} GB de RAM",
+      "graphics": "Gráficos",
+      "profile": "Perfil:",
+      "profileName": {
+        "gpu": "GPU",
+        "balanced": "equilibrado",
+        "cpu": "CPU"
+      },
+      "profileGpu": "VRAM de sobra. Los modelos se ejecutan en la GPU, los lotes son grandes y el análisis es muy paralelo.",
+      "profileBalanced": "Memoria suficiente para mantener residentes los modelos de recuperación mientras se trabaja.",
+      "profileCpu": "No se encontró ninguna GPU utilizable. Todo se ejecuta en la CPU con lotes pequeños: más lento, pero correcto."
+    },
+    "models": {
+      "title": "Los dos modelos que necesita la recuperación",
+      "lead": "Ambos se ejecutan en local y son lo bastante pequeños para permanecer residentes. Las descargas se reanudan donde se interrumpieron y se verifican con sha256 antes de usarse.",
+      "embeddingWhy": "Convierte cada fragmento y cada pregunta en un vector. Cambiarlo después obliga a reindexar.",
+      "rerankingWhy": "Lee juntas la pregunta y cada candidato y los reordena. Es lo que mantiene las respuestas en el tema.",
+      "downloadFailed": "No se pudo iniciar la descarga del modelo {{role}}",
+      "verified": "verificado"
+    },
+    "connection": {
+      "title": "Quién escribe las respuestas",
+      "lead": "La recuperación es local en cualquier caso. Esto solo decide qué modelo convierte los pasajes recuperados en texto.",
+      "add": "Añadir una conexión",
+      "addAnother": "Añadir otra",
+      "remoteWarning": "La conexión activa es remota. La pregunta y los pasajes recuperados salen de este equipo en cada consulta. El chat muestra un aviso cuando ocurre."
+    },
+    "library": {
+      "title": "Indicar una carpeta",
+      "lead": "Los archivos se leen donde están: no se copia ni se mueve nada. Empezar con una carpeta y añadir el resto desde la Biblioteca cuando se quiera.",
+      "indexed": "{{indexed}} de {{total}} documentos indexados",
+      "failed_one": "{{count}} con error",
+      "failed_other": "{{count}} con error",
+      "choose": "Elegir una carpeta",
+      "addAnother": "Añadir otra carpeta"
+    },
+    "done": {
+      "title": "Configuración completada",
+      "lead": "Hacer una pregunta en el Chat. Si una respuesta no tiene cita, lo dice en lugar de inventarla: ese es el objetivo.",
+      "documents_one": "{{count}} documento en el índice",
+      "documents_other": "{{count}} documentos en el índice",
+      "documentsBody": "La Biblioteca muestra cada archivo, su estado y por qué falló alguno.",
+      "citationTitle": "Hacer clic en una cita",
+      "citationBody": "Abre el Lector en la página de origen del pasaje, con el fragmento resaltado.",
+      "diagnosticsTitle": "El Diagnóstico sabe qué se está ejecutando",
+      "diagnosticsBody": "Tarjetas de procesos, el final del registro del núcleo y un informe de depuración para pegar en una incidencia."
+    },
+    "saveFailed": "No se pudo guardar la configuración",
+    "later": "Se puede hacer más tarde.",
+    "openChat": "Abrir el chat",
+    "skip": "Omitir por ahora",
+    "continue": "Continuar"
   }
 }
