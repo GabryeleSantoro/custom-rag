@@ -1,26 +1,27 @@
+import { useTranslation } from "react-i18next";
 import { CpuIcon, MemoryStickIcon, XIcon, ZapIcon } from "lucide-react";
 
 import type { FitVerdict } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
 
-const FIT: Record<FitVerdict, { label: string; icon: typeof ZapIcon; className: string }> = {
+const FIT: Record<FitVerdict, { labelKey: string; icon: typeof ZapIcon; className: string }> = {
   vram: {
-    label: "Fits in VRAM",
+    labelKey: "models.fitVram",
     icon: ZapIcon,
     className: "border-status-ok/30 bg-status-ok/10 text-status-ok",
   },
   ram: {
-    label: "Fits in RAM",
+    labelKey: "models.fitRam",
     icon: MemoryStickIcon,
     className: "border-status-warn/30 bg-status-warn/10 text-status-warn",
   },
   "too-large": {
-    label: "Too large",
+    labelKey: "models.fitTooLarge",
     icon: XIcon,
     className: "border-status-error/30 bg-status-error/10 text-status-error",
   },
   unknown: {
-    label: "Unknown",
+    labelKey: "models.fitUnknown",
     icon: CpuIcon,
     className: "border-border bg-muted text-muted-foreground",
   },
@@ -36,6 +37,7 @@ export function FitBadge({
   note?: string | null;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const meta = FIT[fit] ?? FIT.unknown;
   return (
     <span
@@ -47,7 +49,7 @@ export function FitBadge({
       )}
     >
       <meta.icon className="size-2.5" />
-      {meta.label}
+      {t(meta.labelKey)}
     </span>
   );
 }

@@ -20,6 +20,52 @@
       "label": "Sprache",
       "hint": "Sprache der Oberfläche und der Chat-Antworten",
       "system": "System"
+    },
+    "sections": {
+      "general": {
+        "label": "Allgemein",
+        "blurb": "Sprache und Erscheinungsbild."
+      },
+      "connections": {
+        "label": "Verbindungen",
+        "blurb": "Wo Antworten entstehen. Schlüssel liegen im Schlüsselbund des Systems."
+      },
+      "retrieval": {
+        "label": "Abruf",
+        "blurb": "Wie Passagen gefunden, sortiert und in den Prompt gepackt werden."
+      },
+      "performance": {
+        "label": "Leistung",
+        "blurb": "Batchgrößen und GPU-Auslagerung, vorbelegt anhand der erkannten Hardware."
+      },
+      "storage": {
+        "label": "Speicher",
+        "blurb": "Wo die Daten liegen und wie man sie entfernt."
+      },
+      "updates": {
+        "label": "Updates",
+        "blurb": "Verwendete Version und wie neue ankommen."
+      }
     }
+  },
+  "nav": {
+    "chat": "Chat",
+    "library": "Bibliothek",
+    "convert": "Folien → Text",
+    "models": "Modelle",
+    "settings": "Einstellungen",
+    "logs": "Protokolle",
+    "diagnostics": "Diagnose",
+    "eval": "Evaluierungslauf",
+    "theme": "Design",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeSystem": "System"
+  },
+  "models": {
+    "fitVram": "Passt in den VRAM",
+    "fitRam": "Passt in den RAM",
+    "fitTooLarge": "Zu groß",
+    "fitUnknown": "Unbekannt"
   }
 }

@@ -1,5 +1,6 @@
 import { createContext, use, useCallback, useEffect, useMemo, useState } from "react";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -77,24 +78,25 @@ export function useTheme() {
 }
 
 const OPTIONS = [
-  { value: "light", label: "Light", icon: SunIcon },
-  { value: "dark", label: "Dark", icon: MoonIcon },
-  { value: "system", label: "System", icon: MonitorIcon },
+  { value: "light", labelKey: "nav.themeLight", icon: SunIcon },
+  { value: "dark", labelKey: "nav.themeDark", icon: MoonIcon },
+  { value: "system", labelKey: "nav.themeSystem", icon: MonitorIcon },
 ] as const;
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const active = OPTIONS.find((option) => option.value === theme) ?? OPTIONS[2];
 
   return (
     <DropdownMenu>
-      <IconTooltip label="Theme" side="right">
+      <IconTooltip label={t("nav.theme")} side="right">
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
             className="size-9 text-rail-foreground hover:text-foreground"
-            aria-label="Theme"
+            aria-label={t("nav.theme")}
           >
             <active.icon className="size-4.5" />
           </Button>
@@ -104,7 +106,7 @@ export function ThemeToggle() {
         {OPTIONS.map((option) => (
           <DropdownMenuItem key={option.value} onSelect={() => setTheme(option.value)}>
             <option.icon className="size-4" />
-            {option.label}
+            {t(option.labelKey)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

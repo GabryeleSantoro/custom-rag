@@ -488,12 +488,14 @@ function StorageSection() {
 }
 
 export function SettingsPanel() {
+  const { t } = useTranslation();
   const { section } = useParams({ from: "/_shell/settings/$section" });
   const meta = SETTINGS_SECTIONS.find((entry) => entry.slug === section);
 
   return (
     <Page>
-      <PageHeader title={meta?.label ?? "Settings"} description={meta?.blurb} />
+      <PageHeader title={t(`settings.sections.${meta?.slug ?? "general"}.label`)}
+        description={meta ? t(`settings.sections.${meta.slug}.blurb`) : undefined} />
       <PageBody>
         <div className="max-w-3xl p-5">
           {section === "general" ? <GeneralSection /> : null}

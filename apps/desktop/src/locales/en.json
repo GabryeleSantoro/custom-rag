@@ -20,6 +20,52 @@
       "label": "Language",
       "hint": "Interface and chat answer language",
       "system": "System"
+    },
+    "sections": {
+      "general": {
+        "label": "General",
+        "blurb": "Language and appearance."
+      },
+      "connections": {
+        "label": "Connections",
+        "blurb": "Where answers are written. Keys live in the OS keychain."
+      },
+      "retrieval": {
+        "label": "Retrieval",
+        "blurb": "How passages are found, ranked and packed into the prompt."
+      },
+      "performance": {
+        "label": "Performance",
+        "blurb": "Batch sizes and GPU offload, defaulted from the detected hardware."
+      },
+      "storage": {
+        "label": "Storage",
+        "blurb": "Where data lives, and how to remove it."
+      },
+      "updates": {
+        "label": "Updates",
+        "blurb": "Version in use, and how new ones arrive."
+      }
     }
+  },
+  "nav": {
+    "chat": "Chat",
+    "library": "Library",
+    "convert": "Slides to text",
+    "models": "Models",
+    "settings": "Settings",
+    "logs": "Logs",
+    "diagnostics": "Diagnostics",
+    "eval": "Eval runner",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
+  },
+  "models": {
+    "fitVram": "Fits in VRAM",
+    "fitRam": "Fits in RAM",
+    "fitTooLarge": "Too large",
+    "fitUnknown": "Unknown"
   }
 }

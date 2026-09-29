@@ -20,6 +20,52 @@
       "label": "Langue",
       "hint": "Langue de l'interface et des réponses du chat",
       "system": "Système"
+    },
+    "sections": {
+      "general": {
+        "label": "Général",
+        "blurb": "Langue et apparence."
+      },
+      "connections": {
+        "label": "Connexions",
+        "blurb": "Où les réponses sont rédigées. Les clés restent dans le trousseau du système."
+      },
+      "retrieval": {
+        "label": "Recherche",
+        "blurb": "Comment les passages sont trouvés, classés et intégrés au prompt."
+      },
+      "performance": {
+        "label": "Performances",
+        "blurb": "Tailles de lot et déport sur GPU, réglés d'après le matériel détecté."
+      },
+      "storage": {
+        "label": "Stockage",
+        "blurb": "Où résident les données et comment les supprimer."
+      },
+      "updates": {
+        "label": "Mises à jour",
+        "blurb": "Version utilisée et arrivée des nouvelles."
+      }
     }
+  },
+  "nav": {
+    "chat": "Chat",
+    "library": "Bibliothèque",
+    "convert": "Diapos → texte",
+    "models": "Modèles",
+    "settings": "Réglages",
+    "logs": "Journaux",
+    "diagnostics": "Diagnostic",
+    "eval": "Exécuteur d'évaluations",
+    "theme": "Thème",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeSystem": "Système"
+  },
+  "models": {
+    "fitVram": "Tient dans la VRAM",
+    "fitRam": "Tient dans la RAM",
+    "fitTooLarge": "Trop volumineux",
+    "fitUnknown": "Inconnu"
   }
 }

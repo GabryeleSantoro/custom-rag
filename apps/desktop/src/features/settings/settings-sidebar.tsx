@@ -1,34 +1,24 @@
 import { Link, useParams } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 
 import { ContextSidebar } from "@/components/shell/context-sidebar";
 import { cn } from "@/lib/utils";
 
 export const SETTINGS_SECTIONS = [
-  { slug: "general", label: "General", blurb: "Language and appearance." },
-  {
-    slug: "connections",
-    label: "Connections",
-    blurb: "Where answers are written. Keys live in the OS keychain.",
-  },
-  {
-    slug: "retrieval",
-    label: "Retrieval",
-    blurb: "How passages are found, ranked and packed into the prompt.",
-  },
-  {
-    slug: "performance",
-    label: "Performance",
-    blurb: "Batch sizes and GPU offload, defaulted from the detected hardware.",
-  },
-  { slug: "storage", label: "Storage", blurb: "Where data lives, and how to remove it." },
-  { slug: "updates", label: "Updates", blurb: "Version in use, and how new ones arrive." },
+  { slug: "general" },
+  { slug: "connections" },
+  { slug: "retrieval" },
+  { slug: "performance" },
+  { slug: "storage" },
+  { slug: "updates" },
 ] as const;
 
 export function SettingsSidebar() {
+  const { t } = useTranslation();
   const params = useParams({ strict: false }) as { section?: string };
 
   return (
-    <ContextSidebar title="Settings">
+    <ContextSidebar title={t("nav.settings")}>
       <nav className="flex flex-col gap-0.5 pt-1">
         {SETTINGS_SECTIONS.map((section) => (
           <Link
@@ -41,7 +31,7 @@ export function SettingsSidebar() {
               params.section === section.slug && "bg-sidebar-accent font-medium",
             )}
           >
-            {section.label}
+            {t(`settings.sections.${section.slug}.label`)}
           </Link>
         ))}
       </nav>

@@ -20,6 +20,52 @@
       "label": "Lingua",
       "hint": "Lingua dell'interfaccia e delle risposte in chat",
       "system": "Sistema"
+    },
+    "sections": {
+      "general": {
+        "label": "Generale",
+        "blurb": "Lingua e aspetto."
+      },
+      "connections": {
+        "label": "Connessioni",
+        "blurb": "Dove vengono scritte le risposte. Le chiavi restano nel portachiavi del sistema."
+      },
+      "retrieval": {
+        "label": "Recupero",
+        "blurb": "Come i passaggi vengono trovati, ordinati e inseriti nel prompt."
+      },
+      "performance": {
+        "label": "Prestazioni",
+        "blurb": "Dimensioni dei batch e offload su GPU, impostati in base all'hardware rilevato."
+      },
+      "storage": {
+        "label": "Archiviazione",
+        "blurb": "Dove risiedono i dati e come rimuoverli."
+      },
+      "updates": {
+        "label": "Aggiornamenti",
+        "blurb": "Versione in uso e come arrivano le nuove."
+      }
     }
+  },
+  "nav": {
+    "chat": "Chat",
+    "library": "Libreria",
+    "convert": "Slide → testo",
+    "models": "Modelli",
+    "settings": "Impostazioni",
+    "logs": "Log",
+    "diagnostics": "Diagnostica",
+    "eval": "Esecuzione valutazioni",
+    "theme": "Tema",
+    "themeLight": "Chiaro",
+    "themeDark": "Scuro",
+    "themeSystem": "Sistema"
+  },
+  "models": {
+    "fitVram": "Entra nella VRAM",
+    "fitRam": "Entra nella RAM",
+    "fitTooLarge": "Troppo grande",
+    "fitUnknown": "Sconosciuto"
   }
 }

@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIcon,
   BoxesIcon,
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 type RailItem = {
   to: string;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   /** Matches nested routes, e.g. /reader/* belongs to Library. */
   match: string[];
@@ -26,32 +27,34 @@ type RailItem = {
 };
 
 const PRIMARY: RailItem[] = [
-  { to: "/chat", label: "Chat", icon: MessagesSquareIcon, match: ["/chat", "/"] },
-  { to: "/library", label: "Library", icon: LibraryIcon, match: ["/library", "/reader"] },
-  { to: "/convert", label: "Slide → testo", icon: FilePenLineIcon, match: ["/convert"] },
-  { to: "/models", label: "Models", icon: BoxesIcon, match: ["/models"] },
-  { to: "/settings", label: "Settings", icon: SettingsIcon, match: ["/settings"] },
+  { to: "/chat", labelKey: "nav.chat", icon: MessagesSquareIcon, match: ["/chat", "/"] },
+  { to: "/library", labelKey: "nav.library", icon: LibraryIcon, match: ["/library", "/reader"] },
+  { to: "/convert", labelKey: "nav.convert", icon: FilePenLineIcon, match: ["/convert"] },
+  { to: "/models", labelKey: "nav.models", icon: BoxesIcon, match: ["/models"] },
+  { to: "/settings", labelKey: "nav.settings", icon: SettingsIcon, match: ["/settings"] },
 ];
 
 const SECONDARY: RailItem[] = [
-  { to: "/logs", label: "Logs", icon: ScrollTextIcon, match: ["/logs"] },
-  { to: "/diagnostics", label: "Diagnostics", icon: ActivityIcon, match: ["/diagnostics"] },
-  { to: "/eval", label: "Eval runner", icon: FlaskConicalIcon, match: ["/eval"], devOnly: true },
+  { to: "/logs", labelKey: "nav.logs", icon: ScrollTextIcon, match: ["/logs"] },
+  { to: "/diagnostics", labelKey: "nav.diagnostics", icon: ActivityIcon, match: ["/diagnostics"] },
+  { to: "/eval", labelKey: "nav.eval", icon: FlaskConicalIcon, match: ["/eval"], devOnly: true },
 ];
 
 function RailButton({ item, active }: { item: RailItem; active: boolean }) {
+  const { t } = useTranslation();
+  const label = t(item.labelKey);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Link
           to={item.to}
-          aria-label={item.label}
+          aria-label={label}
           aria-current={active ? "page" : undefined}
           data-tauri-drag-region="false"
           className={cn(
-            "no-drag relative grid size-9 place-items-center rounded-md transition-colors",
+            "no-drag relative grid size-9 place-items-center rounded-lg transition-[background-color,color,transform] duration-200",
             "text-rail-foreground hover:bg-sidebar-accent hover:text-foreground",
-            active && "bg-sidebar-accent text-foreground",
+            active && "bg-primary/12 text-primary",
           )}
         >
           {/* Active marker rides the rail edge so the icon itself stays unstyled. */}
@@ -64,7 +67,7 @@ function RailButton({ item, active }: { item: RailItem; active: boolean }) {
           <item.icon className="size-4.5" strokeWidth={1.75} />
         </Link>
       </TooltipTrigger>
-      <TooltipContent side="right">{item.label}</TooltipContent>
+      <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
   );
 }
