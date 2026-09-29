@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardCheckIcon, ClipboardCopyIcon, RotateCwIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -37,10 +38,10 @@ type ProcRow = {
   managed: boolean;
 };
 
-const ROLE_BLURB: Record<string, string> = {
-  ragcore: "Python core: ingestion, retrieval, the API every screen reads from.",
-  embedding: "Embedding server. Turns chunks and questions into vectors.",
-  reranking: "Cross-encoder. Reorders candidates before the prompt is packed.",
+const ROLE_BLURB_KEY: Record<string, string> = {
+  ragcore: "diagnostics.roleRagcore",
+  embedding: "diagnostics.roleEmbedding",
+  reranking: "diagnostics.roleReranking",
 };
 
 function Section({
@@ -80,6 +81,7 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function ProcessCard({ proc }: { proc: ProcRow }) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -91,21 +93,21 @@ function ProcessCard({ proc }: { proc: ProcRow }) {
         <div className="min-w-0">
           <p className="truncate text-[0.8125rem] font-medium">{proc.name}</p>
           <p className="mt-0.5 text-[0.6875rem] leading-[1.45] text-muted-foreground">
-            {ROLE_BLURB[proc.role] ?? proc.role}
+            {ROLE_BLURB_KEY[proc.role] ? t(ROLE_BLURB_KEY[proc.role]) : proc.role}
           </p>
         </div>
         <StatusChip
           tone={STATE_TONE[proc.state]}
-          label={proc.state}
+          label={t(`diagnostics.state.${proc.state}`)}
           pulse={proc.state === "starting" || proc.state === "restarting"}
         />
       </div>
 
       <div className="mt-3 grid grid-cols-4 gap-3 border-t border-border pt-2.5">
-        <Stat label="pid" value={proc.pid ?? "—"} />
-        <Stat label="port" value={proc.port ?? "—"} />
-        <Stat label="uptime" value={duration(proc.uptime_s)} />
-        <Stat label="restarts" value={proc.restarts} />
+        <Stat label={t("diagnostics.pid")} value={proc.pid ?? "—"} />
+        <Stat label={t("diagnostics.port")} value={proc.port ?? "—"} />
+        <Stat label={t("diagnostics.uptime")} value={duration(proc.uptime_s)} />
+        <Stat label={t("diagnostics.restarts")} value={proc.restarts} />
       </div>
 
       {proc.detail ? (
@@ -121,7 +123,7 @@ function ProcessCard({ proc }: { proc: ProcRow }) {
 
       {!proc.managed ? (
         <p className="mt-2 text-[0.625rem] text-muted-foreground">
-          Reported by the core, not supervised by the shell.
+          {t("diagnostics.unsupervised")}
         </p>
       ) : null}
     </div>
@@ -129,27 +131,27 @@ function ProcessCard({ proc }: { proc: ProcRow }) {
 }
 
 function IndexSection({ health }: { health: Health | undefined }) {
+  const { t } = useTranslation();
   if (!health) return <Skeleton className="h-24 w-full" />;
   const index = health.index;
 
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Stat label="documents" value={count(index.documents)} />
-        <Stat label="chunks" value={count(index.chunks)} />
-        <Stat label="parents" value={count(index.parents)} />
-        <Stat label="topics" value={count(index.topics)} />
-        <Stat label="on disk" value={bytes(index.size_bytes)} />
+        <Stat label={t("diagnostics.documents")} value={count(index.documents)} />
+        <Stat label={t("diagnostics.chunks")} value={count(index.chunks)} />
+        <Stat label={t("diagnostics.parents")} value={count(index.parents)} />
+        <Stat label={t("diagnostics.topics")} value={count(index.topics)} />
+        <Stat label={t("diagnostics.onDisk")} value={bytes(index.size_bytes)} />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-2.5 sm:grid-cols-4">
-        <Stat label="embedder" value={index.embed_model} />
-        <Stat label="dim" value={index.embed_dim} />
-        <Stat label="reranker" value={index.reranker_model} />
-        <Stat label="last indexed" value={relativeTime(index.last_indexed_at)} />
+        <Stat label={t("diagnostics.embedder")} value={index.embed_model} />
+        <Stat label={t("diagnostics.dim")} value={index.embed_dim} />
+        <Stat label={t("diagnostics.reranker")} value={index.reranker_model} />
+        <Stat label={t("diagnostics.lastIndexed")} value={relativeTime(index.last_indexed_at)} />
       </div>
       <p className="mt-2.5 text-[0.6875rem] text-muted-foreground">
-        Index schema v{index.schema_version}. Changing the embedder rewrites every vector, so the
-        schema version moves with it.
+        {t("diagnostics.schema", { version: index.schema_version })}
       </p>
     </div>
   );
@@ -162,33 +164,33 @@ function EnvironmentSection({
   health: Health | undefined;
   hardware: HardwareInfo | undefined;
 }) {
+  const { t } = useTranslation();
   if (!hardware) return <Skeleton className="h-20 w-full" />;
 
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="platform" value={`${hardware.os} ${hardware.arch}`} />
-        <Stat label="cpu threads" value={hardware.cpu_count} />
-        <Stat label="ram" value={`${(hardware.ram_mb / 1024).toFixed(1)} GB`} />
+        <Stat label={t("diagnostics.platform")} value={`${hardware.os} ${hardware.arch}`} />
+        <Stat label={t("diagnostics.threads")} value={hardware.cpu_count} />
+        <Stat label={t("diagnostics.ram")} value={`${(hardware.ram_mb / 1024).toFixed(1)} GB`} />
         <Stat
-          label="gpu"
+          label={t("diagnostics.gpu")}
           value={
             hardware.gpu_backend === "cpu"
-              ? "none"
+              ? t("diagnostics.none")
               : `${hardware.gpu_backend} · ${(hardware.vram_mb / 1024).toFixed(1)} GB`
           }
         />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-2.5 sm:grid-cols-4">
-        <Stat label="profile" value={hardware.profile} />
-        <Stat label="core version" value={health?.version ?? "—"} />
-        <Stat label="core uptime" value={duration(health?.uptime_s)} />
-        <Stat label="build" value={health?.dev_mode ? "dev" : "release"} />
+        <Stat label={t("diagnostics.profile")} value={t(`onboarding.hardware.profileName.${hardware.profile}`)} />
+        <Stat label={t("diagnostics.coreVersion")} value={health?.version ?? "—"} />
+        <Stat label={t("diagnostics.coreUptime")} value={duration(health?.uptime_s)} />
+        <Stat label={t("diagnostics.build")} value={health?.dev_mode ? t("diagnostics.dev") : t("diagnostics.release")} />
       </div>
       {health?.stub ? (
         <p className="mt-2.5 text-[0.6875rem] text-status-warn">
-          The core is serving fixture data. Retrieval and answers are shaped like the real thing
-          but are not computed over your documents.
+          {t("diagnostics.stub")}
         </p>
       ) : null}
     </div>
@@ -251,6 +253,7 @@ function debugReport(input: {
 }
 
 export function DiagnosticsView() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const health = useQuery(healthQuery);
   const hardware = useQuery(hardwareQuery);
@@ -290,22 +293,22 @@ export function DiagnosticsView() {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success("Debug report copied", {
-        description: "No API keys or session tokens are included.",
+      toast.success(t("diagnostics.reportCopied"), {
+        description: t("diagnostics.reportNoSecrets"),
       });
     } catch {
-      toast.error("Could not reach the clipboard");
+      toast.error(t("diagnostics.clipboardFailed"));
     }
   }
 
   async function restart() {
     try {
       await shell.restart();
-      toast.success("Restarting ragcore", { description: "The supervisor will bring it back." });
+      toast.success(t("diagnostics.restarting"), { description: t("diagnostics.restartingHint") });
       void queryClient.invalidateQueries({ queryKey: keys.sidecars });
       void queryClient.invalidateQueries({ queryKey: keys.health });
     } catch (error) {
-      toast.error("Restart failed", { description: String(error) });
+      toast.error(t("diagnostics.restartFailed"), { description: String(error) });
     }
   }
 
@@ -314,13 +317,13 @@ export function DiagnosticsView() {
   return (
     <Page>
       <PageHeader
-        title="Diagnostics"
-        description="What is running, what it indexed, and what it printed"
+        title={t("nav.diagnostics")}
+        description={t("diagnostics.lead")}
         actions={
           <>
             <Button variant="ghost" size="sm" className="h-7" onClick={() => void restart()}>
               <RotateCwIcon className="size-3.5" />
-              Restart core
+              {t("diagnostics.restart")}
             </Button>
             <Button variant="secondary" size="sm" className="h-7" onClick={() => void copyReport()}>
               {copied ? (
@@ -328,7 +331,7 @@ export function DiagnosticsView() {
               ) : (
                 <ClipboardCopyIcon className="size-3.5" />
               )}
-              Copy debug report
+              {t("diagnostics.copyReport")}
             </Button>
           </>
         }
@@ -337,15 +340,14 @@ export function DiagnosticsView() {
       <PageBody>
         {unreachable ? (
           <div className="border-b border-status-error/25 bg-status-error/8 px-5 py-2 text-xs text-status-error">
-            The core is not answering on loopback. The process cards below still show what the
-            shell knows, and the log tail is the fastest way to see why.
+            {t("diagnostics.unreachable")}
           </div>
         ) : null}
 
         <div className="mx-auto max-w-4xl space-y-6 p-5">
           <Section
-            title="Processes"
-            description="Everything this app started on your machine."
+            title={t("diagnostics.processes")}
+            description={t("diagnostics.processesHint")}
           >
             {sidecars.isLoading && processes.length === 0 ? (
               <Skeleton className="h-28 w-full" />
@@ -358,17 +360,17 @@ export function DiagnosticsView() {
             )}
           </Section>
 
-          <Section title="Index" description="What retrieval currently searches over.">
+          <Section title={t("diagnostics.index")} description={t("diagnostics.indexHint")}>
             <IndexSection health={health.data} />
           </Section>
 
-          <Section title="Environment" description="Detected hardware and the build in use.">
+          <Section title={t("diagnostics.environment")} description={t("diagnostics.environmentHint")}>
             <EnvironmentSection health={health.data} hardware={hardware.data} />
           </Section>
 
           <Section
-            title="Recent log"
-            description="Everything the app, the proxy and the core logged. The Logs page has the full view."
+            title={t("diagnostics.recentLog")}
+            description={t("diagnostics.recentLogHint")}
           >
             <LogPane lines={lines} />
           </Section>

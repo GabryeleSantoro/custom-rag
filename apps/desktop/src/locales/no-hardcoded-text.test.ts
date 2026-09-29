@@ -10,7 +10,7 @@ const sources = import.meta.glob<string>("../**/*.tsx", {
 });
 
 // JSX text node starting with a capitalised word: >Add source< or >\n  Add source\n
-const JSX_TEXT = />[ \t\n]*([A-Z][a-z]+(?: [A-Za-z][a-z']*)*)[ \t\n]*</g;
+const JSX_TEXT = /(?<![=-])>[ \t\n]*([A-Z][a-z]+(?: [A-Za-z][a-z']*)*)[ \t\n]*</g;
 const ATTR = /\b(?:placeholder|title|aria-label|alt|label|description|hint)="([A-Z][a-z][^"]*)"/g;
 // Multi-line JSX text (paragraphs): a line of prose between tags.
 const PROSE = /^[ \t]+[A-Z][a-z]+ [a-z]+ [^<>{}=;\n]*[a-z.,]$/gm;
