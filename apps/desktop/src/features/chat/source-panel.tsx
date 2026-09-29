@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -55,6 +56,7 @@ export function SourcePanel({
   onSelect: (chunkId: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const sources = useQuery(sourcesQuery);
   const documents = useQuery({
     queryKey: keys.documents({ limit: 500 }),
@@ -68,12 +70,12 @@ export function SourcePanel({
 
   const updateProject = useMutation({
     mutationFn: (useGlobalSources: boolean) => {
-      if (!project) throw new Error("No project selected");
+      if (!project) throw new Error(t("chat.noProjectSelected"));
       return api.updateProject(project.id, { use_global_sources: useGlobalSources });
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.projects }),
     onError: (error: Error) =>
-      toast.error("Could not update project resources", { description: error.message }),
+      toast.error(t("chat.updateResourcesFailed"), { description: error.message }),
   });
 
   const allDocuments = documents.data?.items ?? [];
@@ -141,18 +143,18 @@ export function SourcePanel({
         className="drag-region flex items-center justify-between gap-2 px-3 pt-3 pb-2"
       >
         <div>
-          <h2 className="text-[0.8125rem] font-semibold tracking-tight">Resources</h2>
+          <h2 className="text-[0.8125rem] font-semibold tracking-tight">{t("chat.resources")}</h2>
           <p className="text-[0.6875rem] text-muted-foreground">
-            {project ? project.name : "Global library"}
+            {project ? project.name : t("chat.globalLibrary")}
           </p>
         </div>
-        <IconTooltip label="Close resources">
+        <IconTooltip label={t("chat.closeResources")}>
           <Button
             data-tauri-drag-region="false"
             variant="ghost"
             size="icon"
             className="no-drag size-7"
-            aria-label="Close resources"
+            aria-label={t("chat.closeResources")}
             onClick={onClose}
           >
             <XIcon className="size-4" />
@@ -165,9 +167,9 @@ export function SourcePanel({
           <section className="space-y-1">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h3 className="text-xs font-semibold tracking-tight">Knowledge</h3>
+                <h3 className="text-xs font-semibold tracking-tight">{t("chat.knowledge")}</h3>
                 <p className="text-[0.6875rem] text-muted-foreground">
-                  {project ? "What this project can search" : "Shared across projects"}
+                  {project ? t("chat.knowledgeProject") : t("chat.knowledgeShared")}
                 </p>
               </div>
               {!project ? (
@@ -175,7 +177,7 @@ export function SourcePanel({
                   trigger={
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                       <FolderPlusIcon className="size-3.5" />
-                      Add folder
+                      {t("chat.addFolder")}
                     </Button>
                   }
                 />
@@ -187,8 +189,8 @@ export function SourcePanel({
               <Input
                 value={knowledgeSearch}
                 onChange={(event) => setKnowledgeSearch(event.target.value)}
-                placeholder="Search knowledge…"
-                aria-label="Search knowledge"
+                placeholder={t("chat.searchKnowledge")}
+                aria-label={t("chat.searchKnowledgeLabel")}
                 className="h-8 pl-8 text-xs"
               />
             </div>
@@ -199,7 +201,7 @@ export function SourcePanel({
                   <button
                     type="button"
                     className="flex min-w-0 items-center gap-2 text-left"
-                    aria-label={`${globalOpen ? "Collapse" : "Expand"} global knowledge`}
+                    aria-label={globalOpen ? t("chat.collapseGlobal") : t("chat.expandGlobal")}
                   >
                     {globalOpen ? (
                       <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -207,7 +209,7 @@ export function SourcePanel({
                       <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
                     )}
                     <FolderIcon className="size-4 shrink-0 text-primary" />
-                    <span className="truncate text-xs font-medium">Global knowledge</span>
+                    <span className="truncate text-xs font-medium">{t("chat.globalKnowledge")}</span>
                     <span className="text-[0.6875rem] text-muted-foreground">
                       {globalSources.length}
                     </span>
@@ -223,7 +225,7 @@ export function SourcePanel({
                     }
                   }}
                   disabled={updateProject.isPending}
-                  aria-label="Include all global knowledge files"
+                  aria-label={t("chat.includeAllGlobal")}
                 />
               </div>
               <CollapsibleContent>
@@ -242,10 +244,10 @@ export function SourcePanel({
                         />
                       ))
                     ) : (
-                      <p className="py-2 text-xs text-muted-foreground">No matching files.</p>
+                      <p className="py-2 text-xs text-muted-foreground">{t("chat.noMatchingFiles")}</p>
                     )
                   ) : (
-                    <p className="py-2 text-xs text-muted-foreground">No global files yet.</p>
+                    <p className="py-2 text-xs text-muted-foreground">{t("chat.noGlobalFiles")}</p>
                   )}
                 </div>
               </CollapsibleContent>
@@ -258,7 +260,7 @@ export function SourcePanel({
                     <button
                       type="button"
                       className="flex min-w-0 items-center gap-2 text-left"
-                      aria-label={`${projectOpen ? "Collapse" : "Expand"} project folders`}
+                      aria-label={projectOpen ? t("chat.collapseProject") : t("chat.expandProject")}
                     >
                       {projectOpen ? (
                         <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -266,7 +268,7 @@ export function SourcePanel({
                         <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
                       )}
                       <FolderIcon className="size-4 shrink-0 text-primary" />
-                      <span className="truncate text-xs font-medium">Project folders</span>
+                      <span className="truncate text-xs font-medium">{t("chat.projectFolders")}</span>
                       <span className="text-[0.6875rem] text-muted-foreground">
                         {projectSources.length}
                       </span>
@@ -279,12 +281,12 @@ export function SourcePanel({
                         variant="ghost"
                         size="icon"
                         className="size-6"
-                        aria-label="Add project folder"
+                        aria-label={t("chat.addProjectFolder")}
                       >
                         <FolderPlusIcon className="size-3.5" />
                       </Button>
                     }
-                    triggerLabel="Add project folder"
+                    triggerLabel={t("chat.addProjectFolder")}
                   />
                 </div>
                 <CollapsibleContent>
@@ -302,10 +304,10 @@ export function SourcePanel({
                           />
                         ))
                       ) : (
-                        <p className="py-2 text-xs text-muted-foreground">No matching files.</p>
+                        <p className="py-2 text-xs text-muted-foreground">{t("chat.noMatchingFiles")}</p>
                       )
                     ) : (
-                      <p className="py-2 text-xs text-muted-foreground">No project files yet.</p>
+                      <p className="py-2 text-xs text-muted-foreground">{t("chat.noProjectFiles")}</p>
                     )}
                   </div>
                 </CollapsibleContent>
@@ -316,16 +318,16 @@ export function SourcePanel({
           <section className="border-t border-border pt-3">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-semibold tracking-tight">Answer sources</h3>
+                <h3 className="text-xs font-semibold tracking-tight">{t("chat.answerSources")}</h3>
                 <p className="text-[0.6875rem] text-muted-foreground">
-                  {chunks.length} passage{chunks.length === 1 ? "" : "s"} sent to the model
+                  {t("chat.passagesSent", { count: chunks.length })}
                 </p>
               </div>
             </div>
 
             {chunks.length === 0 ? (
               <p className="py-5 text-center text-xs text-muted-foreground">
-                Ask a question to see the passages used in the answer.
+                {t("chat.askToSeePassages")}
               </p>
             ) : null}
 
@@ -357,7 +359,7 @@ export function SourcePanel({
                           "grid size-5 shrink-0 place-items-center rounded font-mono text-[0.625rem]",
                           citation ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground",
                         )}
-                        title={citation ? "Cited in the answer" : "Retrieved but not cited"}
+                        title={citation ? t("chat.cited") : t("chat.notCited")}
                       >
                         {index + 1}
                       </span>
@@ -369,11 +371,11 @@ export function SourcePanel({
 
                     <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
                       <span>p.{chunk.page_start}</span>
-                      <span title="Reranker score after the sigmoid">
+                      <span title={t("chat.rerankerTitle")}>
                         rerank {chunk.rerank_score.toFixed(3)}
                       </span>
-                      <span title="Rank in the dense list">dense {chunk.dense_rank ?? "—"}</span>
-                      <span title="Rank in the keyword list">bm25 {chunk.bm25_rank ?? "—"}</span>
+                      <span title={t("chat.denseTitle")}>dense {chunk.dense_rank ?? "—"}</span>
+                      <span title={t("chat.keywordTitle")}>bm25 {chunk.bm25_rank ?? "—"}</span>
                     </div>
 
                     <Button
@@ -388,7 +390,7 @@ export function SourcePanel({
                         search={{ page: chunk.page_start, highlight: chunk.chunk_id }}
                       >
                         <BookOpenIcon className="size-3.5" />
-                        Open in reader
+                        {t("chat.openInReader")}
                       </Link>
                     </Button>
                   </article>
@@ -417,6 +419,7 @@ function FolderGroup({
   onToggle: (documents: Document[], checked: boolean) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const selectedCount = files.filter(selected).length;
   const checked = !disabled && files.length > 0 && selectedCount === files.length;
@@ -429,7 +432,7 @@ function FolderGroup({
           checked={indeterminate ? "indeterminate" : checked}
           onCheckedChange={(value) => onToggle(files, value === true)}
           disabled={disabled}
-          aria-label={`Include all files in ${shortPath(source.path)}`}
+          aria-label={t("chat.includeAllIn", { path: shortPath(source.path) })}
         />
         <CollapsibleTrigger asChild>
           <button type="button" className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -442,8 +445,12 @@ function FolderGroup({
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-medium">{shortPath(source.path)}</p>
               <p className="truncate text-[0.6875rem] text-muted-foreground">
-                {selectedCount}/{files.length} files included · {source.indexed_count}/
-                {source.document_count} indexed
+                {t("chat.folderStats", {
+                  selected: selectedCount,
+                  files: files.length,
+                  indexed: source.indexed_count,
+                  total: source.document_count,
+                })}
               </p>
             </div>
           </button>
@@ -462,7 +469,7 @@ function FolderGroup({
               />
             ))
           ) : (
-            <p className="py-1 text-[0.6875rem] text-muted-foreground">No matching files.</p>
+            <p className="py-1 text-[0.6875rem] text-muted-foreground">{t("chat.noMatchingFiles")}</p>
           )}
         </div>
       </CollapsibleContent>
@@ -481,6 +488,7 @@ function FileRow({
   disabled: boolean;
   onToggle: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -492,13 +500,13 @@ function FileRow({
         checked={selected}
         onCheckedChange={(value) => onToggle(value === true)}
         disabled={disabled}
-        aria-label={`Include ${document.title}`}
+        aria-label={t("chat.includeFile", { title: document.title })}
       />
       <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium">{document.title}</p>
         <p className="truncate text-[0.6875rem] text-muted-foreground">
-          {document.status} · {relativeTime(document.mtime)}
+          {t(`documentStatus.${document.status}`)} · {relativeTime(document.mtime)}
         </p>
       </div>
     </div>

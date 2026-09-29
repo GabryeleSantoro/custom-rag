@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { Citation } from "@/lib/ipc";
 import { cn } from "@/lib/utils";
@@ -21,12 +22,13 @@ function Chip({
   known: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   const label = index ?? "?";
   return (
     <button
       type="button"
       onClick={onSelect}
-      title={known ? `${docId}, page ${page}` : `${docId} was not among the retrieved passages`}
+      title={known ? t("chat.citationPage", { docId, page }) : t("chat.citationUnknown", { docId })}
       className={cn(
         "mx-0.5 inline-flex h-4.5 min-w-4.5 translate-y-[-1px] items-center justify-center",
         "rounded-[0.25rem] px-1 align-middle font-mono text-[0.625rem] font-medium tabular-nums",

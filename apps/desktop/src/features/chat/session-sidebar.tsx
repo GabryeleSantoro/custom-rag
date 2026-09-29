@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -62,6 +63,7 @@ function SessionRow({
   onTogglePin: (session: ChatSession) => void;
   onMove: (session: ChatSession, projectId: string | null) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -88,16 +90,16 @@ function SessionRow({
               </p>
             </div>
             <p className="mt-0.5 truncate text-[0.6875rem] text-muted-foreground">
-              {session.message_count} message{session.message_count === 1 ? "" : "s"} ·{" "}
+              {t("chat.messageCount", { count: session.message_count })} ·{" "}
               {relativeTime(session.updated_at)}
             </p>
           </Link>
 
-          <IconTooltip label={`Delete ${session.title}`}>
+          <IconTooltip label={t("chat.deleteNamed", { name: session.title })}>
             <Button
               variant="ghost"
               size="icon"
-              aria-label={`Delete ${session.title}`}
+              aria-label={t("chat.deleteNamed", { name: session.title })}
               onClick={() => onDelete(session.id)}
               className="absolute top-1.5 right-1 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             >
@@ -109,12 +111,12 @@ function SessionRow({
       <ContextMenuContent>
         <ContextMenuItem onSelect={() => onTogglePin(session)}>
           {session.pinned ? <PinOffIcon /> : <PinIcon />}
-          {session.pinned ? "Unpin chat" : "Pin chat"}
+          {session.pinned ? t("chat.unpinChat") : t("chat.pinChat")}
         </ContextMenuItem>
         {session.project_id ? (
           <ContextMenuItem onSelect={() => onMove(session, null)}>
             <FolderIcon />
-            Remove from project
+            {t("chat.removeFromProject")}
           </ContextMenuItem>
         ) : null}
         {projects
@@ -122,12 +124,12 @@ function SessionRow({
           .map((project) => (
             <ContextMenuItem key={project.id} onSelect={() => onMove(session, project.id)}>
               <FolderIcon />
-              Move to {project.name}
+              {t("chat.moveTo", { name: project.name })}
             </ContextMenuItem>
           ))}
         <ContextMenuItem variant="destructive" onSelect={() => onDelete(session.id)}>
           <Trash2Icon />
-          Delete chat
+          {t("chat.deleteChat")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -151,6 +153,7 @@ function ProjectRow({
   onTogglePin: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -173,12 +176,12 @@ function ProjectRow({
               {chatCount}
             </span>
           </button>
-          <IconTooltip label={`New chat in ${project.name}`}>
+          <IconTooltip label={t("chat.newChatIn", { name: project.name })}>
             <Button
               variant="ghost"
               size="icon"
               className="mr-0.5 size-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-              aria-label={`New chat in ${project.name}`}
+              aria-label={t("chat.newChatIn", { name: project.name })}
               onClick={(event) => {
                 event.stopPropagation();
                 onNewChat();
@@ -192,11 +195,11 @@ function ProjectRow({
       <ContextMenuContent>
         <ContextMenuItem onSelect={onTogglePin}>
           {project.pinned ? <PinOffIcon /> : <PinIcon />}
-          {project.pinned ? "Unpin project" : "Pin project"}
+          {project.pinned ? t("chat.unpinProject") : t("chat.pinProject")}
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" onSelect={onDelete}>
           <Trash2Icon />
-          Delete project
+          {t("chat.deleteProject")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -204,6 +207,7 @@ function ProjectRow({
 }
 
 export function ChatSessionSidebar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const params = useParams({ strict: false }) as { sessionId?: string };
@@ -224,7 +228,7 @@ export function ChatSessionSidebar() {
       invalidateChatNavigation();
       if (params.sessionId === id) void navigate({ to: "/chat" });
     },
-    onError: (error: Error) => toast.error("Could not delete the chat", { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.deleteChatFailed"), { description: error.message }),
   });
 
   const createProject = useMutation({
@@ -238,22 +242,22 @@ export function ChatSessionSidebar() {
       });
       setProjectName("");
       setProjectDialogOpen(false);
-      toast.success("Project created", { description: project.name });
+      toast.success(t("chat.projectCreated"), { description: project.name });
     },
-    onError: (error: Error) => toast.error("Could not create the project", { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.createProjectFailed"), { description: error.message }),
   });
 
   const updateProject = useMutation({
     mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
       api.updateProject(id, { pinned }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.projects }),
-    onError: (error: Error) => toast.error("Could not update the project", { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.updateProjectFailed"), { description: error.message }),
   });
 
   const removeProject = useMutation({
     mutationFn: (id: string) => api.deleteProject(id),
     onSuccess: () => invalidateChatNavigation(),
-    onError: (error: Error) => toast.error("Could not delete the project", { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.deleteProjectFailed"), { description: error.message }),
   });
 
   const createProjectChat = useMutation({
@@ -262,14 +266,14 @@ export function ChatSessionSidebar() {
       invalidateChatNavigation();
       void navigate({ to: "/chat/$sessionId", params: { sessionId: session.id } });
     },
-    onError: (error: Error) => toast.error("Could not create the chat", { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.createChatFailed"), { description: error.message }),
   });
 
   const updateChat = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof api.updateSession>[1] }) =>
       api.updateSession(id, payload),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.sessions }),
-    onError: (error: Error) => toast.error("Could not update the chat", { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.updateChatFailed"), { description: error.message }),
   });
 
   const allSessions = sessions.data ?? [];
@@ -300,28 +304,28 @@ export function ChatSessionSidebar() {
             }}
           >
             <DialogHeader>
-              <DialogTitle>New project</DialogTitle>
+              <DialogTitle>{t("chat.newProject")}</DialogTitle>
               <DialogDescription>
-                Keep related chats together so they are easier to find and pin as a group.
+                {t("chat.newProjectLead")}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <Label htmlFor="project-name">Project name</Label>
+              <Label htmlFor="project-name">{t("chat.projectName")}</Label>
               <Input
                 id="project-name"
                 className="mt-1.5"
                 autoFocus
                 value={projectName}
-                placeholder="Research notes"
+                placeholder={t("chat.projectNamePlaceholder")}
                 onChange={(event) => setProjectName(event.target.value)}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setProjectDialogOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={!projectName.trim() || createProject.isPending}>
-                {createProject.isPending ? "Creating…" : "Create project"}
+                {createProject.isPending ? t("chat.creating") : t("chat.createProject")}
               </Button>
             </DialogFooter>
           </form>
@@ -329,22 +333,22 @@ export function ChatSessionSidebar() {
       </Dialog>
 
       <ContextSidebar
-        title="Chats"
+        title={t("chat.sidebarTitle")}
         action={
           <div className="flex items-center gap-0.5">
-            <IconTooltip label="New chat">
+            <IconTooltip label={t("chat.newChat")}>
               <Button variant="ghost" size="icon" className="size-7" asChild>
-                <Link to="/chat" aria-label="New chat">
+                <Link to="/chat" aria-label={t("chat.newChat")}>
                   <MessageSquarePlusIcon className="size-4" />
                 </Link>
               </Button>
             </IconTooltip>
-            <IconTooltip label="New project">
+            <IconTooltip label={t("chat.newProject")}>
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-7"
-                aria-label="New project"
+                aria-label={t("chat.newProject")}
                 onClick={() => setProjectDialogOpen(true)}
               >
                 <FolderPlusIcon className="size-4" />
@@ -360,7 +364,7 @@ export function ChatSessionSidebar() {
           </div>
         ) : null}
 
-        {orderedProjects.length ? <SidebarSectionLabel>Projects</SidebarSectionLabel> : null}
+        {orderedProjects.length ? <SidebarSectionLabel>{t("chat.projects")}</SidebarSectionLabel> : null}
         <nav className="flex flex-col gap-0.5">
           {orderedProjects.map((project) => {
             const projectSessions = sortSessions(
@@ -402,7 +406,7 @@ export function ChatSessionSidebar() {
           })}
         </nav>
 
-        {unassignedSessions.length ? <SidebarSectionLabel>Chats</SidebarSectionLabel> : null}
+        {unassignedSessions.length ? <SidebarSectionLabel>{t("chat.sidebarTitle")}</SidebarSectionLabel> : null}
         <nav className="flex flex-col gap-0.5">
           {unassignedSessions.map((session) => (
             <SessionRow
@@ -423,7 +427,7 @@ export function ChatSessionSidebar() {
 
         {!sessions.isLoading && !projects.isLoading && !allSessions.length && !allProjects.length ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-            No chats yet. Ask something to start one.
+            {t("chat.noChats")}
           </p>
         ) : null}
       </ContextSidebar>

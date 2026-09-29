@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpIcon, SquareIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/tooltip";
@@ -12,7 +13,7 @@ export function Composer({
   onStop,
   streaming,
   disabled,
-  placeholder = "Ask about your documents…",
+  placeholder,
   children,
 }: {
   onSend: (text: string) => void;
@@ -23,6 +24,7 @@ export function Composer({
   /** Filter chips and the mode selector sit above the input. */
   children?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -41,13 +43,13 @@ export function Composer({
   };
 
   return (
-    <div className="border-t border-border bg-background px-5 py-3">
+    <div className="bg-linear-to-t from-background via-background/90 to-transparent px-5 pb-4 pt-6">
       <div className="mx-auto w-full max-w-3xl">
         {children ? <div className="mb-2 flex flex-wrap gap-1.5">{children}</div> : null}
 
         <div
           className={cn(
-            "flex items-end gap-2 rounded-xl border border-input bg-card p-2 transition-colors",
+            "glass flex items-end gap-2 rounded-2xl border border-input p-2 shadow-lg shadow-primary/5 transition-colors",
             "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/25",
             disabled && "opacity-60",
           )}
@@ -57,7 +59,7 @@ export function Composer({
             rows={1}
             value={value}
             disabled={disabled}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("chat.composerPlaceholder")}
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
@@ -68,23 +70,23 @@ export function Composer({
             className="max-h-45 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />
           {streaming ? (
-            <IconTooltip label="Stop generating">
+            <IconTooltip label={t("chat.stop")}>
               <Button
                 size="icon"
                 variant="secondary"
                 className="size-8"
-                aria-label="Stop generating"
+                aria-label={t("chat.stop")}
                 onClick={onStop}
               >
                 <SquareIcon className="size-3.5 fill-current" />
               </Button>
             </IconTooltip>
           ) : (
-            <IconTooltip label="Send">
+            <IconTooltip label={t("chat.send")}>
               <Button
                 size="icon"
                 className="size-8"
-                aria-label="Send"
+                aria-label={t("chat.send")}
                 disabled={!value.trim() || disabled}
                 onClick={submit}
               >
@@ -95,7 +97,7 @@ export function Composer({
         </div>
 
         <p className="mt-1.5 px-1 text-[0.6875rem] text-muted-foreground">
-          Enter sends, Shift+Enter adds a line.
+          {t("chat.composerHint")}
         </p>
       </div>
     </div>

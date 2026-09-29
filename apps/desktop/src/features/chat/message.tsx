@@ -1,4 +1,5 @@
 import { AlertTriangleIcon, GlobeIcon, LayersIcon, Loader2Icon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { AnswerText, type CitationTarget } from "@/features/chat/answer-text";
 import { Badge } from "@/components/ui/badge";
@@ -17,24 +18,26 @@ export function UserMessage({ text }: { text: string }) {
 }
 
 export function ModeBadge({ mode, reason }: { mode: "local" | "global"; reason?: string | null }) {
+  const { t } = useTranslation();
   const Icon = mode === "global" ? GlobeIcon : LayersIcon;
   return (
     <Badge variant="outline" className="gap-1 font-normal" title={reason ?? undefined}>
       <Icon className="size-3" />
-      {mode === "global" ? "Global" : "Local"}
+      {mode === "global" ? t("chat.modeGlobal") : t("chat.modeLocal")}
     </Badge>
   );
 }
 
 function GroundingNotice({ grounding, dropped }: { grounding: Grounding; dropped: number }) {
+  const { t } = useTranslation();
   if (grounding === "ok" && dropped === 0) return null;
 
   const message =
     grounding === "none"
-      ? "No citations. Nothing in this answer is backed by a retrieved passage."
+      ? t("chat.groundingNone")
       : dropped > 0
-        ? `${dropped} citation${dropped === 1 ? "" : "s"} pointed at documents that were not retrieved and were removed.`
-        : "Only one passage backs this answer. Treat it as weakly grounded.";
+        ? t("chat.groundingDropped", { count: dropped })
+        : t("chat.groundingLow");
 
   return (
     <div
@@ -78,6 +81,7 @@ export function AssistantMessage({
   error?: string | null;
   onSelectCitation?: (target: CitationTarget) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -85,12 +89,14 @@ export function AssistantMessage({
         {retrieving ? (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2Icon className="size-3 animate-spin" />
-            Searching {chunks.length ? `${chunks.length} passages` : "the index"}…
+            {chunks.length
+              ? t("chat.searchingPassages", { count: chunks.length })
+              : t("chat.searchingIndex")}
           </span>
         ) : null}
         {!retrieving && chunks.length > 0 ? (
           <span className="text-[0.6875rem] text-muted-foreground">
-            {chunks.length} passage{chunks.length === 1 ? "" : "s"}
+            {t("chat.passages", { count: chunks.length })}
           </span>
         ) : null}
       </div>
@@ -114,9 +120,11 @@ export function AssistantMessage({
 
       {latency && !streaming ? (
         <p className="font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-          retrieval {ms(latency.embed_ms + latency.dense_ms + latency.bm25_ms + latency.rerank_ms)}
-          {" · "}first token {ms(latency.llm_first_token_ms)}
-          {" · "}total {ms(latency.total_ms)}
+          {t("chat.latency", {
+            retrieval: ms(latency.embed_ms + latency.dense_ms + latency.bm25_ms + latency.rerank_ms),
+            firstToken: ms(latency.llm_first_token_ms),
+            total: ms(latency.total_ms),
+          })}
         </p>
       ) : null}
     </div>

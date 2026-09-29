@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { CloudIcon, FileTextIcon, PanelRightIcon } from "lucide-react";
 
@@ -24,6 +25,7 @@ import { api, type ChatMessage, type QueryMode } from "@/lib/ipc";
 import { connectionsQuery, keys, projectsQuery, sourcesQuery } from "@/lib/queries";
 
 export function ChatView({ sessionId }: { sessionId: string | null }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState<QueryMode>("auto");
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[] | null>(null);
@@ -148,15 +150,15 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
     <>
       <Page>
         <PageHeader
-          title={sessionId ? undefined : "New chat"}
+          title={sessionId ? undefined : t("chat.newChat")}
           actions={
-            <IconTooltip label={panelOpen ? "Hide resources" : "Show resources"}>
+            <IconTooltip label={panelOpen ? t("chat.hideResources") : t("chat.showResources")}>
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-8"
                 aria-pressed={panelOpen}
-                aria-label={panelOpen ? "Hide resources" : "Show resources"}
+                aria-label={panelOpen ? t("chat.hideResources") : t("chat.showResources")}
                 onClick={() => setPanelOpen((open) => !open)}
               >
                 <PanelRightIcon className="size-4" />
@@ -166,10 +168,10 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
         >
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold tracking-tight">
-              {sessionId ? "Chat" : "New chat"}
+              {sessionId ? t("nav.chat") : t("chat.newChat")}
             </h1>
             <p className="truncate text-xs text-muted-foreground">
-              {active ? `${active.name} · ${active.model_id}` : "No model connected"}
+              {active ? `${active.name} · ${active.model_id}` : t("chat.noModel")}
             </p>
           </div>
         </PageHeader>
@@ -177,8 +179,7 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
         {active?.is_remote ? (
           <div className="flex items-center gap-2 border-b border-status-warn/25 bg-status-warn/8 px-5 py-1.5 text-[0.6875rem] text-status-warn">
             <CloudIcon className="size-3.5 shrink-0" />
-            Retrieved passages leave this device: they are sent to {active.name}. Embedding and
-            reranking stay local.
+            {t("chat.remoteBanner", { name: active.name })}
           </div>
         ) : null}
 
@@ -231,10 +232,9 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
 
             {!pending && !sessionId ? (
               <div className="pt-10">
-                <h2 className="text-lg font-semibold tracking-tight">Ask your documents</h2>
+                <h2 className="text-lg font-semibold tracking-tight">{t("chat.emptyTitle")}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Answers are built from passages in your library, and every claim links back to
-                  the page it came from.
+                  {t("chat.emptyLead")}
                 </p>
                 <div className="mt-5 grid gap-2">
                   {suggestions.isFetching
@@ -262,7 +262,7 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
           {scopeDocId ? (
             <Badge variant="secondary" className="h-7 gap-1.5 font-normal">
               <FileTextIcon className="size-3" />
-              Scoped to one document
+              {t("chat.scopedToDocument")}
             </Badge>
           ) : null}
 
@@ -271,17 +271,15 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="auto">Auto mode</SelectItem>
-              <SelectItem value="local">Local: passages</SelectItem>
-              <SelectItem value="global">Global: whole corpus</SelectItem>
+              <SelectItem value="auto">{t("chat.modeAuto")}</SelectItem>
+              <SelectItem value="local">{t("chat.modeLocalOption")}</SelectItem>
+              <SelectItem value="global">{t("chat.modeGlobalOption")}</SelectItem>
             </SelectContent>
           </Select>
 
           <Badge variant="secondary" className="h-7 gap-1.5 font-normal">
             <FileTextIcon className="size-3" />
-            {scopeDocId
-              ? "1 file selected"
-              : `${selectedDocumentCount} file${selectedDocumentCount === 1 ? "" : "s"} selected`}
+            {t("chat.filesSelected", { count: scopeDocId ? 1 : selectedDocumentCount })}
           </Badge>
         </Composer>
       </Page>
