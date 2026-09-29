@@ -6,7 +6,7 @@
 # Its context is 2048 tokens (child chunks are ~256).
 set -euo pipefail
 
-DEST="${RAGCORE_MODEL_DIR:-$HOME/.custom-rag/models}"
+DEST="${RAGCORE_MODEL_DIR:-$HOME/.ibid/models}"
 LLAMA="${LLAMA_SERVER:-llama-server}"
 
 "$LLAMA" -m "$DEST/embeddinggemma-300M-qat-Q4_0.gguf" \

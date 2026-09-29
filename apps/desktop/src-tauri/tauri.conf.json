@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Custom RAG",
-  "identifier": "com.customrag.desktop",
+  "productName": "Ibid",
+  "identifier": "com.ibid.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Custom RAG",
+        "title": "Ibid",
         "width": 1280,
         "height": 840,
         "minWidth": 900,
@@ -42,7 +42,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3NkE4QzQwQjgwQUFFRkEKUldUNnJncTRRSXhxeDdJdzVBK2d4d1hHQXhjdUdzanJpdmZqRHB3a2dlNUlORUlFa0xUY3RWTlQK",
       "endpoints": [
-        "https://github.com/GabryeleSantoro/custom-rag/releases/latest/download/latest.json"
+        "https://github.com/GabryeleSantoro/ibid/releases/latest/download/latest.json"
       ]
     }
   }

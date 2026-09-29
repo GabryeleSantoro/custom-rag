@@ -1,4 +1,4 @@
-# Custom RAG: Build Plan
+# Ibid: Build Plan
 
 A local-first, cross-platform desktop app for chatting with your documents. The app ships its own embedder and reranker; the user connects any LLM they like (local or cloud) for generation.
 
@@ -39,7 +39,7 @@ The external LLM is kept out of ingestion, so index quality never depends on whi
 ## 1. Repo layout
 
 ```
-custom-rag/
+ibid/
 ├── apps/desktop/
 │   ├── src/                     # React UI
 │   │   ├── features/{library,chat,topics,settings,onboarding}/

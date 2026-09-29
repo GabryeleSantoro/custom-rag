@@ -55,11 +55,23 @@ def test_serve_passes_host_port_and_log_level_to_uvicorn(
 
 
 def test_serve_creates_the_data_directory(tmp_path: Path, served: list[dict]) -> None:
-    data_dir = tmp_path / "nested" / "custom-rag"
+    data_dir = tmp_path / "nested" / "ibid"
 
     main(["serve", "--data-dir", str(data_dir)])
 
     assert data_dir.is_dir()
+
+
+def test_serve_moves_data_from_before_the_rename(
+    tmp_path: Path, served: list[dict], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    (tmp_path / ".custom-rag" / "models").mkdir(parents=True)
+
+    main(["serve"])
+
+    assert (tmp_path / ".ibid" / "models").is_dir()
+    assert not (tmp_path / ".custom-rag").exists()
 
 
 def test_the_shells_hardware_budget_reaches_the_app(

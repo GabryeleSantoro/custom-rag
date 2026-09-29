@@ -1,8 +1,8 @@
-# Custom RAG
+# Ibid
 
 Applicazione desktop **local-first** per interrogare una raccolta di documenti con risposte corredate da citazioni. L'interfaccia è una app Tauri/React; il motore RAG (`ragcore`) è un sidecar Python esposto solo su localhost e mediato dalla shell Rust.
 
-> **Stato del progetto — prototipo in sviluppo.** L'app desktop e il contratto API sono funzionanti con un corpus di fixture e un backend `stub`. Il backend persistente con ingestione e retrieval tramite modelli locali è ancora in costruzione: la roadmap completa è in [plan/custom-rag-build-plan.md](plan/custom-rag-build-plan.md).
+> **Stato del progetto — prototipo in sviluppo.** L'app desktop e il contratto API sono funzionanti con un corpus di fixture e un backend `stub`. Il backend persistente con ingestione e retrieval tramite modelli locali è ancora in costruzione: la roadmap completa è in [plan/ibid-build-plan.md](plan/ibid-build-plan.md).
 
 ## Cosa offre oggi
 
@@ -71,7 +71,7 @@ Finché nessuna connessione è attiva, `/query` risponde con lo stub scriptato (
 
 ## Modelli locali (sviluppo)
 
-Il repository include gli script per scaricare EmbeddingGemma-300M e Qwen3-Reranker-0.6B in `~/.custom-rag/models` e per avviare due istanze di `llama-server`:
+Il repository include gli script per scaricare EmbeddingGemma-300M e Qwen3-Reranker-0.6B in `~/.ibid/models` e per avviare due istanze di `llama-server`:
 
 ```bash
 # Installa prima llama.cpp/llama-server per il tuo sistema.
@@ -123,4 +123,4 @@ docs/superpowers/    Specifiche, piani e note tecniche
 
 ## Roadmap tecnica
 
-Le prossime parti principali sono il backend `real`, il retrieval ibrido (dense + full-text), reranking, parsing esteso di PDF/DOCX/HTML/CSV, ingestione incrementale e packaging dei sidecar per macOS, Windows e Linux. Dettagli, decisioni di licenza e fasi di consegna sono documentati nel [build plan](plan/custom-rag-build-plan.md).
+Le prossime parti principali sono il backend `real`, il retrieval ibrido (dense + full-text), reranking, parsing esteso di PDF/DOCX/HTML/CSV, ingestione incrementale e packaging dei sidecar per macOS, Windows e Linux. Dettagli, decisioni di licenza e fasi di consegna sono documentati nel [build plan](plan/ibid-build-plan.md).

@@ -209,7 +209,7 @@ function debugReport(input: {
   logs: string[];
 }): string {
   const { health, hardware, processes, logs } = input;
-  const lines: string[] = ["# custom-rag debug report", `generated: ${new Date().toISOString()}`, ""];
+  const lines: string[] = ["# ibid debug report", `generated: ${new Date().toISOString()}`, ""];
 
   lines.push("## environment");
   if (hardware) {

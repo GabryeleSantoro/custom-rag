@@ -210,9 +210,9 @@ impl Supervisor {
 
     fn open_log_file(&self, dir: PathBuf) -> std::io::Result<()> {
         std::fs::create_dir_all(&dir)?;
-        let path = dir.join("custom-rag.log");
+        let path = dir.join("ibid.log");
         if std::fs::metadata(&path).map(|m| m.len() > LOG_FILE_MAX_BYTES).unwrap_or(false) {
-            std::fs::rename(&path, dir.join("custom-rag.1.log"))?;
+            std::fs::rename(&path, dir.join("ibid.1.log"))?;
         }
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
         *self.log_file.lock().expect("log file poisoned") = Some((path, file));
@@ -291,7 +291,7 @@ impl Supervisor {
                 Err(err) => self.log(format!("[shell] no log directory: {err}")),
             }
         }
-        self.log(format!("[shell] Custom RAG {} starting", env!("CARGO_PKG_VERSION")));
+        self.log(format!("[shell] Ibid {} starting", env!("CARGO_PKG_VERSION")));
         let supervisor = Arc::clone(self);
         tauri::async_runtime::spawn(async move {
             supervisor.supervise(app, hw, http).await;

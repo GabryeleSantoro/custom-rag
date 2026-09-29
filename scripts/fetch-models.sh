@@ -3,7 +3,7 @@
 # Production downloads go through the model hub; this is the dev shortcut.
 set -euo pipefail
 
-DEST="${RAGCORE_MODEL_DIR:-$HOME/.custom-rag/models}"
+DEST="${RAGCORE_MODEL_DIR:-$HOME/.ibid/models}"
 mkdir -p "$DEST"
 
 fetch() {

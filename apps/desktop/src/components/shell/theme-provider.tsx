@@ -13,7 +13,7 @@ import { IconTooltip } from "@/components/ui/tooltip";
 
 export type Theme = "light" | "dark" | "system";
 
-const STORAGE_KEY = "custom-rag.theme";
+const STORAGE_KEY = "ibid.theme";
 
 type ThemeContext = { theme: Theme; resolved: "light" | "dark"; setTheme: (theme: Theme) => void };
 

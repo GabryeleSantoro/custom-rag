@@ -18,7 +18,7 @@ The repo today is a complete front half and a hollow back half:
   TF-IDF cosine over six fixture markdown files for retrieval, and a scripted answer stream.
 
 No embeddings exist. No vectors exist. No document has ever been parsed. Phase 0 of
-`plan/custom-rag-build-plan.md` never ran, so the riskiest stack decision — whether
+`plan/ibid-build-plan.md` never ran, so the riskiest stack decision — whether
 `llama-server --reranking` scores the Qwen3 reranker correctly — is still untested while the UI,
 the schemas and the performance profiles are all already built on the assumption that it does.
 

@@ -19,6 +19,13 @@ from ragcore.api.app import create_app
 from ragcore.config import Config
 
 
+def _adopt_legacy_data_dir(data_dir: Path) -> None:
+    """Before the rename to Ibid, data lived in ~/.custom-rag: move it over once."""
+    legacy = Path.home() / ".custom-rag"
+    if data_dir == Path.home() / ".ibid" and not data_dir.exists() and legacy.is_dir():
+        legacy.rename(data_dir)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ragcore", description="RAG core sidecar")
     parser.add_argument("--version", action="version", version=__version__)
@@ -30,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument(
         "--token", default="", help="Session token; a random one is logged if empty"
     )
-    serve.add_argument("--data-dir", type=Path, default=Path.home() / ".custom-rag")
+    serve.add_argument("--data-dir", type=Path, default=Path.home() / ".ibid")
     serve.add_argument("--ram-mb", type=int, default=None)
     serve.add_argument("--vram-mb", type=int, default=0)
     serve.add_argument("--gpu-backend", default="cpu", choices=["metal", "cuda", "vulkan", "cpu"])
@@ -69,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.ram_mb:
         config.ram_mb = args.ram_mb
 
+    _adopt_legacy_data_dir(config.data_dir)
     config.data_dir.mkdir(parents=True, exist_ok=True)
 
     uvicorn.run(
