@@ -21,6 +21,8 @@ const Context = createContext<JobsValue>({
 });
 
 const ACTIVE = new Set(["queued", "running"]);
+const FLUSH_MS = 200;
+const KEEP_FINISHED = 20;
 
 /**
  * One SSE subscription for the whole app.
@@ -36,9 +38,30 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
   const settled = useRef(new Set<string>());
 
   useEffect(() => {
+    // Progress ticks arrive many times a second; batch them into one render per
+    // FLUSH_MS instead of re-rendering every consumer on each tick.
+    let pending = new Map<string, Job>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      timer = undefined;
+      const batch = pending;
+      pending = new Map();
+      setJobs((previous) => {
+        const next = new Map(previous);
+        for (const [id, job] of batch) next.set(id, job);
+        // Keep every active job plus the newest few finished ones.
+        const finished = [...next.values()]
+          .filter((job) => !ACTIVE.has(job.state))
+          .sort((a, b) => (b.started_at ?? "").localeCompare(a.started_at ?? ""));
+        for (const job of finished.slice(KEEP_FINISHED)) next.delete(job.id);
+        return next;
+      });
+    };
+
     const handle = streamJobs((job) => {
       setConnected(true);
-      setJobs((previous) => new Map(previous).set(job.id, job));
+      pending.set(job.id, job);
+      timer ??= setTimeout(flush, FLUSH_MS);
 
       if (ACTIVE.has(job.state) || settled.current.has(job.id)) return;
       settled.current.add(job.id);
@@ -54,6 +77,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      clearTimeout(timer);
       void handle.cancel();
     };
   }, [queryClient]);
