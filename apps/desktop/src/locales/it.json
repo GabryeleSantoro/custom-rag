@@ -340,7 +340,7 @@
     "messageCount_one": "{{count}} messaggio",
     "messageCount_other": "{{count}} messaggi",
     "deleteNamed": "Elimina {{name}}",
-    "unpinChat": "Rimuovi il chat dai fissati",
+    "unpinChat": "Rimuovi la chat dai fissati",
     "pinChat": "Fissa chat",
     "removeFromProject": "Rimuovi dal progetto",
     "moveTo": "Sposta in {{name}}",
