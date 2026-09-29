@@ -32,6 +32,22 @@ fn describe(err: &dyn std::error::Error) -> String {
     text
 }
 
+/// An error the UI can translate: a stable `code`, the English `message`, and
+/// the values the sentence interpolates. Plain strings still work; the UI falls
+/// back to showing them as they are.
+fn shell_error(code: &str, message: String, params: Value) -> String {
+    serde_json::json!({ "code": code, "message": message, "params": params }).to_string()
+}
+
+/// ragcore's coded error body (`{detail, code, params}`) in the UI's shape.
+/// `None` for anything without a string `code`, which keeps the old text path.
+fn coded_error(body: &Value) -> Option<String> {
+    let code = body.get("code")?.as_str()?;
+    let message = body.get("detail").and_then(Value::as_str).unwrap_or(code);
+    let params = body.get("params").cloned().unwrap_or_else(|| serde_json::json!({}));
+    Some(shell_error(code, message.to_string(), params))
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum StreamFrame {
@@ -70,7 +86,11 @@ fn check_path(path: &str) -> Result<(), String> {
     if path.starts_with('/') && !path.starts_with("//") {
         Ok(())
     } else {
-        Err(format!("invalid path {path}"))
+        Err(shell_error(
+            "invalid_path",
+            format!("invalid path {path}"),
+            serde_json::json!({ "path": path }),
+        ))
     }
 }
 
@@ -79,7 +99,13 @@ async fn forward(state: &State<'_, AppState>, req: ApiRequest) -> Result<Value, 
     state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), req.path);
     let method = reqwest::Method::from_bytes(req.method.to_uppercase().as_bytes())
-        .map_err(|_| format!("unsupported method {}", req.method))?;
+        .map_err(|_| {
+            shell_error(
+                "unsupported_method",
+                format!("unsupported method {}", req.method),
+                serde_json::json!({ "method": req.method }),
+            )
+        })?;
 
     let mut builder = state
         .http
@@ -93,12 +119,25 @@ async fn forward(state: &State<'_, AppState>, req: ApiRequest) -> Result<Value, 
     let response = builder
         .send()
         .await
-        .map_err(|e| format!("ragcore unreachable: {}", describe(&e)))?;
+        .map_err(|e| {
+            let reason = describe(&e);
+            shell_error(
+                "ragcore_unreachable",
+                format!("ragcore unreachable: {reason}"),
+                serde_json::json!({ "reason": reason }),
+            )
+        })?;
 
     let status = response.status();
     let text = response.text().await.unwrap_or_default();
 
     if !status.is_success() {
+        if let Some(coded) = serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|body| coded_error(&body))
+        {
+            return Err(coded);
+        }
         let detail = serde_json::from_str::<Value>(&text)
             .ok()
             .and_then(|v| v.get("detail").and_then(|d| d.as_str().map(String::from)))
@@ -109,7 +148,13 @@ async fn forward(state: &State<'_, AppState>, req: ApiRequest) -> Result<Value, 
     if text.is_empty() {
         return Ok(Value::Null);
     }
-    serde_json::from_str(&text).map_err(|e| format!("invalid JSON from ragcore: {e}"))
+    serde_json::from_str(&text).map_err(|e| {
+        shell_error(
+            "invalid_response",
+            format!("invalid JSON from ragcore: {e}"),
+            serde_json::json!({ "reason": e.to_string() }),
+        )
+    })
 }
 
 /// Open an SSE stream and forward each frame to the channel.
@@ -129,7 +174,13 @@ pub async fn api_stream(
     state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), path);
     let http_method = reqwest::Method::from_bytes(method.to_uppercase().as_bytes())
-        .map_err(|_| format!("unsupported method {method}"))?;
+        .map_err(|_| {
+            shell_error(
+                "unsupported_method",
+                format!("unsupported method {method}"),
+                serde_json::json!({ "method": method }),
+            )
+        })?;
 
     let cancels = Arc::clone(&state.cancels);
     cancels
@@ -153,7 +204,12 @@ pub async fn api_stream(
     let response = match builder.send().await {
         Ok(response) => response,
         Err(err) => {
-            let message = format!("ragcore unreachable: {}", describe(&err));
+            let reason = describe(&err);
+            let message = shell_error(
+                "ragcore_unreachable",
+                format!("ragcore unreachable: {reason}"),
+                serde_json::json!({ "reason": reason }),
+            );
             state.supervisor.log(format!("[shell] stream {label} failed: {message}"));
             let _ = channel.send(StreamFrame::Failed { message });
             return Ok(());
@@ -163,7 +219,10 @@ pub async fn api_stream(
     if !response.status().is_success() {
         let status = response.status().as_u16();
         let text = response.text().await.unwrap_or_default();
-        let message = format!("{status}: {text}");
+        let message = serde_json::from_str::<Value>(&text)
+            .ok()
+            .and_then(|body| coded_error(&body))
+            .unwrap_or_else(|| format!("{status}: {text}"));
         state.supervisor.log(format!("[shell] stream {label} failed: {message}"));
         let _ = channel.send(StreamFrame::Failed { message });
         return Ok(());
@@ -186,7 +245,12 @@ pub async fn api_stream(
         let bytes = match chunk {
             Ok(bytes) => bytes,
             Err(err) => {
-                let message = format!("stream broken: {}", describe(&err));
+                let why = describe(&err);
+                let message = shell_error(
+                    "stream_broken",
+                    format!("stream broken: {why}"),
+                    serde_json::json!({ "reason": why }),
+                );
                 state.supervisor.log(format!(
                     "[shell] stream {label} broken after {:.0}s: {message}",
                     started.elapsed().as_secs_f64()
@@ -388,6 +452,40 @@ mod tests {
 
         assert!(without.body.is_none());
         assert_eq!(without.path, "/health");
+    }
+
+    #[test]
+    fn a_shell_error_is_json_with_a_code_and_params() {
+        let text = shell_error(
+            "invalid_path",
+            "invalid path x".into(),
+            serde_json::json!({ "path": "x" }),
+        );
+        let parsed: Value = serde_json::from_str(&text).unwrap();
+
+        assert_eq!(parsed["code"], "invalid_path");
+        assert_eq!(parsed["message"], "invalid path x");
+        assert_eq!(parsed["params"]["path"], "x");
+    }
+
+    #[test]
+    fn a_coded_ragcore_body_becomes_the_ui_error_shape() {
+        let body = serde_json::json!({
+            "detail": "model not installed",
+            "code": "model_not_installed",
+            "params": { "id": "m" }
+        });
+        let parsed: Value = serde_json::from_str(&coded_error(&body).unwrap()).unwrap();
+
+        assert_eq!(parsed["code"], "model_not_installed");
+        assert_eq!(parsed["message"], "model not installed");
+        assert_eq!(parsed["params"]["id"], "m");
+    }
+
+    #[test]
+    fn a_body_without_a_code_is_not_coded() {
+        assert!(coded_error(&serde_json::json!({ "detail": "boom" })).is_none());
+        assert!(coded_error(&serde_json::json!({ "detail": { "x": 1 } })).is_none());
     }
 
     #[test]
