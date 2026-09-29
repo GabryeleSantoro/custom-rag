@@ -246,6 +246,17 @@ describe("streamQuery", () => {
     expect(args.body.query_id).toMatch(/^q_/);
   });
 
+  it("asks for the answer in the UI language", () => {
+    vi.stubGlobal("localStorage", { getItem: () => "de", setItem: () => {}, removeItem: () => {} });
+    try {
+      streamQuery({ q: "warum?", mode: "auto" }, { onEvent: () => {} });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(invoke.mock.calls[0][1].body.lang).toBe("de");
+  });
+
   it("routes event frames to onEvent and closed frames to onClosed", () => {
     const events: unknown[] = [];
     const closed: string[] = [];

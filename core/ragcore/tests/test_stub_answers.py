@@ -420,3 +420,23 @@ def test_an_error_inside_a_200_stream_is_raised() -> None:
 
 def test_a_stream_with_no_text_at_all_is_an_error() -> None:
     assert "empty answer" in _failure(["data: [DONE]"])
+
+
+def test_english_and_missing_language_leave_the_system_prompt_unchanged() -> None:
+    from ragcore.stub.answers import SYSTEM_PROMPT, system_prompt_for
+
+    assert system_prompt_for(None) == SYSTEM_PROMPT
+    assert system_prompt_for("en") == SYSTEM_PROMPT
+    assert system_prompt_for("xx") == SYSTEM_PROMPT
+
+
+def test_other_languages_add_one_instruction_and_keep_the_citation_format() -> None:
+    from ragcore.stub.answers import SYSTEM_PROMPT, system_prompt_for
+
+    prompt = system_prompt_for("it")
+
+    assert prompt.startswith(SYSTEM_PROMPT)
+    assert prompt.endswith(
+        "Write the answer in Italian. Keep the [document_id:page] markers unchanged."
+    )
+    assert "Write the answer in German." in system_prompt_for("de")

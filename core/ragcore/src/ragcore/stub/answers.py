@@ -31,6 +31,20 @@ Cite every claim with a marker of the form [document_id:page] taken from the
 passage headers. If the passages do not contain the answer, say so plainly and
 cite nothing. Do not invent document ids."""
 
+LANGUAGE_NAMES = {"it": "Italian", "fr": "French", "de": "German", "es": "Spanish"}
+
+
+def system_prompt_for(lang: str | None) -> str:
+    """The answer prompt, told to write in the UI language. English adds nothing."""
+    name = LANGUAGE_NAMES.get(lang or "")
+    if name is None:
+        return SYSTEM_PROMPT
+    return (
+        f"{SYSTEM_PROMPT}\nWrite the answer in {name}. "
+        "Keep the [document_id:page] markers unchanged."
+    )
+
+
 NOT_FOUND = (
     "Nothing in the indexed documents answers that. The closest passages were about "
     "other topics, so rather than guess, here is what is missing: no document in this "

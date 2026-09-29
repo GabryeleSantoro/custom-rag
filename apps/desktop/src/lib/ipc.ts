@@ -7,6 +7,7 @@
  */
 
 import { errorText } from "@/lib/errors";
+import { currentLanguage } from "@/lib/i18n";
 import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
 
 import type { components } from "./api-types";
@@ -362,7 +363,7 @@ export function streamQuery(
   return openStream(
     {
       path: "/query",
-      body: { ...payload, query_id: queryId },
+      body: { ...payload, lang: currentLanguage(), query_id: queryId },
       cancelPath: () => `/query/${queryId}/cancel`,
     },
     (frame) => {

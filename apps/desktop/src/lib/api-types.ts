@@ -1700,6 +1700,11 @@ export interface components {
             /** Connection Id */
             connection_id?: string | null;
             filters?: components["schemas"]["QueryFilters"];
+            /**
+             * Lang
+             * @description Language the answer is written in. None: the model's own choice.
+             */
+            lang?: ("en" | "it" | "fr" | "de" | "es") | null;
         };
         /** ReindexRequest */
         ReindexRequest: {

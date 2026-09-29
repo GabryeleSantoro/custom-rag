@@ -33,6 +33,7 @@ from ragcore.api.schemas import (
 )
 from ragcore.api.sse import frame, sse_response
 from ragcore.citations import extract_citations, parse_directives
+from ragcore.stub.answers import system_prompt_for
 
 router = APIRouter(tags=["query"])
 
@@ -140,7 +141,9 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
         )
 
         connection = store.active_connection()
-        stream = answerer.stream(question, chunks, directives)
+        stream = answerer.stream(
+            question, chunks, directives, system_prompt=system_prompt_for(payload.lang)
+        )
 
         answer: list[str] = []
         first_token_at: float | None = None

@@ -290,3 +290,52 @@ def test_a_failed_generation_carries_a_code_the_ui_can_translate(
 
     assert events["error"]["code"] == "generation_failed"
     assert "Generation failed" in events["error"]["message"]
+
+
+def test_the_query_language_reaches_the_answer_engine(client: TestClient, read_events) -> None:
+    from ragcore.api import deps
+
+    captured: dict = {}
+
+    class Recorder:
+        async def stream(
+            self, question, chunks, directives, *, system_prompt=None, max_tokens=None
+        ):
+            captured["system_prompt"] = system_prompt
+            yield "ok"
+
+    client.app.dependency_overrides[deps.get_answerer] = Recorder
+    try:
+        with client.stream("POST", "/query", json={"q": "Why rerank?", "lang": "fr"}) as response:
+            read_events(response)
+    finally:
+        client.app.dependency_overrides.pop(deps.get_answerer, None)
+
+    assert captured["system_prompt"].endswith(
+        "Write the answer in French. Keep the [document_id:page] markers unchanged."
+    )
+
+
+def test_a_query_without_a_language_keeps_the_default_prompt(
+    client: TestClient, read_events
+) -> None:
+    from ragcore.api import deps
+    from ragcore.stub.answers import SYSTEM_PROMPT
+
+    captured: dict = {}
+
+    class Recorder:
+        async def stream(
+            self, question, chunks, directives, *, system_prompt=None, max_tokens=None
+        ):
+            captured["system_prompt"] = system_prompt
+            yield "ok"
+
+    client.app.dependency_overrides[deps.get_answerer] = Recorder
+    try:
+        with client.stream("POST", "/query", json={"q": "Why rerank?"}) as response:
+            read_events(response)
+    finally:
+        client.app.dependency_overrides.pop(deps.get_answerer, None)
+
+    assert captured["system_prompt"] == SYSTEM_PROMPT

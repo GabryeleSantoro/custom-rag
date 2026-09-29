@@ -202,6 +202,9 @@ class QueryRequest(BaseModel):
     mode: QueryMode = "auto"
     connection_id: str | None = None
     filters: QueryFilters = Field(default_factory=QueryFilters)
+    lang: Literal["en", "it", "fr", "de", "es"] | None = Field(
+        default=None, description="Language the answer is written in. None: the model's own choice."
+    )
 
 
 class RetrievedChunk(BaseModel):
