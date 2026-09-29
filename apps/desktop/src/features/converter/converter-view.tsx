@@ -6,6 +6,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   BookOpenTextIcon,
   CheckCircle2Icon,
+  ChevronLeftIcon,
   ChevronRightIcon,
   FileUpIcon,
   LoaderCircleIcon,
@@ -36,6 +37,8 @@ import {
 import { LANGUAGES, LANGUAGE_NAMES, currentLanguage, type Language } from "@/lib/i18n";
 import { connectionsQuery, keys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 8;
 
 type PresentationStatus = "generating" | "saved" | "error";
 type PresentationRow = {
@@ -159,6 +162,9 @@ export function ConverterView() {
   });
   const active = connections.data?.find((connection) => connection.active);
   const items = documents.data?.items ?? [];
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageItems = items.slice(Math.min(page, pageCount - 1) * PAGE_SIZE, (Math.min(page, pageCount - 1) + 1) * PAGE_SIZE);
   const selected = items.filter((document) => selectedIds.includes(document.id));
   const selectedCount = selected.length + uploadedSlides.length;
   const canConvert = Boolean(active && selectedCount && !running);
@@ -351,7 +357,7 @@ export function ConverterView() {
                   </div>
                 </div>
               ) : (
-                <div className="max-h-80 overflow-auto">
+                <div>
                   {uploadedSlides.map((file) => (
                     <div
                       key={file.path}
@@ -378,7 +384,7 @@ export function ConverterView() {
                       </button>
                     </div>
                   ))}
-                  {items.map((document) => (
+                  {pageItems.map((document) => (
                     <SlideRow
                       key={document.id}
                       document={document}
@@ -389,6 +395,38 @@ export function ConverterView() {
                   ))}
                 </div>
               )}
+
+              {pageCount > 1 ? (
+                <div className="flex items-center justify-between border-t border-border px-4 py-2">
+                  <span className="font-mono text-[0.65rem] text-muted-foreground tabular-nums">
+                    {t("converter.pageOf", { page: Math.min(page, pageCount - 1) + 1, total: pageCount })}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label={t("converter.prevPage")}
+                      disabled={page <= 0}
+                      onClick={() => setPage((current) => Math.max(0, current - 1))}
+                    >
+                      <ChevronLeftIcon className="size-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label={t("converter.nextPage")}
+                      disabled={page >= pageCount - 1}
+                      onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+                    >
+                      <ChevronRightIcon className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             <section className="rounded-xl border border-border bg-card p-5">
