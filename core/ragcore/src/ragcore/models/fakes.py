@@ -24,7 +24,9 @@ def _vector(text: str) -> list[float]:
 class FakeEmbedClient:
     dim = EMBED_DIM
 
-    async def embed(self, texts: list[str], *, batch_size: int = 32) -> list[list[float]]:
+    async def embed(
+        self, texts: list[str], *, batch_size: int = 32, query: bool = False
+    ) -> list[list[float]]:
         return [_vector(text) for text in texts]
 
     async def aclose(self) -> None:

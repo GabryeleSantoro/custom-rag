@@ -16,8 +16,10 @@ fetch() {
   curl -fL --progress-bar -o "$DEST/$name" "$url"
 }
 
-fetch "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf" \
-      "Qwen3-Embedding-0.6B-Q8_0.gguf"
+# EmbeddingGemma-300M (QAT Q4_0): small and light on CPU, 768-d, 2K context.
+# Chosen over Qwen3-Embedding-0.6B in scripts/eval/ (same or better recall, ~2.5x less CPU).
+fetch "https://huggingface.co/ggml-org/embeddinggemma-300M-qat-q4_0-GGUF/resolve/main/embeddinggemma-300M-qat-Q4_0.gguf" \
+      "embeddinggemma-300M-qat-Q4_0.gguf"
 # Qwen never published Qwen/Qwen3-Reranker-0.6B-GGUF (the repo 401s: it does
 # not exist under that org). Use ggml-org's own conversion, not a plain
 # convert_hf_to_gguf.py static quant: Qwen3-Reranker is a causal LM scored by

@@ -1,8 +1,10 @@
 """Embedding over llama-server's OpenAI-compatible endpoint.
 
-The server is started with `--embedding --pooling last`. Normalisation is done
-here regardless of what the server returns, because the index stores unit
-vectors and cosine similarity on unit vectors is a dot product.
+The server is started with `--embedding` (EmbeddingGemma's pooling comes from
+the GGUF metadata). EmbeddingGemma expects a task prefix on every input, one
+for queries and one for documents; `embed` adds it. Normalisation is done here
+regardless of what the server returns, because the index stores unit vectors
+and cosine similarity on unit vectors is a dot product.
 """
 
 from __future__ import annotations
@@ -10,7 +12,9 @@ from __future__ import annotations
 import httpx
 import numpy as np
 
-EMBED_DIM = 1024
+EMBED_DIM = 768
+QUERY_PREFIX = "task: search result | query: "
+DOC_PREFIX = "title: none | text: "
 
 
 class EmbedClient:
@@ -20,7 +24,7 @@ class EmbedClient:
         self,
         base_url: str,
         *,
-        model: str = "qwen3-embedding",
+        model: str = "embeddinggemma",
         timeout: float = 120.0,
         normalize: bool = True,
     ) -> None:
@@ -38,9 +42,13 @@ class EmbedClient:
         rows = sorted(response.json()["data"], key=lambda row: row["index"])
         return [row["embedding"] for row in rows]
 
-    async def embed(self, texts: list[str], *, batch_size: int = 32) -> list[list[float]]:
+    async def embed(
+        self, texts: list[str], *, batch_size: int = 32, query: bool = False
+    ) -> list[list[float]]:
         if not texts:
             return []
+        prefix = QUERY_PREFIX if query else DOC_PREFIX
+        texts = [prefix + text for text in texts]
         out: list[list[float]] = []
         for start in range(0, len(texts), batch_size):
             out.extend(await self._post(texts[start : start + batch_size]))

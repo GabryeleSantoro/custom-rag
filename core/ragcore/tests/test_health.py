@@ -13,7 +13,7 @@ def test_health_reports_the_index_it_is_serving(client: TestClient) -> None:
     assert body["stub"] is True
     assert body["models_ready"] is True
     assert body["index"]["chunks"] > 0
-    assert body["index"]["embed_dim"] == 1024
+    assert body["index"]["embed_dim"] == 768
 
 
 def test_health_lists_ragcore_as_a_supervised_process(client: TestClient) -> None:

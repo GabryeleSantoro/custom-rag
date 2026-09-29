@@ -37,8 +37,8 @@ from ragcore.stub.retrieval import Retriever
 logger = logging.getLogger("ragcore.library")
 
 SCHEMA_VERSION = 1
-EMBED_MODEL = "Qwen3-Embedding-0.6B-Q8_0"
-EMBED_DIM = 1024
+EMBED_MODEL = "embeddinggemma-300M-qat-Q4_0"
+EMBED_DIM = 768
 RERANK_MODEL = "Qwen3-Reranker-0.6B-Q8_0"
 
 
@@ -110,18 +110,18 @@ class Store:
     def _seed_models(self) -> None:
         shipped = [
             InstalledModel(
-                id="embed-qwen3-0.6b",
+                id="embed-gemma-300m",
                 role="embedding",
-                name="Qwen3 Embedding 0.6B",
-                repo_id="Qwen/Qwen3-Embedding-0.6B-GGUF",
-                filename="Qwen3-Embedding-0.6B-Q8_0.gguf",
-                quant="Q8_0",
-                size_bytes=639_000_000,
-                sha256="a" * 64,
+                name="EmbeddingGemma 300M",
+                repo_id="ggml-org/embeddinggemma-300M-qat-q4_0-GGUF",
+                filename="embeddinggemma-300M-qat-Q4_0.gguf",
+                quant="Q4_0",
+                size_bytes=277_852_192,
+                sha256="50d28e22432a148f6f8a86eab3700f92add5d1f54baf7790675a2a4dadbccf26",
                 active=True,
                 shipped=True,
                 downloaded_at=_now() - timedelta(days=2),
-                context_length=32768,
+                context_length=2048,
             ),
             InstalledModel(
                 id="rerank-qwen3-0.6b",

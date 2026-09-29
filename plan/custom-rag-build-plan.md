@@ -13,7 +13,7 @@ Stack: **Tauri 2 (React + TS) UI, Rust shell, Python sidecar for the RAG core, a
 | UI | Tauri 2 + React + TS + Vite | Cross-platform, small binaries |
 | Shell | Rust (`src-tauri`) | Starts and restarts the sidecars, stores API keys in the OS keychain, handles updates |
 | RAG core | Python 3.12 package `ragcore`, FastAPI on localhost | Mature ML ecosystem (clustering, topic labels, NER) |
-| Shipped models | Qwen3-Embedding-0.6B + Qwen3-Reranker-0.6B (GGUF), with Reranker-4B as an optional download | Run everywhere, CPU fallback |
+| Shipped models | EmbeddingGemma-300M (QAT Q4_0, 768-d) as embedder; Qwen3-Reranker-0.6B (GGUF) as an opt-in download, off by default | Light on CPU: `scripts/eval/` showed equal or better recall than Qwen3-Embedding-0.6B at ~2.5x less CPU, and no reranker gain on the eval set |
 | Model runtime | Two `llama-server` processes, one with `--embedding` and one with `--reranking` | Metal, CUDA, Vulkan or CPU from one codebase |
 | Vector store | LanceDB (embedded) | Vectors + full-text search in one place, no server |
 | App state | SQLite | Connections, chats, jobs, settings |
@@ -88,7 +88,7 @@ custom-rag/
 ```python
 import pyarrow as pa
 
-EMBED_DIM = 1024
+EMBED_DIM = 768
 
 index_meta = pa.schema([
     ("key", pa.string()),            # schema_version, embed_model, embed_dim, reranker_model, last_cluster_at
@@ -195,7 +195,7 @@ Goal: remove the riskiest unknowns before writing real code.
 - **Parsers:** PDF (`pypdfium2`), DOCX (`python-docx`), MD, TXT, HTML (`selectolax`), CSV as row groups.
 - **OCR:** run RapidOCR only on pages with no text layer, for example fewer than 20 characters.
 - **Dedupe and incremental updates:** skip files whose sha256 is unchanged; delete and re-insert changed ones; remove deleted ones.
-- **Chunking:** headings or layout first, then 256-token children and 1024-token parents with about 12% overlap. Count tokens with the HF `tokenizers` Qwen3 tokenizer.
+- **Chunking:** headings or layout first, then 256-token children and 1024-token parents with about 12% overlap. Count tokens with the embedder's own (Gemma) tokenizer; its context is 2048 tokens.
 - **Contextual header:** prepend `"{title} > {section_path}\n"` to each chunk's `embed_text`.
 - **Embedding:** batched calls to the embedder's `/v1/embeddings`, L2-normalized, and resumable after a crash via job checkpoints.
 - **Job queue:** in SQLite, with progress events for the UI.

@@ -30,7 +30,7 @@ FastAPI sidecar (core/ragcore)
           └── backend reale in sviluppo: LanceDB + SQLite + llama-server
 ```
 
-Nella configurazione finale l'app distribuirà localmente un embedder e un reranker Qwen3; il modello generativo resterà una connessione scelta dall'utente, locale o remota e compatibile con API OpenAI/Anthropic. I documenti non vengono inviati a un provider esterno senza una connessione remota configurata dall'utente.
+Nella configurazione finale l'app distribuirà localmente un embedder EmbeddingGemma-300M (leggero su CPU); il reranker Qwen3 è opzionale; il modello generativo resterà una connessione scelta dall'utente, locale o remota e compatibile con API OpenAI/Anthropic. I documenti non vengono inviati a un provider esterno senza una connessione remota configurata dall'utente.
 
 ## Requisiti per lo sviluppo
 
@@ -71,7 +71,7 @@ Finché nessuna connessione è attiva, `/query` risponde con lo stub scriptato (
 
 ## Modelli locali (sviluppo)
 
-Il repository include gli script per scaricare Qwen3-Embedding-0.6B e Qwen3-Reranker-0.6B in `~/.custom-rag/models` e per avviare due istanze di `llama-server`:
+Il repository include gli script per scaricare EmbeddingGemma-300M e Qwen3-Reranker-0.6B in `~/.custom-rag/models` e per avviare due istanze di `llama-server`:
 
 ```bash
 # Installa prima llama.cpp/llama-server per il tuo sistema.

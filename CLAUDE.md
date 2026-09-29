@@ -39,7 +39,7 @@ bun run gen:types      # regenerate src/lib/api-types.ts from a running sidecar 
 cd src-tauri && cargo test --lib
 ```
 
-Other scripts: `scripts/fetch-models.sh` + `scripts/dev/serve-models.sh` (Qwen3 embedder/reranker via llama-server), `scripts/build-sidecar.sh` (PyInstaller → `src-tauri/binaries/ragcore`), `scripts/install-local.sh`.
+Other scripts: `scripts/fetch-models.sh` + `scripts/dev/serve-models.sh` (EmbeddingGemma embedder + Qwen3 reranker via llama-server), `scripts/build-sidecar.sh` (PyInstaller → `src-tauri/binaries/ragcore`), `scripts/install-local.sh`.
 
 **After every change, run `scripts/install-local.sh`** (builds the app and swaps it into /Applications; data in `~/.custom-rag` and keychain are untouched). Do not cut a release unless asked.
 

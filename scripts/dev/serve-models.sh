@@ -2,15 +2,15 @@
 # Starts the two llama-server instances ragcore's real backend talks to.
 # Embedder: port 8770. Reranker: port 8771.
 #
-# --pooling last is not optional: Qwen3 embedding models pool from the last
-# token, and mean pooling returns plausible vectors with quietly worse recall.
+# EmbeddingGemma takes its pooling from the GGUF metadata; don't override it.
+# Its context is 2048 tokens (child chunks are ~256).
 set -euo pipefail
 
 DEST="${RAGCORE_MODEL_DIR:-$HOME/.custom-rag/models}"
 LLAMA="${LLAMA_SERVER:-llama-server}"
 
-"$LLAMA" -m "$DEST/Qwen3-Embedding-0.6B-Q8_0.gguf" \
-  --embedding --pooling last -c 8192 -ngl 999 --port 8770 --host 127.0.0.1 &
+"$LLAMA" -m "$DEST/embeddinggemma-300M-qat-Q4_0.gguf" \
+  --embedding -c 2048 -ngl 999 --port 8770 --host 127.0.0.1 &
 EMBED_PID=$!
 
 "$LLAMA" -m "$DEST/Qwen3-Reranker-0.6B-Q8_0.gguf" \

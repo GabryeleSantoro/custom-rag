@@ -231,7 +231,7 @@ def test_index_stats_count_what_was_loaded(store: Store) -> None:
     assert stats.documents == len(store.documents)
     assert stats.chunks == sum(len(doc.chunks) for doc in store.loaded.values())
     assert stats.parents == sum(len(doc.pages) for doc in store.loaded.values())
-    assert stats.embed_dim == 1024
+    assert stats.embed_dim == 768
     assert stats.last_indexed_at is not None
 
 

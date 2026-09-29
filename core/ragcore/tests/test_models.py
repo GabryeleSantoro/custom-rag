@@ -284,7 +284,7 @@ def test_a_download_that_activates_deactivates_the_previous_model_for_that_role(
     inventory = client.get("/models").json()
     assert inventory["active_reranking"] == "qwen_whatever_model-q4_k_m.gguf"
     # Swapping the reranker must not disturb the embedder.
-    assert inventory["active_embedding"] == "embed-qwen3-0.6b"
+    assert inventory["active_embedding"] == "embed-gemma-300m"
     active = [m["id"] for m in inventory["installed"] if m["active"]]
     assert len(active) == 2
 
@@ -297,7 +297,7 @@ def test_activating_an_unknown_model_is_a_404(client: TestClient) -> None:
 
 
 def test_switching_the_embedder_needs_the_reindex_accepted(client: TestClient) -> None:
-    response = client.post("/models/embed-qwen3-0.6b/activate")
+    response = client.post("/models/embed-gemma-300m/activate")
 
     assert response.status_code == 409
     assert "accept_reindex" in response.json()["detail"]
@@ -305,7 +305,7 @@ def test_switching_the_embedder_needs_the_reindex_accepted(client: TestClient) -
 
 def test_accepting_the_reindex_activates_the_embedder(client: TestClient) -> None:
     response = client.post(
-        "/models/embed-qwen3-0.6b/activate", params={"accept_reindex": "true"}
+        "/models/embed-gemma-300m/activate", params={"accept_reindex": "true"}
     )
 
     assert response.status_code == 200

@@ -121,7 +121,7 @@ async def test_a_chunk_round_trips_with_its_text_and_offsets(tmp_path: Path) -> 
     assert row["text"] == "reranking reorders candidates"
     assert row["section_path"] == "Reranking > Overview"
     assert (row["page_start"], row["page_end"]) == (1, 1)
-    assert len(row["vector"]) == 1024
+    assert len(row["vector"]) == 768
 
 
 async def test_dense_search_on_an_empty_table_finds_nothing(tmp_path: Path) -> None:

@@ -7,7 +7,7 @@ import math
 
 import httpx
 import pytest
-from ragcore.models.embed import EMBED_DIM, EmbedClient
+from ragcore.models.embed import DOC_PREFIX, EMBED_DIM, QUERY_PREFIX, EmbedClient
 from ragcore.models.fakes import FakeEmbedClient
 
 
@@ -72,7 +72,7 @@ async def test_embed_client_handles_empty_texts(
 
 
 @pytest.mark.requires_models
-async def test_live_server_returns_1024_dimensions() -> None:
+async def test_live_server_returns_the_configured_dimension() -> None:
     client = EmbedClient("http://127.0.0.1:8770")
     try:
         [vector] = await client.embed(["reranking reorders candidates"])
@@ -116,12 +116,30 @@ async def test_the_request_names_the_model_and_carries_every_text() -> None:
             200, json={"data": [{"index": 0, "embedding": [1.0] * EMBED_DIM}]}
         )
 
-    client = EmbedClient("http://127.0.0.1:8770/", model="qwen3-embedding")
+    client = EmbedClient("http://127.0.0.1:8770/", model="embeddinggemma")
     client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
     await client.embed(["reranking"])
 
-    assert seen == {"input": ["reranking"], "model": "qwen3-embedding"}
+    assert seen == {"input": [DOC_PREFIX + "reranking"], "model": "embeddinggemma"}
+
+
+async def test_queries_get_the_query_prefix_and_documents_the_document_prefix() -> None:
+    sent: list[list[str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content)["input"])
+        return httpx.Response(
+            200, json={"data": [{"index": 0, "embedding": [1.0] * EMBED_DIM}]}
+        )
+
+    client = EmbedClient("http://127.0.0.1:8770")
+    client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+    await client.embed(["how to chunk"], query=True)
+    await client.embed(["chunking"])
+
+    assert sent == [[QUERY_PREFIX + "how to chunk"], [DOC_PREFIX + "chunking"]]
 
 
 async def test_vectors_come_back_normalised() -> None:
