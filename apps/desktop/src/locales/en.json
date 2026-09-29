@@ -404,6 +404,11 @@
       "0": "What does the document say about “{{topic}}”?",
       "1": "Can you explain “{{topic}}”?",
       "2": "What are the key points of “{{topic}}”?"
+    },
+    "suggestionModel": {
+      "offer": "Get better questions written by a small local model (1.1 GB download)",
+      "downloading": "Downloading the question model… {{percent}}%",
+      "failed": "Download failed: {{error}}"
     }
   },
   "documentStatus": {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CloudIcon, FileTextIcon, PanelRightIcon } from "lucide-react";
 
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
@@ -26,6 +26,7 @@ import { connectionsQuery, keys, projectsQuery, sourcesQuery } from "@/lib/queri
 
 export function ChatView({ sessionId }: { sessionId: string | null }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [mode, setMode] = useState<QueryMode>("auto");
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[] | null>(null);
@@ -128,16 +129,31 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
   const selectedDocumentCount = includedDocumentIds.length;
 
   const suggestionDocIds = [...includedDocumentIds].sort();
+  const newChat = !sessionId && suggestionDocIds.length > 0;
+  const model = useQuery({
+    queryKey: ["suggestion-model"],
+    queryFn: api.suggestionModel,
+    enabled: newChat,
+    refetchInterval: (query) => (query.state.data?.state === "downloading" ? 1500 : false),
+  });
+  const modelState = model.data?.state;
   const suggestions = useQuery({
-    queryKey: ["suggestions", suggestionDocIds],
+    queryKey: ["suggestions", suggestionDocIds, modelState === "ready"],
     queryFn: () => api.suggestQuestions(suggestionDocIds),
-    enabled: !sessionId && suggestionDocIds.length > 0,
+    enabled: newChat && modelState !== undefined && modelState !== "downloading",
     staleTime: Infinity,
     retry: false,
   });
-  const questions = (suggestions.data?.topics ?? []).map((topic, index) =>
-    t(`chat.suggestion.${index}`, { topic }),
-  );
+  const questions =
+    suggestions.data?.source === "model"
+      ? suggestions.data.questions
+      : (suggestions.data?.topics ?? []).map((topic, index) =>
+          t(`chat.suggestion.${index}`, { topic, lng: suggestions.data?.language ?? undefined }),
+        );
+  const installModel = useMutation({
+    mutationFn: api.installSuggestionModel,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["suggestion-model"] }),
+  });
 
   const onSend = (text: string) => {
     send(text, {
@@ -253,6 +269,27 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
                     </button>
                   ))}
                 </div>
+                {newChat && modelState === "downloading" ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {t("chat.suggestionModel.downloading", {
+                      percent: Math.round((model.data?.progress ?? 0) * 100),
+                    })}
+                  </p>
+                ) : null}
+                {newChat && modelState === "missing" ? (
+                  <button
+                    type="button"
+                    onClick={() => installModel.mutate()}
+                    className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  >
+                    {t("chat.suggestionModel.offer")}
+                  </button>
+                ) : null}
+                {newChat && model.data?.error ? (
+                  <p className="mt-1 text-xs text-destructive">
+                    {t("chat.suggestionModel.failed", { error: model.data.error })}
+                  </p>
+                ) : null}
               </div>
             ) : null}
 

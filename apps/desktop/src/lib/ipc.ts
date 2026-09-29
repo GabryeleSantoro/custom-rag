@@ -179,7 +179,14 @@ export const api = {
   } = {}) => request<DocumentList>("GET", `/documents${query(params)}`),
 
   suggestQuestions: (doc_ids: string[]) =>
-    request<{ questions: string[]; topics: string[] }>("POST", "/suggestions", { doc_ids }),
+    request<{ questions: string[]; topics: string[]; language: string | null; source: string }>("POST", "/suggestions", { doc_ids }),
+
+  suggestionModel: () =>
+    request<{ state: "missing" | "downloading" | "ready"; progress: number; error: string | null }>(
+      "GET",
+      "/suggestions/model",
+    ),
+  installSuggestionModel: () => request<void>("POST", "/suggestions/model"),
 
   listFolders: () => request<Folder[]>("GET", "/folders"),
   createFolder: (name: string) => request<Folder>("POST", "/folders", { name }),

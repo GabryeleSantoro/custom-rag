@@ -404,6 +404,11 @@
       "0": "¿Qué dice el documento sobre «{{topic}}»?",
       "1": "¿Puedes explicar «{{topic}}»?",
       "2": "¿Cuáles son los puntos clave de «{{topic}}»?"
+    },
+    "suggestionModel": {
+      "offer": "Obtén mejores preguntas escritas por un pequeño modelo local (descarga de 1,1 GB)",
+      "downloading": "Descargando el modelo de preguntas… {{percent}} %",
+      "failed": "Descarga fallida: {{error}}"
     }
   },
   "documentStatus": {
