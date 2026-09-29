@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { HubBrowser } from "@/features/models/hub-browser";
 import { ModelDetailSheet } from "@/features/models/model-detail";
+import { errorText } from "@/lib/errors";
 import { bytes, relativeTime } from "@/lib/format";
 import { api, type InstalledModel, type ModelRole } from "@/lib/ipc";
 import { healthQuery, hardwareQuery, keys, modelsQuery } from "@/lib/queries";
@@ -103,7 +104,7 @@ export function ModelsView() {
       void queryClient.invalidateQueries({ queryKey: keys.models });
       toast.success(t("models.activated"));
     },
-    onError: (error: Error) => toast.error(t("models.activateFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("models.activateFailed"), { description: errorText(error) }),
   });
 
   const remove = useMutation({
@@ -112,7 +113,7 @@ export function ModelsView() {
       void queryClient.invalidateQueries({ queryKey: keys.models });
       toast.success(t("models.removed"));
     },
-    onError: (error: Error) => toast.error(t("library.removeFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.removeFailed"), { description: errorText(error) }),
   });
 
   const roleLabel = t(`models.role.${role}.label`);

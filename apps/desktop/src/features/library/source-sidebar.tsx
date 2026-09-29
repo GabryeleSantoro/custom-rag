@@ -30,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddSourceDialog } from "@/features/library/add-source-dialog";
 import { FolderList } from "@/features/library/folder-list";
+import { errorText } from "@/lib/errors";
 import { relativeTime, shortPath } from "@/lib/format";
 import { api, type Job, type Source } from "@/lib/ipc";
 import { useJobs } from "@/lib/jobs-context";
@@ -63,7 +64,7 @@ export function SourceSidebar({
   const rescan = useMutation({
     mutationFn: (id: string) => api.rescanSource(id),
     onSuccess: invalidate,
-    onError: (error: Error) => toast.error(t("library.rescanFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.rescanFailed"), { description: errorText(error) }),
   });
 
   const remove = useMutation({
@@ -73,7 +74,7 @@ export function SourceSidebar({
       invalidate();
       toast.success(t("library.sourceRemoved"));
     },
-    onError: (error: Error) => toast.error(t("library.removeSourceFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.removeSourceFailed"), { description: errorText(error) }),
   });
 
   return (

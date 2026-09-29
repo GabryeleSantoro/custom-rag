@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorText } from "@/lib/errors";
 import { count } from "@/lib/format";
 import { api, type HubModel, type ModelRole } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
@@ -170,7 +171,7 @@ export function HubBrowser({
 
         {results.isError ? (
           <p className="mt-2 text-xs text-status-error">
-            {(results.error as Error).message}
+            {errorText(results.error)}
           </p>
         ) : null}
 

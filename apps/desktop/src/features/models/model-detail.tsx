@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { FitBadge } from "@/features/models/fit-badge";
+import { errorText } from "@/lib/errors";
 import { bytes, count } from "@/lib/format";
 import { api, type HubFile, type ModelRole } from "@/lib/ipc";
 import { useJobs } from "@/lib/jobs-context";
@@ -67,7 +68,7 @@ function DownloadButton({
       void queryClient.invalidateQueries({ queryKey: keys.models });
       toast.success(t("models.downloadStarted"), { description: file.path });
     },
-    onError: (error: Error) => toast.error(t("models.downloadFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("models.downloadFailed"), { description: errorText(error) }),
   });
 
   if (job) {
@@ -156,7 +157,7 @@ export function ModelDetailSheet({
               <Skeleton className="h-14 w-full" />
             </div>
           ) : detail.isError ? (
-            <p className="text-xs text-status-error">{(detail.error as Error).message}</p>
+            <p className="text-xs text-status-error">{errorText(detail.error)}</p>
           ) : null}
 
           {detail.data ? (

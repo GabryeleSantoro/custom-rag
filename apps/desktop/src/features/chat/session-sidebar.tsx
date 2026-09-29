@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
+import { errorText } from "@/lib/errors";
 import { api, type ChatProject, type ChatSession } from "@/lib/ipc";
 import { relativeTime } from "@/lib/format";
 import { keys, projectsQuery, sessionsQuery } from "@/lib/queries";
@@ -228,7 +229,7 @@ export function ChatSessionSidebar() {
       invalidateChatNavigation();
       if (params.sessionId === id) void navigate({ to: "/chat" });
     },
-    onError: (error: Error) => toast.error(t("chat.deleteChatFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.deleteChatFailed"), { description: errorText(error) }),
   });
 
   const createProject = useMutation({
@@ -244,20 +245,20 @@ export function ChatSessionSidebar() {
       setProjectDialogOpen(false);
       toast.success(t("chat.projectCreated"), { description: project.name });
     },
-    onError: (error: Error) => toast.error(t("chat.createProjectFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.createProjectFailed"), { description: errorText(error) }),
   });
 
   const updateProject = useMutation({
     mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
       api.updateProject(id, { pinned }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.projects }),
-    onError: (error: Error) => toast.error(t("chat.updateProjectFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.updateProjectFailed"), { description: errorText(error) }),
   });
 
   const removeProject = useMutation({
     mutationFn: (id: string) => api.deleteProject(id),
     onSuccess: () => invalidateChatNavigation(),
-    onError: (error: Error) => toast.error(t("chat.deleteProjectFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.deleteProjectFailed"), { description: errorText(error) }),
   });
 
   const createProjectChat = useMutation({
@@ -266,14 +267,14 @@ export function ChatSessionSidebar() {
       invalidateChatNavigation();
       void navigate({ to: "/chat/$sessionId", params: { sessionId: session.id } });
     },
-    onError: (error: Error) => toast.error(t("chat.createChatFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.createChatFailed"), { description: errorText(error) }),
   });
 
   const updateChat = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof api.updateSession>[1] }) =>
       api.updateSession(id, payload),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.sessions }),
-    onError: (error: Error) => toast.error(t("chat.updateChatFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("chat.updateChatFailed"), { description: errorText(error) }),
   });
 
   const allSessions = sessions.data ?? [];

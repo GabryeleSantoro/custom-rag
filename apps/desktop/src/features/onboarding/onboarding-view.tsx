@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { errorText } from "@/lib/errors";
 import {
   ArrowRightIcon,
   BookOpenIcon,
@@ -60,9 +61,9 @@ const CORE_MODELS: {
 }[] = [
   {
     role: "embedding",
-    name: "Qwen3 Embedding 0.6B",
-    repo_id: "Qwen/Qwen3-Embedding-0.6B-GGUF",
-    filename: "Qwen3-Embedding-0.6B-Q8_0.gguf",
+    name: "EmbeddingGemma 300M",
+    repo_id: "ggml-org/embeddinggemma-300M-qat-q4_0-GGUF",
+    filename: "embeddinggemma-300M-qat-Q4_0.gguf",
     whyKey: "onboarding.models.embeddingWhy",
   },
   {
@@ -245,7 +246,7 @@ function ModelRow({
     },
     onError: (error: Error) =>
       toast.error(t("onboarding.models.downloadFailed", { role: t(`models.roles.${spec.role}`) }), {
-        description: error.message,
+        description: errorText(error),
       }),
   });
 
@@ -499,7 +500,7 @@ export function OnboardingView() {
       void navigate({ to: "/chat", replace: true });
     },
     onError: (error: Error) =>
-      toast.error(t("onboarding.saveFailed"), { description: error.message }),
+      toast.error(t("onboarding.saveFailed"), { description: errorText(error) }),
   });
 
   const coreReady = CORE_MODELS.every((spec) =>

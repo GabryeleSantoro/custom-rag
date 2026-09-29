@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { errorText } from "@/lib/errors";
 import { api, type Folder } from "@/lib/ipc";
 import { foldersQuery, keys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,7 @@ export function FolderList({
     void queryClient.invalidateQueries({ queryKey: keys.folders });
     void queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
-  const onError = (error: Error) => toast.error(t("library.folderNotSaved"), { description: error.message });
+  const onError = (error: Error) => toast.error(t("library.folderNotSaved"), { description: errorText(error) });
 
   const create = useMutation({
     mutationFn: api.createFolder,

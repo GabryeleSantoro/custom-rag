@@ -36,6 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { SourceSidebar } from "@/features/library/source-sidebar";
+import { errorText } from "@/lib/errors";
 import { bytes, relativeTime } from "@/lib/format";
 import { api } from "@/lib/ipc";
 import { useJobs } from "@/lib/jobs-context";
@@ -69,13 +70,13 @@ export function LibraryView() {
   const reindex = useMutation({
     mutationFn: (docIds: string[]) => api.rebuild({ doc_ids: docIds }),
     onSuccess: () => toast.success(t("library.reindexStarted")),
-    onError: (error: Error) => toast.error(t("library.reindexFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.reindexFailed"), { description: errorText(error) }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.removeDocument(id),
     onSuccess: invalidate,
-    onError: (error: Error) => toast.error(t("library.removeFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.removeFailed"), { description: errorText(error) }),
   });
 
   const move = useMutation({
@@ -85,7 +86,7 @@ export function LibraryView() {
       void queryClient.invalidateQueries({ queryKey: keys.folders });
       void queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
-    onError: (error: Error) => toast.error(t("library.moveFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.moveFailed"), { description: errorText(error) }),
   });
 
   const folderOf = new Map<string, string>();

@@ -1204,6 +1204,12 @@ export interface components {
              * @default false
              */
             retryable: boolean;
+            /** Code */
+            code?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
         };
         /** EvalMetrics */
         EvalMetrics: {
@@ -1621,6 +1627,12 @@ export interface components {
             title: string;
             /** Message */
             message: string;
+            /** Code */
+            code?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
         };
         /** ProcessStatus */
         ProcessStatus: {

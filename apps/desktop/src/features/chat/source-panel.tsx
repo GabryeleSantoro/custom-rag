@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { errorText } from "@/lib/errors";
 import {
   BookOpenIcon,
   ChevronDownIcon,
@@ -75,7 +76,7 @@ export function SourcePanel({
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.projects }),
     onError: (error: Error) =>
-      toast.error(t("chat.updateResourcesFailed"), { description: error.message }),
+      toast.error(t("chat.updateResourcesFailed"), { description: errorText(error) }),
   });
 
   const allDocuments = documents.data?.items ?? [];

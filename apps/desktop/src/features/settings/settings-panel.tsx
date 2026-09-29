@@ -6,6 +6,7 @@ import { CloudIcon, HardDriveIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
+import { errorText } from "@/lib/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,7 +93,7 @@ function useSettingsDraft() {
       queryClient.setQueryData(keys.settings, updated);
       toast.success(t("settings.saved"));
     },
-    onError: (error: Error) => toast.error(t("settings.saveFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("settings.saveFailed"), { description: errorText(error) }),
   });
 
   return { settings, draft, setDraft, save };
@@ -432,7 +433,7 @@ function StorageSection() {
       void queryClient.invalidateQueries();
       toast.success(t("settings.storage.wiped"));
     },
-    onError: (error: Error) => toast.error(t("settings.storage.wipeFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("settings.storage.wipeFailed"), { description: errorText(error) }),
   });
 
   if (!draft) return <Skeleton className="h-40 w-full" />;

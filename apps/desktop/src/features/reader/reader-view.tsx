@@ -9,6 +9,7 @@ import { ContextSidebar } from "@/components/shell/context-sidebar";
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorText } from "@/lib/errors";
 import { bytes, relativeTime } from "@/lib/format";
 import { api, type DocumentChunkRef } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
@@ -72,7 +73,7 @@ export function ReaderView() {
       }),
     onSuccess: (session) =>
       navigate({ to: "/chat/$sessionId", params: { sessionId: session.id } }),
-    onError: (error: Error) => toast.error(t("reader.startChatFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("reader.startChatFailed"), { description: errorText(error) }),
   });
 
   return (

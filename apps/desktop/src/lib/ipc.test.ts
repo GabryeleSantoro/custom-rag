@@ -92,18 +92,18 @@ describe("query strings", () => {
   });
 
   it("sends the reindex acknowledgement when activating an embedder", async () => {
-    await api.activateModel("embed-qwen3-0.6b", true);
+    await api.activateModel("embed-gemma-300m", true);
 
     expect(invoke.mock.calls[0][1].req.path).toBe(
-      "/models/embed-qwen3-0.6b/activate?accept_reindex=true",
+      "/models/embed-gemma-300m/activate?accept_reindex=true",
     );
   });
 
   it("defaults the reindex acknowledgement to false", async () => {
-    await api.activateModel("embed-qwen3-0.6b");
+    await api.activateModel("embed-gemma-300m");
 
     expect(invoke.mock.calls[0][1].req.path).toBe(
-      "/models/embed-qwen3-0.6b/activate?accept_reindex=false",
+      "/models/embed-gemma-300m/activate?accept_reindex=false",
     );
   });
 });
@@ -196,9 +196,21 @@ describe("openStream", () => {
     const handle = openStream({ path: "/query" }, (frame) => frames.push(frame));
     await handle.done;
 
-    expect(frames).toEqual([
-      { kind: "failed", message: "Error: ragcore unreachable" },
-    ]);
+    expect(frames).toEqual([{ kind: "failed", message: "ragcore unreachable" }]);
+  });
+
+  it("keeps the error code on a failed frame so the UI can translate it", async () => {
+    invoke.mockRejectedValue('{"code":"ragcore_unreachable","message":"down","params":{"reason":"x"}}');
+    const frames: { kind: string; message?: string }[] = [];
+
+    const handle = openStream({ path: "/query" }, (frame) => frames.push(frame));
+    await handle.done;
+
+    expect(JSON.parse(frames[0].message as string)).toEqual({
+      code: "ragcore_unreachable",
+      message: "down",
+      params: { reason: "x" },
+    });
   });
 
   it("cancels with the path the caller derived from the stream id", async () => {

@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { IconTooltip } from "@/components/ui/tooltip";
+import { errorText } from "@/lib/errors";
 import { api } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
 
@@ -67,7 +68,7 @@ export function AddSourceDialog({
       setPath("");
       toast.success(t("library.sourceAdded"), { description: source.path });
     },
-    onError: (error: Error) => toast.error(t("library.addSourceFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.addSourceFailed"), { description: errorText(error) }),
   });
 
   const pick = async () => {

@@ -5,6 +5,7 @@ import { CheckCircle2Icon, Loader2Icon, XCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { errorText } from "@/lib/errors";
 import {
   Dialog,
   DialogContent,
@@ -149,7 +150,7 @@ export function ConnectionDialog({
         api_key: apiKey || null,
       }),
     onSuccess: setResult,
-    onError: (error: Error) => toast.error(t("connection.testFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("connection.testFailed"), { description: errorText(error) }),
   });
 
   const save = useMutation({
@@ -186,7 +187,7 @@ export function ConnectionDialog({
       setApiKey("");
       toast.success(connection ? t("connection.updated") : t("connection.added"));
     },
-    onError: (error: Error) => toast.error(t("settings.saveFailed"), { description: error.message }),
+    onError: (error: Error) => toast.error(t("settings.saveFailed"), { description: errorText(error) }),
   });
 
   const needsUrl = provider.id === "custom";

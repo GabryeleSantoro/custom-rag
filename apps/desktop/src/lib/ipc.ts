@@ -6,6 +6,7 @@
  * reaches this side of the boundary.
  */
 
+import { errorText } from "@/lib/errors";
 import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
 
 import type { components } from "./api-types";
@@ -102,18 +103,45 @@ export type StreamFrame =
   | { kind: "closed"; reason: string }
   | { kind: "failed"; message: string };
 
-export class IpcError extends Error {}
+/** An error from ragcore or the shell. `code` (when present) selects a translation. */
+export class IpcError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+    public params?: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}
+
+/** The shell and ragcore send coded errors as JSON text; anything else is plain text. */
+export function parseIpcError(raw: string): IpcError {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && typeof (parsed as { code?: unknown }).code === "string") {
+      const { code, message, params } = parsed as {
+        code: string;
+        message?: string;
+        params?: Record<string, unknown>;
+      };
+      return new IpcError(message ?? code, code, params ?? {});
+    }
+  } catch {
+    // Not JSON: an uncoded, English-only error.
+  }
+  return new IpcError(raw);
+}
 
 const OUTSIDE_TAURI =
   "This build is running in a plain browser. Start it with `bun tauri dev` so the " +
   "Rust shell can launch the ragcore sidecar.";
 
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  if (!isTauri()) throw new IpcError(OUTSIDE_TAURI);
+  if (!isTauri()) throw new IpcError(OUTSIDE_TAURI, "outside_tauri");
   try {
     return await invoke<T>(command, args);
   } catch (error) {
-    throw new IpcError(typeof error === "string" ? error : String(error));
+    throw parseIpcError(typeof error === "string" ? error : String(error));
   }
 }
 
@@ -244,6 +272,19 @@ export type StreamHandle = {
  * Open an SSE stream through the shell. The id is generated here so `cancel()`
  * works even before the first frame arrives.
  */
+/** Text for a failed stream frame: coded JSON from the shell becomes translated prose. */
+const failureText = (message: string) => errorText(parseIpcError(message));
+
+type ErrorData = { message: string; code?: string | null; params?: Record<string, unknown> };
+
+/** `error` and `presentation_error` payloads, with `message` already translated. */
+function translated<T extends ErrorData>(data: T): T {
+  return {
+    ...data,
+    message: errorText(new IpcError(data.message, data.code ?? undefined, data.params)),
+  };
+}
+
 export function openStream(
   options: {
     method?: string;
@@ -264,7 +305,13 @@ export function openStream(
     body: options.body ?? null,
     channel,
   }).catch((error: unknown) => {
-    onFrame({ kind: "failed", message: String(error) });
+    const message =
+      error instanceof IpcError && error.code
+        ? JSON.stringify({ code: error.code, message: error.message, params: error.params })
+        : error instanceof Error
+          ? error.message
+          : String(error);
+    onFrame({ kind: "failed", message });
   });
 
   return {
@@ -297,7 +344,10 @@ export type QueryEvent =
         remote: boolean;
       };
     }
-  | { event: "error"; data: { message: string; retryable: boolean } };
+  | {
+      event: "error";
+      data: { message: string; retryable: boolean; code?: string | null; params?: Record<string, unknown> };
+    };
 
 export function streamQuery(
   payload: QueryRequest,
@@ -317,11 +367,12 @@ export function streamQuery(
     },
     (frame) => {
       if (frame.kind === "event") {
-        handlers.onEvent({ event: frame.event, data: frame.data } as QueryEvent);
+        const data = frame.event === "error" ? translated(frame.data as ErrorData) : frame.data;
+        handlers.onEvent({ event: frame.event, data } as QueryEvent);
       } else if (frame.kind === "closed") {
         handlers.onClosed?.(frame.reason);
       } else {
-        handlers.onFailed?.(frame.message);
+        handlers.onFailed?.(failureText(frame.message));
       }
     },
   );
@@ -370,7 +421,10 @@ export type ConversionEvent =
   | { event: "conversion_saved"; data: ConversionSavedEvent }
   | { event: "presentation_error"; data: PresentationErrorEvent }
   | { event: "conversion_done"; data: ConversionDoneEventData }
-  | { event: "error"; data: { message: string; retryable: boolean } };
+  | {
+      event: "error";
+      data: { message: string; retryable: boolean; code?: string | null; params?: Record<string, unknown> };
+    };
 
 type ConversionStartEventData = {
   presentation_index: number;
@@ -394,11 +448,15 @@ export function streamSlideConversion(
 ): StreamHandle {
   return openStream({ path: "/conversions/slides", body: payload }, (frame) => {
     if (frame.kind === "event") {
-      handlers.onEvent({ event: frame.event, data: frame.data } as ConversionEvent);
+      const data =
+        frame.event === "error" || frame.event === "presentation_error"
+          ? translated(frame.data as ErrorData)
+          : frame.data;
+      handlers.onEvent({ event: frame.event, data } as ConversionEvent);
     } else if (frame.kind === "closed") {
       handlers.onClosed?.(frame.reason);
     } else {
-      handlers.onFailed?.(frame.message);
+      handlers.onFailed?.(failureText(frame.message));
     }
   });
 }
@@ -417,7 +475,7 @@ export function streamEval(
     } else if (frame.kind === "closed") {
       handlers.onClosed?.(frame.reason);
     } else {
-      handlers.onFailed?.(frame.message);
+      handlers.onFailed?.(failureText(frame.message));
     }
   });
 }
