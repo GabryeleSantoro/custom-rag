@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from ragcore import __version__
+from ragcore.api.errors import ApiError, api_error_handler
 from ragcore.api.routes import (
     chats,
     connections,
@@ -59,6 +60,8 @@ def create_app(config: Config) -> FastAPI:
         summary="Local RAG core: ingestion, retrieval and grounded generation.",
         lifespan=lifespan,
     )
+
+    app.add_exception_handler(ApiError, api_error_handler)
 
     @app.middleware("http")
     async def require_token(request: Request, call_next):

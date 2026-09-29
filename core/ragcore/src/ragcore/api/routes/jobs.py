@@ -4,9 +4,10 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import JobsDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import Job, Ok
 from ragcore.api.sse import frame, sse_response
 
@@ -47,12 +48,12 @@ async def stream_jobs(jobs: JobsDep):
 def get_job(job_id: str, jobs: JobsDep) -> Job:
     job = jobs.jobs.get(job_id)
     if job is None:
-        raise HTTPException(404, "job not found")
+        raise api_error(404, "job_not_found", "job not found")
     return job
 
 
 @router.post("/{job_id}/cancel", response_model=Ok)
 def cancel_job(job_id: str, jobs: JobsDep) -> Ok:
     if job_id not in jobs.jobs:
-        raise HTTPException(404, "job not found")
+        raise api_error(404, "job_not_found", "job not found")
     return Ok(ok=jobs.cancel(job_id))

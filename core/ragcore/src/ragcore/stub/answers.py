@@ -83,12 +83,23 @@ async def scripted_stream(
     words = text.split(" ")
     for index, word in enumerate(words):
         if "error" in directives and index == min(12, len(words) - 1):
-            raise RuntimeError("Generation failed: connection reset by the model server")
+            raise LlmError(
+                "generation_failed", "Generation failed: connection reset by the model server"
+            )
         await asyncio.sleep(delay * random.uniform(0.6, 1.5))
         yield word if index == 0 else " " + word
 
 
 logger = logging.getLogger("ragcore.llm")
+
+
+class LlmError(RuntimeError):
+    """A generation failure with a stable code the UI can translate."""
+
+    def __init__(self, code: str, message: str, **params: object) -> None:
+        super().__init__(message)
+        self.code = code
+        self.params = params
 
 ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -167,7 +178,12 @@ def _raise_on_error(connection: Connection, data: str) -> None:
     if error:
         message = error.get("message", error) if isinstance(error, dict) else error
         logger.error("%s: error inside the stream: %s", connection.name, message)
-        raise RuntimeError(f"{connection.name} failed mid-answer: {message}")
+        raise LlmError(
+            "llm_failed_mid_answer",
+            f"{connection.name} failed mid-answer: {message}",
+            name=connection.name,
+            reason=str(message),
+        )
 
 
 def _finish_reason(kind: str, data: str) -> str | None:
@@ -223,7 +239,11 @@ async def llm_stream(
 ) -> AsyncIterator[str]:
     """Stream from the connection the user activated, and from nothing else."""
     if connection.kind != "anthropic" and not connection.base_url:
-        raise RuntimeError(f"Connection {connection.name!r} has no base URL")
+        raise LlmError(
+            "connection_no_url",
+            f"Connection {connection.name!r} has no base URL",
+            name=connection.name,
+        )
 
     url, body, headers = _request(
         connection,
@@ -248,8 +268,12 @@ async def llm_stream(
         if response.status_code >= 400:
             detail = (await response.aread()).decode(errors="replace").strip()[:500]
             logger.error("%s: HTTP %s: %s", connection.name, response.status_code, detail)
-            raise RuntimeError(
-                f"{connection.name} returned HTTP {response.status_code}: {detail}"
+            raise LlmError(
+                "llm_http_error",
+                f"{connection.name} returned HTTP {response.status_code}: {detail}",
+                name=connection.name,
+                status=response.status_code,
+                detail=detail,
             )
         produced = False
         finish: str | None = None
@@ -266,10 +290,15 @@ async def llm_stream(
                 break
             except TimeoutError:
                 logger.error("%s: no data for %.0fs, giving up", connection.name, IDLE_TIMEOUT)
-                raise RuntimeError(
+                raise LlmError(
+                    "llm_idle_timeout",
                     f"{connection.name} sent nothing for {IDLE_TIMEOUT:.0f}s "
                     f"({chars} chars of text, {reasoning} of reasoning so far). Lower "
-                    "Thinking, use a non-reasoning model, or try again."
+                    "Thinking, use a non-reasoning model, or try again.",
+                    name=connection.name,
+                    seconds=round(IDLE_TIMEOUT),
+                    chars=chars,
+                    reasoning=reasoning,
                 ) from None
             if not line.startswith("data:"):
                 continue
@@ -297,19 +326,28 @@ async def llm_stream(
         if finish in ("length", "max_tokens"):
             budget = max_tokens or connection.max_output_tokens
             spent = f"its whole output budget ({budget} tokens)" if budget else "its output limit"
-            raise RuntimeError(
+            raise LlmError(
+                "llm_budget_spent",
                 f"{connection.name} used {spent} without writing any text, most likely on "
-                "reasoning. Raise or clear Max output tokens, or lower Thinking."
+                "reasoning. Raise or clear Max output tokens, or lower Thinking.",
+                name=connection.name,
+                budget=budget,
             )
         if (finish is None and not done) or (finish == "error" and reasoning):
             detail = f"{reasoning} chars of reasoning, no text" if reasoning else "no text"
-            raise RuntimeError(
+            raise LlmError(
+                "llm_stream_cut",
                 f"{connection.name} closed the stream after "
                 f"{time.perf_counter() - started:.0f}s with {detail} and "
                 f"{'finish reason error' if finish else 'no finish reason'}, "
                 "most likely still reasoning when the provider cut it off. Lower Thinking, "
-                "use a non-reasoning model, or convert fewer slides at a time."
+                "use a non-reasoning model, or convert fewer slides at a time.",
+                name=connection.name,
+                seconds=round(time.perf_counter() - started),
             )
-        raise RuntimeError(
-            f"{connection.name} returned an empty answer (finish reason: {finish or 'none'})"
+        raise LlmError(
+            "llm_empty_answer",
+            f"{connection.name} returned an empty answer (finish reason: {finish or 'none'})",
+            name=connection.name,
+            finish=finish or "none",
         )

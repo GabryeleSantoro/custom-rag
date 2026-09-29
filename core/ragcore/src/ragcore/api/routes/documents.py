@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from ragcore.api.deps import JobsDep, StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import (
     Document,
     DocumentContent,
@@ -52,7 +53,7 @@ def list_documents(
 def get_document(doc_id: str, store: StoreDep) -> Document:
     document = store.documents.get(doc_id)
     if document is None:
-        raise HTTPException(404, "document not found")
+        raise api_error(404, "document_not_found", "document not found")
     return document
 
 
@@ -60,7 +61,7 @@ def get_document(doc_id: str, store: StoreDep) -> Document:
 def get_content(doc_id: str, store: StoreDep) -> DocumentContent:
     content = store.content(doc_id)
     if content is None:
-        raise HTTPException(404, "document not found")
+        raise api_error(404, "document_not_found", "document not found")
     return content
 
 
@@ -80,6 +81,6 @@ async def rebuild(payload: ReindexRequest, store: StoreDep, jobs: JobsDep) -> Jo
 @router.delete("/documents/{doc_id}", response_model=Ok)
 def remove_document(doc_id: str, store: StoreDep) -> Ok:
     if doc_id not in store.documents:
-        raise HTTPException(404, "document not found")
+        raise api_error(404, "document_not_found", "document not found")
     store.remove_document(doc_id)
     return Ok()

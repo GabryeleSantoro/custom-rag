@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import (
     ChatMessage,
     ChatProject,
@@ -38,7 +39,7 @@ def create_project(payload: ChatProjectCreate, store: StoreDep) -> ChatProject:
 def update_project(project_id: str, payload: ChatProjectPatch, store: StoreDep) -> ChatProject:
     project = store.projects.get(project_id)
     if project is None:
-        raise HTTPException(404, "project not found")
+        raise api_error(404, "project_not_found", "project not found")
     if payload.name is not None:
         project.name = payload.name.strip() or project.name
     if payload.pinned is not None:
@@ -53,7 +54,7 @@ def update_project(project_id: str, payload: ChatProjectPatch, store: StoreDep) 
 @router.delete("/projects/{project_id}", response_model=Ok)
 def delete_project(project_id: str, store: StoreDep) -> Ok:
     if project_id not in store.projects:
-        raise HTTPException(404, "project not found")
+        raise api_error(404, "project_not_found", "project not found")
     store.projects.pop(project_id)
     # Project folders remain available as global knowledge when their project
     # is removed; deleting a project must not delete files from the index.
@@ -71,7 +72,7 @@ def delete_project(project_id: str, store: StoreDep) -> Ok:
 @router.post("", response_model=ChatSession, status_code=201)
 def create_session(payload: ChatSessionCreate, store: StoreDep) -> ChatSession:
     if payload.project_id is not None and payload.project_id not in store.projects:
-        raise HTTPException(404, "project not found")
+        raise api_error(404, "project_not_found", "project not found")
     return store.create_session(payload.title, payload.scope_doc_id, payload.project_id)
 
 
@@ -79,21 +80,21 @@ def create_session(payload: ChatSessionCreate, store: StoreDep) -> ChatSession:
 def get_session(session_id: str, store: StoreDep) -> ChatSession:
     session = store.sessions.get(session_id)
     if session is None:
-        raise HTTPException(404, "session not found")
+        raise api_error(404, "session_not_found", "session not found")
     return session
 
 
 @router.get("/{session_id}/messages", response_model=list[ChatMessage])
 def get_messages(session_id: str, store: StoreDep) -> list[ChatMessage]:
     if session_id not in store.sessions:
-        raise HTTPException(404, "session not found")
+        raise api_error(404, "session_not_found", "session not found")
     return store.messages.get(session_id, [])
 
 
 @router.delete("/{session_id}", response_model=Ok)
 def delete_session(session_id: str, store: StoreDep) -> Ok:
     if session_id not in store.sessions:
-        raise HTTPException(404, "session not found")
+        raise api_error(404, "session_not_found", "session not found")
     store.sessions.pop(session_id)
     store.messages.pop(session_id, None)
     store.save_chats()
@@ -104,12 +105,12 @@ def delete_session(session_id: str, store: StoreDep) -> Ok:
 def update_session(session_id: str, payload: ChatSessionPatch, store: StoreDep) -> ChatSession:
     session = store.sessions.get(session_id)
     if session is None:
-        raise HTTPException(404, "session not found")
+        raise api_error(404, "session_not_found", "session not found")
     if payload.title is not None and payload.title.strip():
         session.title = payload.title
     if "project_id" in payload.model_fields_set:
         if payload.project_id is not None and payload.project_id not in store.projects:
-            raise HTTPException(404, "project not found")
+            raise api_error(404, "project_not_found", "project not found")
         session.project_id = payload.project_id
     if payload.pinned is not None:
         session.pinned = payload.pinned

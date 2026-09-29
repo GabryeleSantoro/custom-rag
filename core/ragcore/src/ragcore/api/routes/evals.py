@@ -6,9 +6,10 @@ import asyncio
 import random
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import ConfigDep, StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import (
     EvalMetrics,
     EvalQuestionResult,
@@ -31,11 +32,13 @@ def list_sets(store: StoreDep) -> list[EvalSet]:
 @router.post("/run")
 async def run_eval(payload: EvalRunRequest, store: StoreDep, config: ConfigDep):
     if not config.dev_mode:
-        raise HTTPException(403, "eval runs in dev builds only")
+        raise api_error(403, "eval_dev_only", "eval runs in dev builds only")
 
     eval_set = next((s for s in store.eval_sets if s.name == payload.set_name), None)
     if eval_set is None:
-        raise HTTPException(404, f"unknown eval set {payload.set_name!r}")
+        raise api_error(
+            404, "eval_set_unknown", f"unknown eval set {payload.set_name!r}", name=payload.set_name
+        )
 
     # Questions are drawn from the fixture corpus so retrieval actually runs;
     # only the relevance labels are synthetic.

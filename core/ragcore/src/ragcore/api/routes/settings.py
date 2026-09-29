@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import AppSettings, AppSettingsPatch, Ok, WipeRequest
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -28,7 +29,7 @@ def patch_settings(payload: AppSettingsPatch, store: StoreDep) -> AppSettings:
 @router.post("/wipe", response_model=Ok)
 def wipe(payload: WipeRequest, store: StoreDep) -> Ok:
     if payload.confirm != "DELETE":
-        raise HTTPException(400, 'confirm must be the literal string "DELETE"')
+        raise api_error(400, "wipe_confirm_required", 'confirm must be the literal string "DELETE"')
 
     store.sources.clear()
     store.documents.clear()

@@ -280,6 +280,8 @@ class DoneEvent(BaseModel):
 class ErrorEvent(BaseModel):
     message: str
     retryable: bool = False
+    code: str | None = None
+    params: dict[str, object] = Field(default_factory=dict)
 
 
 # --------------------------------------------------------------- slide to text
@@ -321,6 +323,8 @@ class PresentationErrorEvent(BaseModel):
     presentation_total: int
     title: str
     message: str
+    code: str | None = None
+    params: dict[str, object] = Field(default_factory=dict)
 
 
 class ConversionDoneEvent(BaseModel):

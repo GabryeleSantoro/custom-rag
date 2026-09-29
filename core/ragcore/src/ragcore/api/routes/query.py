@@ -156,7 +156,15 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
                 yield frame("token", TokenEvent(text=piece))
         except Exception as exc:  # noqa: BLE001 - reported to the UI as an error frame
             logging.getLogger("ragcore.query").error("answer failed: %s", exc)
-            yield frame("error", ErrorEvent(message=str(exc), retryable=True))
+            yield frame(
+                "error",
+                ErrorEvent(
+                    message=str(exc),
+                    retryable=True,
+                    code=getattr(exc, "code", None),
+                    params=getattr(exc, "params", {}),
+                ),
+            )
             return
         finally:
             _cancelled.discard(query_id)

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import JobsDep, StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import Job, Ok, Source, SourceCreate
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -16,7 +17,7 @@ def list_sources(store: StoreDep) -> list[Source]:
 @router.post("", response_model=Source, status_code=201)
 async def add_source(payload: SourceCreate, store: StoreDep, jobs: JobsDep) -> Source:
     if payload.project_id is not None and payload.project_id not in store.projects:
-        raise HTTPException(404, "project not found")
+        raise api_error(404, "project_not_found", "project not found")
     source = store.add_source(payload)
     documents = store.ingest_source(source.id)
 
@@ -38,7 +39,7 @@ async def add_source(payload: SourceCreate, store: StoreDep, jobs: JobsDep) -> S
 @router.delete("/{source_id}", response_model=Ok)
 def remove_source(source_id: str, store: StoreDep) -> Ok:
     if source_id not in store.sources:
-        raise HTTPException(404, "source not found")
+        raise api_error(404, "source_not_found", "source not found")
     store.remove_source(source_id)
     return Ok()
 
@@ -46,7 +47,7 @@ def remove_source(source_id: str, store: StoreDep) -> Ok:
 @router.post("/{source_id}/rescan", response_model=Job)
 async def rescan(source_id: str, store: StoreDep, jobs: JobsDep) -> Job:
     if source_id not in store.sources:
-        raise HTTPException(404, "source not found")
+        raise api_error(404, "source_not_found", "source not found")
     documents = store.ingest_source(source_id)
     job = jobs.create(
         "index", "Rescanning source", total=max(len(documents), 1), source_id=source_id

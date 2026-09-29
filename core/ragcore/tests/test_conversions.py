@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-
 from ragcore.api.routes import conversions
 from ragcore.api.schemas import ConnectionTestResult, SlideConversionRequest
 
@@ -476,3 +475,29 @@ def test_other_languages_reuse_the_english_rules_and_name_the_output_language(co
 
 def test_english_prompt_is_unchanged() -> None:
     assert "Valid Markdown in English" in conversions._build_system_prompt("en")
+
+
+class _CodedFailingAnswerer:
+    async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
+        from ragcore.stub.answers import LlmError
+
+        yield "partial"
+        raise LlmError("llm_idle_timeout", "model went quiet", name="LM Studio", seconds=120)
+
+
+def test_a_coded_generation_failure_reaches_the_ui_with_its_code(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    from ragcore.api import deps
+
+    monkeypatch.setitem(client.app.dependency_overrides, deps.get_answerer, _CodedFailingAnswerer)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# Deck\n\n## Context\n\nReadable content.\n")
+
+    with client.stream("POST", "/conversions/slides", json={"file_paths": [str(slide)]}) as r:
+        events = read_events(r)
+
+    error = next(data for name, data in events if name == "presentation_error")
+    assert error["code"] == "llm_idle_timeout"
+    assert error["params"]["name"] == "LM Studio"

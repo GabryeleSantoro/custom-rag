@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import Folder, FolderAssignment, FolderInput, Ok
 from ragcore.ports import StorePort
 
@@ -23,14 +24,14 @@ def _visible(folder: Folder, store: StorePort) -> Folder:
 def _get(folder_id: str, store: StorePort) -> Folder:
     folder = store.folders.get(folder_id)
     if folder is None:
-        raise HTTPException(404, "folder not found")
+        raise api_error(404, "folder_not_found", "folder not found")
     return folder
 
 
 def _name(payload: FolderInput) -> str:
     name = payload.name.strip()
     if not name:
-        raise HTTPException(422, "folder name cannot be empty")
+        raise api_error(422, "folder_name_empty", "folder name cannot be empty")
     return name
 
 
@@ -71,7 +72,7 @@ def delete_folder(folder_id: str, store: StoreDep) -> Ok:
 def move_document(doc_id: str, payload: FolderAssignment, store: StoreDep) -> Ok:
     """A document sits in at most one folder, like a file."""
     if doc_id not in store.documents:
-        raise HTTPException(404, "document not found")
+        raise api_error(404, "document_not_found", "document not found")
     if payload.folder_id is not None:
         _get(payload.folder_id, store)
     for folder in store.folders.values():

@@ -280,3 +280,13 @@ def test_a_failed_generation_leaves_no_assistant_turn(
 
     assert [m["role"] for m in messages] == ["user"]
     assert events["error"]["retryable"] is True
+
+
+def test_a_failed_generation_carries_a_code_the_ui_can_translate(
+    client: TestClient, read_events
+) -> None:
+    with client.stream("POST", "/query", json={"q": "!error Why rerank?"}) as response:
+        events = dict(read_events(response))
+
+    assert events["error"]["code"] == "generation_failed"
+    assert "Generation failed" in events["error"]["message"]

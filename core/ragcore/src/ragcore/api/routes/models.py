@@ -5,9 +5,10 @@ import platform
 from datetime import UTC, datetime
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Query, Request
 
 from ragcore.api.deps import ConfigDep, JobsDep, StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import (
     DownloadRequest,
     HardwareInfo,
@@ -75,7 +76,9 @@ async def hub_search(
     try:
         items = await _hub(request).search(role=role, query=q, sort=sort, limit=limit)
     except httpx.HTTPError as exc:
-        raise HTTPException(502, f"Hugging Face unreachable: {exc}") from exc
+        raise api_error(
+            502, "hub_unreachable", f"Hugging Face unreachable: {exc}", reason=str(exc)
+        ) from exc
     return HubSearchResult(items=items, role=role, query=q)
 
 
@@ -84,7 +87,9 @@ async def hub_recommended(request: Request, role: ModelRole) -> HubSearchResult:
     try:
         items = await _hub(request).recommended(role)
     except httpx.HTTPError as exc:
-        raise HTTPException(502, f"Hugging Face unreachable: {exc}") from exc
+        raise api_error(
+            502, "hub_unreachable", f"Hugging Face unreachable: {exc}", reason=str(exc)
+        ) from exc
     return HubSearchResult(items=items, role=role)
 
 
@@ -93,9 +98,17 @@ async def hub_detail(repo_id: str, request: Request, role: ModelRole | None = No
     try:
         return await _hub(request).detail(repo_id, role)
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(exc.response.status_code, f"{repo_id}: {exc}") from exc
+        raise api_error(
+            exc.response.status_code,
+            "hub_error",
+            f"{repo_id}: {exc}",
+            repo_id=repo_id,
+            reason=str(exc),
+        ) from exc
     except httpx.HTTPError as exc:
-        raise HTTPException(502, f"Hugging Face unreachable: {exc}") from exc
+        raise api_error(
+            502, "hub_unreachable", f"Hugging Face unreachable: {exc}", reason=str(exc)
+        ) from exc
 
 
 @router.post("/download", response_model=Job)
@@ -105,8 +118,9 @@ async def download(
     if payload.role == "embedding" and payload.activate and not payload.accept_reindex:
         # Vectors from two embedders are not comparable; activating one without
         # a re-index would silently destroy retrieval quality.
-        raise HTTPException(
+        raise api_error(
             409,
+            "reindex_required",
             "Activating a different embedder invalidates the index. "
             "Resend with accept_reindex=true.",
         )
@@ -114,7 +128,13 @@ async def download(
     detail = await _hub(request).detail(payload.repo_id, payload.role)
     file = next((f for f in detail.files if f.path == payload.filename), None)
     if file is None:
-        raise HTTPException(404, f"{payload.filename} not found in {payload.repo_id}")
+        raise api_error(
+            404,
+            "hub_file_missing",
+            f"{payload.filename} not found in {payload.repo_id}",
+            filename=payload.filename,
+            repo_id=payload.repo_id,
+        )
 
     model_id = f"{payload.repo_id}/{payload.filename}".replace("/", "_").lower()
     job = jobs.create(
@@ -152,9 +172,11 @@ async def download(
 def activate_model(model_id: str, store: StoreDep, accept_reindex: bool = False) -> InstalledModel:
     model = store.models.get(model_id)
     if model is None:
-        raise HTTPException(404, "model not installed")
+        raise api_error(404, "model_not_installed", "model not installed")
     if model.role == "embedding" and not accept_reindex:
-        raise HTTPException(409, "Switching the embedder requires accept_reindex=true")
+        raise api_error(
+            409, "reindex_required", "Switching the embedder requires accept_reindex=true"
+        )
     for other in store.models.values():
         if other.role == model.role:
             other.active = other.id == model_id
@@ -165,10 +187,10 @@ def activate_model(model_id: str, store: StoreDep, accept_reindex: bool = False)
 def remove_model(model_id: str, store: StoreDep) -> Ok:
     model = store.models.get(model_id)
     if model is None:
-        raise HTTPException(404, "model not installed")
+        raise api_error(404, "model_not_installed", "model not installed")
     if model.shipped:
-        raise HTTPException(409, "Shipped models cannot be removed")
+        raise api_error(409, "model_shipped", "Shipped models cannot be removed")
     if model.active:
-        raise HTTPException(409, "Activate another model for this role first")
+        raise api_error(409, "model_role_needs_other", "Activate another model for this role first")
     store.models.pop(model_id)
     return Ok()

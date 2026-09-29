@@ -5,9 +5,10 @@ import time
 from datetime import UTC, datetime
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ragcore.api.deps import StoreDep
+from ragcore.api.errors import api_error
 from ragcore.api.schemas import (
     Connection,
     ConnectionInput,
@@ -60,7 +61,7 @@ def update_connection(
 ) -> Connection:
     connection = store.connections.get(connection_id)
     if connection is None:
-        raise HTTPException(404, "connection not found")
+        raise api_error(404, "connection_not_found", "connection not found")
     for field, value in payload.model_dump(exclude={"api_key"}).items():
         setattr(connection, field, value)
     connection.is_remote = _is_remote(payload.kind, payload.base_url)
@@ -78,7 +79,7 @@ def update_connection(
 def activate(connection_id: str, store: StoreDep) -> Connection:
     connection = store.connections.get(connection_id)
     if connection is None:
-        raise HTTPException(404, "connection not found")
+        raise api_error(404, "connection_not_found", "connection not found")
     for other in store.connections.values():
         other.active = other.id == connection_id
     store.settings.active_connection_id = connection_id
@@ -89,7 +90,7 @@ def activate(connection_id: str, store: StoreDep) -> Connection:
 @router.delete("/{connection_id}", response_model=Ok)
 def delete_connection(connection_id: str, store: StoreDep) -> Ok:
     if connection_id not in store.connections:
-        raise HTTPException(404, "connection not found")
+        raise api_error(404, "connection_not_found", "connection not found")
     store.connections.pop(connection_id)
     store.secrets.pop(connection_id, None)
     if store.settings.active_connection_id == connection_id:
@@ -102,7 +103,7 @@ def delete_connection(connection_id: str, store: StoreDep) -> Ok:
 def restore_secret(connection_id: str, payload: ConnectionSecret, store: StoreDep) -> Ok:
     """The shell hands back a key from the OS keychain after a restart."""
     if connection_id not in store.connections:
-        raise HTTPException(404, "connection not found")
+        raise api_error(404, "connection_not_found", "connection not found")
     store.secrets[connection_id] = payload.api_key
     return Ok()
 
@@ -175,7 +176,7 @@ async def test_connection(payload: ConnectionTestRequest, store: StoreDep) -> Co
     if payload.connection_id:
         connection = store.connections.get(payload.connection_id)
         if connection is None:
-            raise HTTPException(404, "connection not found")
+            raise api_error(404, "connection_not_found", "connection not found")
         kind, base_url, model_id = connection.kind, connection.base_url, connection.model_id
         # Testing a saved connection must not require retyping its key.
         api_key = api_key or store.secrets.get(connection.id)
