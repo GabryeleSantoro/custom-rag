@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2Icon, Loader2Icon, XCircleIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -35,28 +36,34 @@ import { keys } from "@/lib/queries";
 type ProviderId = "openrouter" | "openai" | "anthropic" | "custom";
 
 /** A preset prefills kind + base_url; "custom" is the only one with an editable URL. */
-const PROVIDERS: { id: ProviderId; label: string; kind: ConnectionKind; baseUrl: string | null; hint: string }[] = [
+const PROVIDERS: {
+  id: ProviderId;
+  label: string;
+  kind: ConnectionKind;
+  baseUrl: string | null;
+  hintKey: string;
+}[] = [
   {
     id: "openrouter",
     label: "OpenRouter",
     kind: "openai-compatible",
     baseUrl: "https://openrouter.ai/api/v1",
-    hint: "Routes to any model OpenRouter offers",
+    hintKey: "connection.hintOpenrouter",
   },
   {
     id: "openai",
     label: "OpenAI",
     kind: "openai-compatible",
     baseUrl: "https://api.openai.com/v1",
-    hint: "GPT models, native OpenAI API",
+    hintKey: "connection.hintOpenai",
   },
-  { id: "anthropic", label: "Anthropic", kind: "anthropic", baseUrl: null, hint: "Claude models, native API" },
+  { id: "anthropic", label: "Anthropic", kind: "anthropic", baseUrl: null, hintKey: "connection.hintAnthropic" },
   {
     id: "custom",
-    label: "Custom / localhost",
+    label: "Custom / localhost", // shown via connection.providerCustom
     kind: "openai-compatible",
     baseUrl: null,
-    hint: "LM Studio, Ollama, llama.cpp, vLLM, or any other OpenAI-compatible server",
+    hintKey: "connection.hintCustom",
   },
 ];
 
@@ -85,14 +92,10 @@ const BLANK = {
   provider_order: null as string[] | null,
 };
 
-const SORT_MODES: { value: "auto" | "price" | "throughput" | "latency"; label: string }[] = [
-  { value: "auto", label: "Auto (OpenRouter default)" },
-  { value: "price", label: "Cheapest" },
-  { value: "throughput", label: "Fastest (throughput)" },
-  { value: "latency", label: "Fastest (first token)" },
-];
+const SORT_MODES = ["auto", "price", "throughput", "latency"] as const;
 
 function TestResult({ result }: { result: ConnectionTestResult }) {
+  const { t } = useTranslation();
   const Icon = result.ok ? CheckCircle2Icon : XCircleIcon;
   return (
     <div
@@ -105,10 +108,10 @@ function TestResult({ result }: { result: ConnectionTestResult }) {
       <Icon className="mt-px size-3.5 shrink-0" />
       <div className="space-y-0.5">
         <p>
-          {result.reachable ? "Reachable" : "Not reachable"}
-          {result.latency_ms != null ? ` in ${ms(result.latency_ms)}` : ""}
-          {result.model_found ? " · model found" : ""}
-          {result.streaming ? " · streaming supported" : ""}
+          {result.reachable ? t("connection.reachable") : t("connection.notReachable")}
+          {result.latency_ms != null ? ` ${t("connection.inMs", { ms: ms(result.latency_ms) })}` : ""}
+          {result.model_found ? ` · ${t("connection.modelFound")}` : ""}
+          {result.streaming ? ` · ${t("connection.streaming")}` : ""}
         </p>
         {result.error ? <p className="opacity-80">{result.error}</p> : null}
       </div>
@@ -123,6 +126,7 @@ export function ConnectionDialog({
   connection?: Connection;
   trigger: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => ({ ...BLANK, ...(connection ?? {}) }));
@@ -145,7 +149,7 @@ export function ConnectionDialog({
         api_key: apiKey || null,
       }),
     onSuccess: setResult,
-    onError: (error: Error) => toast.error("Test failed", { description: error.message }),
+    onError: (error: Error) => toast.error(t("connection.testFailed"), { description: error.message }),
   });
 
   const save = useMutation({
@@ -180,9 +184,9 @@ export function ConnectionDialog({
       void queryClient.invalidateQueries({ queryKey: keys.connections });
       setOpen(false);
       setApiKey("");
-      toast.success(connection ? "Connection updated" : "Connection added");
+      toast.success(connection ? t("connection.updated") : t("connection.added"));
     },
-    onError: (error: Error) => toast.error("Could not save", { description: error.message }),
+    onError: (error: Error) => toast.error(t("settings.saveFailed"), { description: error.message }),
   });
 
   const needsUrl = provider.id === "custom";
@@ -192,17 +196,16 @@ export function ConnectionDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{connection ? "Edit connection" : "Add a connection"}</DialogTitle>
+          <DialogTitle>{connection ? t("connection.editTitle") : t("connection.addTitle")}</DialogTitle>
           <DialogDescription>
-            The model writes the answer. Embedding and reranking always stay on this device,
-            whatever you connect here.
+            {t("connection.lead")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="conn-kind">Provider</Label>
+              <Label htmlFor="conn-kind">{t("connection.provider")}</Label>
               <Select
                 value={provider.id}
                 onValueChange={(value) => {
@@ -223,19 +226,19 @@ export function ConnectionDialog({
                 <SelectContent>
                   {PROVIDERS.map((entry) => (
                     <SelectItem key={entry.id} value={entry.id}>
-                      {entry.label}
+                      {entry.id === "custom" ? t("connection.providerCustom") : entry.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-[0.6875rem] text-muted-foreground">
-                {provider.hint}
+                {t(provider.hintKey)}
                 {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="conn-name">Name</Label>
+              <Label htmlFor="conn-name">{t("connection.name")}</Label>
               <Input
                 id="conn-name"
                 value={form.name}
@@ -248,7 +251,7 @@ export function ConnectionDialog({
           {provider.id === "openrouter" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="conn-provider-sort">Provider routing</Label>
+                <Label htmlFor="conn-provider-sort">{t("connection.routing")}</Label>
                 <Select
                   value={form.provider_sort ?? "auto"}
                   onValueChange={(value) =>
@@ -263,23 +266,23 @@ export function ConnectionDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {SORT_MODES.map((mode) => (
-                      <SelectItem key={mode.value} value={mode.value}>
-                        {mode.label}
+                      <SelectItem key={mode} value={mode}>
+                        {t(`connection.sort.${mode}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="conn-provider-order">Preferred providers</Label>
+                <Label htmlFor="conn-provider-order">{t("connection.preferred")}</Label>
                 <Input
                   id="conn-provider-order"
                   value={providerOrderText}
-                  placeholder="e.g. together, fireworks"
+                  placeholder={t("connection.preferredPlaceholder")}
                   onChange={(event) => setProviderOrderText(event.target.value)}
                 />
                 <p className="text-[0.6875rem] text-muted-foreground">
-                  Comma-separated, tried in order. Leave empty to let OpenRouter pick.
+                  {t("connection.preferredHint")}
                 </p>
               </div>
             </div>
@@ -287,7 +290,7 @@ export function ConnectionDialog({
 
           {needsUrl ? (
             <div className="space-y-1.5">
-              <Label htmlFor="conn-url">Base URL</Label>
+              <Label htmlFor="conn-url">{t("connection.baseUrl")}</Label>
               <Input
                 id="conn-url"
                 value={form.base_url ?? ""}
@@ -301,16 +304,14 @@ export function ConnectionDialog({
                 }}
               />
               <p className="text-[0.6875rem] text-muted-foreground">
-                {form.is_remote
-                  ? "Remote: retrieved passages will leave this device."
-                  : "Local: nothing leaves this device."}
+                {form.is_remote ? t("connection.remoteNote") : t("connection.localNote")}
               </p>
             </div>
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="conn-model">Model ID</Label>
+              <Label htmlFor="conn-model">{t("connection.modelId")}</Label>
               <Input
                 id="conn-model"
                 value={form.model_id}
@@ -319,7 +320,7 @@ export function ConnectionDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="conn-thinking">Thinking</Label>
+              <Label htmlFor="conn-thinking">{t("connection.thinking")}</Label>
               <Select
                 value={form.thinking}
                 onValueChange={(value) => set("thinking", value as typeof form.thinking)}
@@ -330,7 +331,7 @@ export function ConnectionDialog({
                 <SelectContent>
                   {["off", "low", "medium", "high"].map((level) => (
                     <SelectItem key={level} value={level}>
-                      {level}
+                      {t(`connection.level.${level}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -340,11 +341,11 @@ export function ConnectionDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="conn-output">Max output tokens</Label>
+              <Label htmlFor="conn-output">{t("connection.maxOutput")}</Label>
               <Input
                 id="conn-output"
                 type="number"
-                placeholder="No limit"
+                placeholder={t("connection.noLimit")}
                 value={form.max_output_tokens ?? ""}
                 onChange={(event) => set("max_output_tokens", Number(event.target.value) || null)}
               />
@@ -353,17 +354,18 @@ export function ConnectionDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="conn-key">
-              API key {connection?.has_api_key ? "(stored — type to replace)" : ""}
+              {t("connection.apiKey")}{" "}
+              {connection?.has_api_key ? t("connection.apiKeyStored") : ""}
             </Label>
             <Input
               id="conn-key"
               type="password"
               value={apiKey}
-              placeholder={connection?.has_api_key ? "••••••••" : "Leave empty for local servers"}
+              placeholder={connection?.has_api_key ? "••••••••" : t("connection.apiKeyPlaceholder")}
               onChange={(event) => setApiKey(event.target.value)}
             />
             <p className="text-[0.6875rem] text-muted-foreground">
-              Stored in the OS keychain. It is never written to the index, settings or logs.
+              {t("connection.apiKeyHint")}
             </p>
           </div>
 
@@ -373,17 +375,17 @@ export function ConnectionDialog({
         <DialogFooter className="sm:justify-between">
           <Button variant="secondary" onClick={() => test.mutate()} disabled={test.isPending}>
             {test.isPending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-            Test connection
+            {t("connection.test")}
           </Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               disabled={!form.model_id.trim() || save.isPending}
               onClick={() => save.mutate()}
             >
-              Save
+              {t("common.save")}
             </Button>
           </div>
         </DialogFooter>

@@ -14,7 +14,9 @@
     "loading": "Chargement…",
     "remove": "Retirer",
     "previous": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "enabled": "Activé",
+    "disabled": "Désactivé"
   },
   "errors": {
     "ragcore_unreachable": "ragcore injoignable : {{reason}}",
@@ -54,6 +56,74 @@
         "label": "Mises à jour",
         "blurb": "Version utilisée et arrivée des nouvelles."
       }
+    },
+    "saved": "Réglages enregistrés",
+    "saveFailed": "Impossible d'enregistrer",
+    "connections": {
+      "removed": "Connexion retirée",
+      "remote": "Distante",
+      "outputLimit": "{{count}} en sortie",
+      "noOutputLimit": "aucune limite de sortie",
+      "keyInKeychain": "clé dans le trousseau",
+      "add": "Ajouter une connexion"
+    },
+    "retrieval": {
+      "topK": "Passages envoyés au modèle",
+      "topKHint": "Top-k après le reranker. Plus de contexte, réponses plus lentes.",
+      "minScore": "Score minimal",
+      "minScoreHint": "En dessous, un passage est écarté. C'est ce qui permet de répondre « introuvable ».",
+      "rerank": "Candidats à reclasser",
+      "rerankHint": "Le coût est linéaire ici. Quarante sur GPU, vingt sur CPU.",
+      "advanced": "Avancé",
+      "dense": "Candidats denses",
+      "denseHint": "Profondeur de la recherche vectorielle avant fusion.",
+      "keyword": "Candidats par mots-clés",
+      "keywordHint": "Profondeur BM25 avant fusion.",
+      "rrf": "Constante RRF",
+      "rrfHint": "Les petites valeurs font très confiance au premier rang ; les grandes récompensent le consensus large.",
+      "context": "Budget de contexte",
+      "contextHint": "Jetons de passages intégrés au prompt.",
+      "history": "Budget de l'historique",
+      "historyHint": "Jetons d'historique avant que les tours plus anciens soient résumés."
+    },
+    "performance": {
+      "detected": "Détecté : {{gpu}} · {{ram}} Go de RAM · {{cores}} cœurs",
+      "suggested": "Profil suggéré : {{profile}}. On peut le changer ; cela ne modifie que les valeurs par défaut.",
+      "profile": "Profil",
+      "profileHint": "Définit le nombre de candidats et la taille des lots.",
+      "cpuOnly": "CPU uniquement",
+      "balanced": "Équilibré (GPU ≤ 8 Go)",
+      "gpu": "GPU (> 8 Go)",
+      "batch": "Lot d'embedding",
+      "batchHint": "Passages traités par appel pendant l'indexation.",
+      "layers": "Couches sur GPU",
+      "layersHint": "Couches déportées sur le GPU. 999 signifie toutes.",
+      "parsers": "Analyseurs parallèles",
+      "parsersHint": "Fichiers analysés simultanément. À augmenter avec beaucoup de cœurs."
+    },
+    "storage": {
+      "wiped": "Index effacé",
+      "wipeFailed": "Échec de l'effacement",
+      "location": "Emplacement de stockage",
+      "locationHint": "Où résident l'index, les modèles et les réglages.",
+      "crash": "Rapports de plantage",
+      "crashHint": "Sur consentement, sans jamais inclure le contenu des documents.",
+      "wipeAll": "Effacer toutes les données",
+      "wipeHint": "Supprime de l'index chaque source, document, passage et chat. Les fichiers sur le disque ne sont pas touchés et les modèles téléchargés sont conservés.",
+      "wipeIndex": "Effacer l'index",
+      "wipeTitle": "Effacer l'index ?",
+      "wipeBody": "Chaque document indexé et chaque chat sont supprimés et vous repasserez par la configuration. Vos fichiers et vos connexions restent.",
+      "wipeConfirm": "Tout effacer"
+    },
+    "updates": {
+      "latest": "Vous utilisez la dernière version",
+      "downloading": "Téléchargement de la version {{version}}",
+      "failed": "Échec de la recherche de mises à jour",
+      "auto": "Mises à jour automatiques",
+      "autoHint": "Vérifie au lancement et installe en arrière-plan, puis redémarre.",
+      "checking": "Vérification…",
+      "check": "Rechercher des mises à jour",
+      "current": "Version actuelle {{version}}"
     }
   },
   "nav": {
@@ -404,5 +474,53 @@
     "follow": "Suivre",
     "empty": "Aucune sortie pour l'instant.",
     "noMatch": "Aucune ligne ne correspond."
+  },
+  "connection": {
+    "hintOpenrouter": "Route vers n'importe quel modèle proposé par OpenRouter",
+    "hintOpenai": "Modèles GPT, API native d'OpenAI",
+    "hintAnthropic": "Modèles Claude, API native",
+    "hintCustom": "LM Studio, Ollama, llama.cpp, vLLM ou tout autre serveur compatible OpenAI",
+    "providerCustom": "Personnalisé / localhost",
+    "reachable": "Joignable",
+    "notReachable": "Injoignable",
+    "inMs": "en {{ms}}",
+    "modelFound": "modèle trouvé",
+    "streaming": "streaming pris en charge",
+    "testFailed": "Échec du test",
+    "updated": "Connexion mise à jour",
+    "added": "Connexion ajoutée",
+    "editTitle": "Modifier la connexion",
+    "addTitle": "Ajouter une connexion",
+    "lead": "Le modèle rédige la réponse. L'embedding et le reranking restent toujours sur cet appareil.",
+    "provider": "Fournisseur",
+    "name": "Nom",
+    "routing": "Routage des fournisseurs",
+    "sort": {
+      "auto": "Auto (par défaut OpenRouter)",
+      "price": "Le moins cher",
+      "throughput": "Le plus rapide (débit)",
+      "latency": "Le plus rapide (premier jeton)"
+    },
+    "preferred": "Fournisseurs préférés",
+    "preferredPlaceholder": "p. ex. together, fireworks",
+    "preferredHint": "Séparés par des virgules, essayés dans l'ordre. Laisser vide pour laisser OpenRouter choisir.",
+    "baseUrl": "URL de base",
+    "remoteNote": "Distant : les passages retrouvés quitteront cet appareil.",
+    "localNote": "Local : rien ne quitte cet appareil.",
+    "modelId": "ID du modèle",
+    "thinking": "Réflexion",
+    "level": {
+      "off": "désactivée",
+      "low": "faible",
+      "medium": "moyenne",
+      "high": "élevée"
+    },
+    "maxOutput": "Jetons de sortie max.",
+    "noLimit": "Aucune limite",
+    "apiKey": "Clé API",
+    "apiKeyStored": "(enregistrée — saisir pour remplacer)",
+    "apiKeyPlaceholder": "Laisser vide pour les serveurs locaux",
+    "apiKeyHint": "Enregistrée dans le trousseau du système. Jamais écrite dans l'index, les réglages ou les journaux.",
+    "test": "Tester la connexion"
   }
 }

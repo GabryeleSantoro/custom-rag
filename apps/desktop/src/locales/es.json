@@ -14,7 +14,9 @@
     "loading": "Cargando…",
     "remove": "Quitar",
     "previous": "Anterior",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "enabled": "Activado",
+    "disabled": "Desactivado"
   },
   "errors": {
     "ragcore_unreachable": "ragcore inaccesible: {{reason}}",
@@ -54,6 +56,74 @@
         "label": "Actualizaciones",
         "blurb": "Versión en uso y cómo llegan las nuevas."
       }
+    },
+    "saved": "Ajustes guardados",
+    "saveFailed": "No se pudo guardar",
+    "connections": {
+      "removed": "Conexión eliminada",
+      "remote": "Remota",
+      "outputLimit": "{{count}} de salida",
+      "noOutputLimit": "sin límite de salida",
+      "keyInKeychain": "clave en el llavero",
+      "add": "Añadir conexión"
+    },
+    "retrieval": {
+      "topK": "Pasajes enviados al modelo",
+      "topKHint": "Top-k tras el reranker. Más contexto, respuestas más lentas.",
+      "minScore": "Puntuación mínima",
+      "minScoreHint": "Por debajo, un pasaje se descarta. Es lo que permite responder «no encontrado».",
+      "rerank": "Candidatos para el reranking",
+      "rerankHint": "El coste aquí es lineal. Cuarenta en GPU, veinte en CPU.",
+      "advanced": "Avanzado",
+      "dense": "Candidatos densos",
+      "denseHint": "Profundidad de la búsqueda vectorial antes de la fusión.",
+      "keyword": "Candidatos por palabras clave",
+      "keywordHint": "Profundidad BM25 antes de la fusión.",
+      "rrf": "Constante RRF",
+      "rrfHint": "Los valores pequeños confían mucho en el primer puesto; los grandes premian el consenso amplio.",
+      "context": "Presupuesto de contexto",
+      "contextHint": "Tokens de pasajes incluidos en el prompt.",
+      "history": "Presupuesto del historial",
+      "historyHint": "Tokens del historial antes de resumir los turnos más antiguos."
+    },
+    "performance": {
+      "detected": "Detectado: {{gpu}} · {{ram}} GB de RAM · {{cores}} núcleos",
+      "suggested": "Perfil sugerido: {{profile}}. Se puede cambiar; solo modifica los valores predeterminados.",
+      "profile": "Perfil",
+      "profileHint": "Define el número de candidatos y el tamaño de los lotes.",
+      "cpuOnly": "Solo CPU",
+      "balanced": "Equilibrado (GPU ≤ 8 GB)",
+      "gpu": "GPU (> 8 GB)",
+      "batch": "Lote de embedding",
+      "batchHint": "Pasajes procesados por llamada durante la indexación.",
+      "layers": "Capas en GPU",
+      "layersHint": "Capas descargadas a la GPU. 999 significa todas.",
+      "parsers": "Analizadores en paralelo",
+      "parsersHint": "Archivos analizados a la vez. Aumentar con muchos núcleos."
+    },
+    "storage": {
+      "wiped": "Índice borrado",
+      "wipeFailed": "Falló el borrado",
+      "location": "Ubicación del almacenamiento",
+      "locationHint": "Dónde residen el índice, los modelos y los ajustes.",
+      "crash": "Informes de fallos",
+      "crashHint": "Solo con consentimiento y nunca incluye el contenido de los documentos.",
+      "wipeAll": "Borrar todos los datos",
+      "wipeHint": "Elimina del índice cada fuente, documento, pasaje y chat. Los archivos del disco no se tocan y los modelos descargados se conservan.",
+      "wipeIndex": "Borrar índice",
+      "wipeTitle": "¿Borrar el índice?",
+      "wipeBody": "Se eliminan todos los documentos indexados y todos los chats, y volverás a la configuración inicial. Tus archivos y conexiones permanecen.",
+      "wipeConfirm": "Borrar todo"
+    },
+    "updates": {
+      "latest": "Tienes la última versión",
+      "downloading": "Descargando la versión {{version}}",
+      "failed": "Falló la búsqueda de actualizaciones",
+      "auto": "Actualizaciones automáticas",
+      "autoHint": "Comprueba al iniciar e instala en segundo plano, luego reinicia.",
+      "checking": "Comprobando…",
+      "check": "Buscar actualizaciones",
+      "current": "Versión actual {{version}}"
     }
   },
   "nav": {
@@ -404,5 +474,53 @@
     "follow": "Seguir",
     "empty": "Aún no hay salida.",
     "noMatch": "Ninguna línea coincide."
+  },
+  "connection": {
+    "hintOpenrouter": "Enruta a cualquier modelo que ofrezca OpenRouter",
+    "hintOpenai": "Modelos GPT, API nativa de OpenAI",
+    "hintAnthropic": "Modelos Claude, API nativa",
+    "hintCustom": "LM Studio, Ollama, llama.cpp, vLLM o cualquier otro servidor compatible con OpenAI",
+    "providerCustom": "Personalizado / localhost",
+    "reachable": "Accesible",
+    "notReachable": "No accesible",
+    "inMs": "en {{ms}}",
+    "modelFound": "modelo encontrado",
+    "streaming": "streaming compatible",
+    "testFailed": "Falló la prueba",
+    "updated": "Conexión actualizada",
+    "added": "Conexión añadida",
+    "editTitle": "Editar conexión",
+    "addTitle": "Añadir una conexión",
+    "lead": "El modelo escribe la respuesta. El embedding y el reranking siempre permanecen en este dispositivo.",
+    "provider": "Proveedor",
+    "name": "Nombre",
+    "routing": "Enrutamiento de proveedores",
+    "sort": {
+      "auto": "Auto (predeterminado de OpenRouter)",
+      "price": "Más barato",
+      "throughput": "Más rápido (rendimiento)",
+      "latency": "Más rápido (primer token)"
+    },
+    "preferred": "Proveedores preferidos",
+    "preferredPlaceholder": "p. ej. together, fireworks",
+    "preferredHint": "Separados por comas, probados en orden. Dejar vacío para que OpenRouter elija.",
+    "baseUrl": "URL base",
+    "remoteNote": "Remoto: los pasajes recuperados saldrán de este dispositivo.",
+    "localNote": "Local: nada sale de este dispositivo.",
+    "modelId": "ID del modelo",
+    "thinking": "Razonamiento",
+    "level": {
+      "off": "desactivado",
+      "low": "bajo",
+      "medium": "medio",
+      "high": "alto"
+    },
+    "maxOutput": "Máx. tokens de salida",
+    "noLimit": "Sin límite",
+    "apiKey": "Clave API",
+    "apiKeyStored": "(guardada — escribir para reemplazar)",
+    "apiKeyPlaceholder": "Dejar vacío para servidores locales",
+    "apiKeyHint": "Guardada en el llavero del sistema. Nunca se escribe en el índice, los ajustes ni los registros.",
+    "test": "Probar conexión"
   }
 }

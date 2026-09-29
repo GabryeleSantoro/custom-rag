@@ -46,7 +46,12 @@ import {
   type RetrievalSettings,
 } from "@/lib/ipc";
 import { connectionsQuery, hardwareQuery, keys, settingsQuery } from "@/lib/queries";
-import { getLanguagePref, setLanguagePref, type LanguagePref } from "@/lib/i18n";
+import {
+  currentLanguage,
+  getLanguagePref,
+  setLanguagePref,
+  type LanguagePref,
+} from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function Field({
@@ -70,6 +75,7 @@ function Field({
 }
 
 function useSettingsDraft() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const settings = useQuery(settingsQuery);
   const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -82,15 +88,16 @@ function useSettingsDraft() {
     mutationFn: (patch: Parameters<typeof api.patchSettings>[0]) => api.patchSettings(patch),
     onSuccess: (updated) => {
       queryClient.setQueryData(keys.settings, updated);
-      toast.success("Settings saved");
+      toast.success(t("settings.saved"));
     },
-    onError: (error: Error) => toast.error("Could not save", { description: error.message }),
+    onError: (error: Error) => toast.error(t("settings.saveFailed"), { description: error.message }),
   });
 
   return { settings, draft, setDraft, save };
 }
 
 function ConnectionsSection() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const connections = useQuery(connectionsQuery);
 
@@ -106,7 +113,7 @@ function ConnectionsSection() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.connections });
-      toast.success("Connection removed");
+      toast.success(t("settings.connections.removed"));
     },
   });
 
@@ -127,13 +134,13 @@ function ConnectionsSection() {
               <p className="truncate text-[0.8125rem] font-medium">{connection.name}</p>
               {connection.active ? (
                 <span className="rounded-full bg-primary/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-primary">
-                  Active
+                  {t("common.active")}
                 </span>
               ) : null}
               {connection.is_remote ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-status-warn/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-status-warn">
                   <CloudIcon className="size-2.5" />
-                  Remote
+                  {t("settings.connections.remote")}
                 </span>
               ) : null}
             </div>
@@ -143,9 +150,11 @@ function ConnectionsSection() {
             </p>
             <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
               {connection.max_output_tokens
-                ? `${connection.max_output_tokens.toLocaleString()} out`
-                : "no output limit"}
-              {connection.has_api_key ? " · key in keychain" : ""}
+                ? t("settings.connections.outputLimit", {
+                    count: connection.max_output_tokens.toLocaleString(currentLanguage()),
+                  })
+                : t("settings.connections.noOutputLimit")}
+              {connection.has_api_key ? ` · ${t("settings.connections.keyInKeychain")}` : ""}
             </p>
           </div>
 
@@ -157,23 +166,23 @@ function ConnectionsSection() {
                 className="h-7"
                 onClick={() => activate.mutate(connection.id)}
               >
-                Use
+                {t("models.use")}
               </Button>
             ) : null}
             <ConnectionDialog
               connection={connection}
               trigger={
                 <Button variant="ghost" size="sm" className="h-7">
-                  Edit
+                  {t("common.edit")}
                 </Button>
               }
             />
-            <IconTooltip label="Remove">
+            <IconTooltip label={t("common.remove")}>
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-7"
-                aria-label="Remove"
+                aria-label={t("common.remove")}
                 onClick={() => remove.mutate(connection.id)}
               >
                 <Trash2Icon className="size-3.5" />
@@ -187,7 +196,7 @@ function ConnectionsSection() {
         trigger={
           <Button variant="secondary" size="sm">
             <PlusIcon className="size-4" />
-            Add connection
+            {t("settings.connections.add")}
           </Button>
         }
       />
@@ -196,6 +205,7 @@ function ConnectionsSection() {
 }
 
 function RetrievalSection() {
+  const { t } = useTranslation();
   const { draft, setDraft, save } = useSettingsDraft();
   if (!draft) return <Skeleton className="h-40 w-full" />;
 
@@ -207,8 +217,8 @@ function RetrievalSection() {
     <div className="space-y-6">
       <div className="space-y-4">
         <Field
-          label="Passages sent to the model"
-          hint="Top-k after the reranker. More context, slower answers."
+          label={t("settings.retrieval.topK")}
+          hint={t("settings.retrieval.topKHint")}
         >
           <Input
             type="number"
@@ -218,8 +228,8 @@ function RetrievalSection() {
         </Field>
 
         <Field
-          label="Minimum score"
-          hint="Below this, a passage is dropped. This is what lets the app answer “not found”."
+          label={t("settings.retrieval.minScore")}
+          hint={t("settings.retrieval.minScoreHint")}
         >
           <Input
             type="number"
@@ -232,8 +242,8 @@ function RetrievalSection() {
         </Field>
 
         <Field
-          label="Rerank candidates"
-          hint="Cost is linear here. Forty on a GPU, twenty on CPU."
+          label={t("settings.retrieval.rerank")}
+          hint={t("settings.retrieval.rerankHint")}
         >
           <Input
             type="number"
@@ -245,17 +255,17 @@ function RetrievalSection() {
 
       <Collapsible>
         <CollapsibleTrigger className="text-[0.8125rem] font-medium text-muted-foreground hover:text-foreground">
-          Advanced
+          {t("settings.retrieval.advanced")}
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-4 space-y-4">
-          <Field label="Dense candidates" hint="Vector search depth before fusion.">
+          <Field label={t("settings.retrieval.dense")} hint={t("settings.retrieval.denseHint")}>
             <Input
               type="number"
               value={retrieval.dense_top_k}
               onChange={(event) => set("dense_top_k", Number(event.target.value) || 1)}
             />
           </Field>
-          <Field label="Keyword candidates" hint="BM25 depth before fusion.">
+          <Field label={t("settings.retrieval.keyword")} hint={t("settings.retrieval.keywordHint")}>
             <Input
               type="number"
               value={retrieval.bm25_top_k}
@@ -263,8 +273,8 @@ function RetrievalSection() {
             />
           </Field>
           <Field
-            label="RRF constant"
-            hint="Small values trust rank one heavily; large values reward broad agreement."
+            label={t("settings.retrieval.rrf")}
+            hint={t("settings.retrieval.rrfHint")}
           >
             <Input
               type="number"
@@ -272,14 +282,14 @@ function RetrievalSection() {
               onChange={(event) => set("rrf_k", Number(event.target.value) || 1)}
             />
           </Field>
-          <Field label="Context budget" hint="Tokens of passages packed into the prompt.">
+          <Field label={t("settings.retrieval.context")} hint={t("settings.retrieval.contextHint")}>
             <Input
               type="number"
               value={retrieval.context_token_budget}
               onChange={(event) => set("context_token_budget", Number(event.target.value) || 1)}
             />
           </Field>
-          <Field label="History budget" hint="Tokens of chat history before older turns are summarised.">
+          <Field label={t("settings.retrieval.history")} hint={t("settings.retrieval.historyHint")}>
             <Input
               type="number"
               value={retrieval.history_token_budget}
@@ -293,13 +303,14 @@ function RetrievalSection() {
         disabled={save.isPending}
         onClick={() => save.mutate({ retrieval: draft.retrieval })}
       >
-        Save retrieval settings
+        {t("common.save")}
       </Button>
     </div>
   );
 }
 
 function PerformanceSection() {
+  const { t } = useTranslation();
   const { draft, setDraft, save } = useSettingsDraft();
   const hardware = useQuery(hardwareQuery);
   if (!draft) return <Skeleton className="h-40 w-full" />;
@@ -313,17 +324,21 @@ function PerformanceSection() {
       {hardware.data ? (
         <div className="rounded-lg border border-border bg-card p-3 text-[0.6875rem]">
           <p className="font-medium">
-            Detected: {hardware.data.gpu_name ?? hardware.data.gpu_backend.toUpperCase()} ·{" "}
-            {Math.round(hardware.data.ram_mb / 1024)} GB RAM · {hardware.data.cpu_count} cores
+            {t("settings.performance.detected", {
+              gpu: hardware.data.gpu_name ?? hardware.data.gpu_backend.toUpperCase(),
+              ram: Math.round(hardware.data.ram_mb / 1024),
+              cores: hardware.data.cpu_count,
+            })}
           </p>
           <p className="mt-0.5 text-muted-foreground">
-            Suggested profile: {hardware.data.profile}. Overriding it is fine; it only changes
-            defaults.
+            {t("settings.performance.suggested", {
+              profile: t(`onboarding.hardware.profileName.${hardware.data.profile}`),
+            })}
           </p>
         </div>
       ) : null}
 
-      <Field label="Profile" hint="Sets candidate counts and batch sizes.">
+      <Field label={t("settings.performance.profile")} hint={t("settings.performance.profileHint")}>
         <Select
           value={performance.profile}
           onValueChange={(value) => set("profile", value as PerformanceSettings["profile"])}
@@ -332,14 +347,14 @@ function PerformanceSection() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="cpu">CPU only</SelectItem>
-            <SelectItem value="balanced">Balanced (GPU ≤ 8 GB)</SelectItem>
-            <SelectItem value="gpu">GPU (&gt; 8 GB)</SelectItem>
+            <SelectItem value="cpu">{t("settings.performance.cpuOnly")}</SelectItem>
+            <SelectItem value="balanced">{t("settings.performance.balanced")}</SelectItem>
+            <SelectItem value="gpu">{t("settings.performance.gpu")}</SelectItem>
           </SelectContent>
         </Select>
       </Field>
 
-      <Field label="Embedding batch" hint="Passages embedded per call during indexing.">
+      <Field label={t("settings.performance.batch")} hint={t("settings.performance.batchHint")}>
         <Input
           type="number"
           value={performance.embed_batch}
@@ -347,7 +362,7 @@ function PerformanceSection() {
         />
       </Field>
 
-      <Field label="GPU layers" hint="Layers offloaded to the GPU. 999 means all of them.">
+      <Field label={t("settings.performance.layers")} hint={t("settings.performance.layersHint")}>
         <Input
           type="number"
           value={performance.gpu_layers}
@@ -355,7 +370,7 @@ function PerformanceSection() {
         />
       </Field>
 
-      <Field label="Parallel parsers" hint="Files parsed at once. Raise it on many cores.">
+      <Field label={t("settings.performance.parsers")} hint={t("settings.performance.parsersHint")}>
         <Input
           type="number"
           value={performance.max_parallel_parsers}
@@ -367,7 +382,7 @@ function PerformanceSection() {
         disabled={save.isPending}
         onClick={() => save.mutate({ performance: draft.performance })}
       >
-        Save performance settings
+        {t("common.save")}
       </Button>
     </div>
   );
@@ -405,6 +420,7 @@ function GeneralSection() {
 }
 
 function StorageSection() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { draft, setDraft, save } = useSettingsDraft();
 
@@ -412,29 +428,29 @@ function StorageSection() {
     mutationFn: (keepConnections: boolean) => api.wipe(keepConnections),
     onSuccess: () => {
       void queryClient.invalidateQueries();
-      toast.success("Index wiped");
+      toast.success(t("settings.storage.wiped"));
     },
-    onError: (error: Error) => toast.error("Wipe failed", { description: error.message }),
+    onError: (error: Error) => toast.error(t("settings.storage.wipeFailed"), { description: error.message }),
   });
 
   if (!draft) return <Skeleton className="h-40 w-full" />;
 
   return (
     <div className="space-y-6">
-      <Field label="Storage location" hint="Where the index, models and settings live.">
+      <Field label={t("settings.storage.location")} hint={t("settings.storage.locationHint")}>
         <Input
           value={draft.storage_path}
           onChange={(event) => setDraft({ ...draft, storage_path: event.target.value })}
         />
       </Field>
 
-      <Field label="Crash reports" hint="Opt-in, and never includes document content.">
+      <Field label={t("settings.storage.crash")} hint={t("settings.storage.crashHint")}>
         <div className="flex items-center gap-2">
           <Switch
             checked={draft.telemetry}
             onCheckedChange={(checked) => setDraft({ ...draft, telemetry: checked })}
           />
-          <span className="text-[0.8125rem]">{draft.telemetry ? "Enabled" : "Disabled"}</span>
+          <span className="text-[0.8125rem]">{draft.telemetry ? t("common.enabled") : t("common.disabled")}</span>
         </div>
       </Field>
 
@@ -444,40 +460,38 @@ function StorageSection() {
           save.mutate({ storage_path: draft.storage_path, telemetry: draft.telemetry })
         }
       >
-        Save storage settings
+        {t("common.save")}
       </Button>
 
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
         <h3 className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-destructive">
           <HardDriveIcon className="size-3.5" />
-          Wipe all data
+          {t("settings.storage.wipeAll")}
         </h3>
         <p className="mt-1 max-w-prose text-[0.6875rem] leading-[1.5] text-muted-foreground">
-          Deletes every source, document, passage and chat from the index. Files on disk are not
-          touched, and downloaded models are kept.
+          {t("settings.storage.wipeHint")}
         </p>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm" className="mt-3">
-              Wipe index
+              {t("settings.storage.wipeIndex")}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Wipe the index?</AlertDialogTitle>
+              <AlertDialogTitle>{t("settings.storage.wipeTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Every indexed document and every chat is removed and you will be taken back
-                through setup. Your files and your connections stay.
+                {t("settings.storage.wipeBody")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => wipe.mutate(true)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Wipe everything
+                {t("settings.storage.wipeConfirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

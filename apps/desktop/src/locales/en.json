@@ -14,7 +14,9 @@
     "loading": "Loading…",
     "remove": "Remove",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
   },
   "errors": {
     "ragcore_unreachable": "ragcore unreachable: {{reason}}",
@@ -54,6 +56,74 @@
         "label": "Updates",
         "blurb": "Version in use, and how new ones arrive."
       }
+    },
+    "saved": "Settings saved",
+    "saveFailed": "Could not save",
+    "connections": {
+      "removed": "Connection removed",
+      "remote": "Remote",
+      "outputLimit": "{{count}} out",
+      "noOutputLimit": "no output limit",
+      "keyInKeychain": "key in keychain",
+      "add": "Add connection"
+    },
+    "retrieval": {
+      "topK": "Passages sent to the model",
+      "topKHint": "Top-k after the reranker. More context, slower answers.",
+      "minScore": "Minimum score",
+      "minScoreHint": "Below this, a passage is dropped. This is what lets the app answer “not found”.",
+      "rerank": "Rerank candidates",
+      "rerankHint": "Cost is linear here. Forty on a GPU, twenty on CPU.",
+      "advanced": "Advanced",
+      "dense": "Dense candidates",
+      "denseHint": "Vector search depth before fusion.",
+      "keyword": "Keyword candidates",
+      "keywordHint": "BM25 depth before fusion.",
+      "rrf": "RRF constant",
+      "rrfHint": "Small values trust rank one heavily; large values reward broad agreement.",
+      "context": "Context budget",
+      "contextHint": "Tokens of passages packed into the prompt.",
+      "history": "History budget",
+      "historyHint": "Tokens of chat history before older turns are summarised."
+    },
+    "performance": {
+      "detected": "Detected: {{gpu}} · {{ram}} GB RAM · {{cores}} cores",
+      "suggested": "Suggested profile: {{profile}}. Overriding it is fine; it only changes defaults.",
+      "profile": "Profile",
+      "profileHint": "Sets candidate counts and batch sizes.",
+      "cpuOnly": "CPU only",
+      "balanced": "Balanced (GPU ≤ 8 GB)",
+      "gpu": "GPU (> 8 GB)",
+      "batch": "Embedding batch",
+      "batchHint": "Passages embedded per call during indexing.",
+      "layers": "GPU layers",
+      "layersHint": "Layers offloaded to the GPU. 999 means all of them.",
+      "parsers": "Parallel parsers",
+      "parsersHint": "Files parsed at once. Raise it on many cores."
+    },
+    "storage": {
+      "wiped": "Index wiped",
+      "wipeFailed": "Wipe failed",
+      "location": "Storage location",
+      "locationHint": "Where the index, models and settings live.",
+      "crash": "Crash reports",
+      "crashHint": "Opt-in, and never includes document content.",
+      "wipeAll": "Wipe all data",
+      "wipeHint": "Deletes every source, document, passage and chat from the index. Files on disk are not touched, and downloaded models are kept.",
+      "wipeIndex": "Wipe index",
+      "wipeTitle": "Wipe the index?",
+      "wipeBody": "Every indexed document and every chat is removed and you will be taken back through setup. Your files and your connections stay.",
+      "wipeConfirm": "Wipe everything"
+    },
+    "updates": {
+      "latest": "You are on the latest version",
+      "downloading": "Version {{version}} is downloading",
+      "failed": "Update check failed",
+      "auto": "Automatic updates",
+      "autoHint": "Checks at launch and installs in the background, then restarts.",
+      "checking": "Checking…",
+      "check": "Check for updates",
+      "current": "Current version {{version}}"
     }
   },
   "nav": {
@@ -404,5 +474,53 @@
     "follow": "Follow",
     "empty": "No output yet.",
     "noMatch": "No line matches."
+  },
+  "connection": {
+    "hintOpenrouter": "Routes to any model OpenRouter offers",
+    "hintOpenai": "GPT models, native OpenAI API",
+    "hintAnthropic": "Claude models, native API",
+    "hintCustom": "LM Studio, Ollama, llama.cpp, vLLM, or any other OpenAI-compatible server",
+    "providerCustom": "Custom / localhost",
+    "reachable": "Reachable",
+    "notReachable": "Not reachable",
+    "inMs": "in {{ms}}",
+    "modelFound": "model found",
+    "streaming": "streaming supported",
+    "testFailed": "Test failed",
+    "updated": "Connection updated",
+    "added": "Connection added",
+    "editTitle": "Edit connection",
+    "addTitle": "Add a connection",
+    "lead": "The model writes the answer. Embedding and reranking always stay on this device.",
+    "provider": "Provider",
+    "name": "Name",
+    "routing": "Provider routing",
+    "sort": {
+      "auto": "Auto (OpenRouter default)",
+      "price": "Cheapest",
+      "throughput": "Fastest (throughput)",
+      "latency": "Fastest (first token)"
+    },
+    "preferred": "Preferred providers",
+    "preferredPlaceholder": "e.g. together, fireworks",
+    "preferredHint": "Comma-separated, tried in order. Leave empty to let OpenRouter pick.",
+    "baseUrl": "Base URL",
+    "remoteNote": "Remote: retrieved passages will leave this device.",
+    "localNote": "Local: nothing leaves this device.",
+    "modelId": "Model ID",
+    "thinking": "Thinking",
+    "level": {
+      "off": "off",
+      "low": "low",
+      "medium": "medium",
+      "high": "high"
+    },
+    "maxOutput": "Max output tokens",
+    "noLimit": "No limit",
+    "apiKey": "API key",
+    "apiKeyStored": "(stored — type to replace)",
+    "apiKeyPlaceholder": "Leave empty for local servers",
+    "apiKeyHint": "Stored in the OS keychain. It is never written to the index, settings or logs.",
+    "test": "Test connection"
   }
 }

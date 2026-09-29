@@ -14,7 +14,9 @@
     "loading": "Caricamento…",
     "remove": "Rimuovi",
     "previous": "Precedente",
-    "next": "Successivo"
+    "next": "Successivo",
+    "enabled": "Attivo",
+    "disabled": "Disattivato"
   },
   "errors": {
     "ragcore_unreachable": "ragcore non raggiungibile: {{reason}}",
@@ -54,6 +56,74 @@
         "label": "Aggiornamenti",
         "blurb": "Versione in uso e come arrivano le nuove."
       }
+    },
+    "saved": "Impostazioni salvate",
+    "saveFailed": "Impossibile salvare",
+    "connections": {
+      "removed": "Connessione rimossa",
+      "remote": "Remota",
+      "outputLimit": "{{count}} in uscita",
+      "noOutputLimit": "nessun limite di output",
+      "keyInKeychain": "chiave nel portachiavi",
+      "add": "Aggiungi connessione"
+    },
+    "retrieval": {
+      "topK": "Passaggi inviati al modello",
+      "topKHint": "Top-k dopo il reranker. Più contesto, risposte più lente.",
+      "minScore": "Punteggio minimo",
+      "minScoreHint": "Sotto questa soglia un passaggio viene scartato. È ciò che permette di rispondere «non trovato».",
+      "rerank": "Candidati per il reranking",
+      "rerankHint": "Il costo qui è lineare. Quaranta su GPU, venti su CPU.",
+      "advanced": "Avanzate",
+      "dense": "Candidati densi",
+      "denseHint": "Profondità della ricerca vettoriale prima della fusione.",
+      "keyword": "Candidati per parole chiave",
+      "keywordHint": "Profondità BM25 prima della fusione.",
+      "rrf": "Costante RRF",
+      "rrfHint": "Valori bassi si fidano molto del primo posto; valori alti premiano il consenso ampio.",
+      "context": "Budget di contesto",
+      "contextHint": "Token di passaggi inseriti nel prompt.",
+      "history": "Budget della cronologia",
+      "historyHint": "Token di cronologia della chat prima che i turni più vecchi vengano riassunti."
+    },
+    "performance": {
+      "detected": "Rilevato: {{gpu}} · {{ram}} GB di RAM · {{cores}} core",
+      "suggested": "Profilo suggerito: {{profile}}. Si può cambiare: modifica solo i valori predefiniti.",
+      "profile": "Profilo",
+      "profileHint": "Imposta il numero di candidati e la dimensione dei batch.",
+      "cpuOnly": "Solo CPU",
+      "balanced": "Bilanciato (GPU ≤ 8 GB)",
+      "gpu": "GPU (> 8 GB)",
+      "batch": "Batch di embedding",
+      "batchHint": "Passaggi elaborati per chiamata durante l'indicizzazione.",
+      "layers": "Layer su GPU",
+      "layersHint": "Layer spostati sulla GPU. 999 significa tutti.",
+      "parsers": "Parser paralleli",
+      "parsersHint": "File analizzati contemporaneamente. Aumentare con molti core."
+    },
+    "storage": {
+      "wiped": "Indice cancellato",
+      "wipeFailed": "Cancellazione non riuscita",
+      "location": "Posizione di archiviazione",
+      "locationHint": "Dove risiedono indice, modelli e impostazioni.",
+      "crash": "Segnalazioni di arresto anomalo",
+      "crashHint": "Solo su consenso e senza mai includere il contenuto dei documenti.",
+      "wipeAll": "Cancella tutti i dati",
+      "wipeHint": "Elimina dall'indice ogni fonte, documento, passaggio e chat. I file su disco non vengono toccati e i modelli scaricati restano.",
+      "wipeIndex": "Cancella indice",
+      "wipeTitle": "Cancellare l'indice?",
+      "wipeBody": "Ogni documento indicizzato e ogni chat verranno rimossi e si tornerà alla configurazione iniziale. I file e le connessioni restano.",
+      "wipeConfirm": "Cancella tutto"
+    },
+    "updates": {
+      "latest": "La versione è aggiornata",
+      "downloading": "Download della versione {{version}} in corso",
+      "failed": "Controllo aggiornamenti non riuscito",
+      "auto": "Aggiornamenti automatici",
+      "autoHint": "Controlla all'avvio e installa in background, poi riavvia.",
+      "checking": "Controllo…",
+      "check": "Controlla aggiornamenti",
+      "current": "Versione attuale {{version}}"
     }
   },
   "nav": {
@@ -404,5 +474,53 @@
     "follow": "Segui",
     "empty": "Ancora nessun output.",
     "noMatch": "Nessuna riga corrisponde."
+  },
+  "connection": {
+    "hintOpenrouter": "Instrada verso qualsiasi modello offerto da OpenRouter",
+    "hintOpenai": "Modelli GPT, API nativa di OpenAI",
+    "hintAnthropic": "Modelli Claude, API nativa",
+    "hintCustom": "LM Studio, Ollama, llama.cpp, vLLM o qualsiasi server compatibile con OpenAI",
+    "providerCustom": "Personalizzato / localhost",
+    "reachable": "Raggiungibile",
+    "notReachable": "Non raggiungibile",
+    "inMs": "in {{ms}}",
+    "modelFound": "modello trovato",
+    "streaming": "streaming supportato",
+    "testFailed": "Test non riuscito",
+    "updated": "Connessione aggiornata",
+    "added": "Connessione aggiunta",
+    "editTitle": "Modifica connessione",
+    "addTitle": "Aggiungi una connessione",
+    "lead": "Il modello scrive la risposta. Embedding e reranking restano sempre su questo dispositivo.",
+    "provider": "Provider",
+    "name": "Nome",
+    "routing": "Instradamento provider",
+    "sort": {
+      "auto": "Auto (predefinito OpenRouter)",
+      "price": "Più economico",
+      "throughput": "Più veloce (throughput)",
+      "latency": "Più veloce (primo token)"
+    },
+    "preferred": "Provider preferiti",
+    "preferredPlaceholder": "es. together, fireworks",
+    "preferredHint": "Separati da virgola, provati in ordine. Lasciare vuoto per scegliere automaticamente.",
+    "baseUrl": "URL di base",
+    "remoteNote": "Remoto: i passaggi recuperati lasceranno questo dispositivo.",
+    "localNote": "Locale: nulla lascia questo dispositivo.",
+    "modelId": "ID del modello",
+    "thinking": "Ragionamento",
+    "level": {
+      "off": "disattivato",
+      "low": "basso",
+      "medium": "medio",
+      "high": "alto"
+    },
+    "maxOutput": "Token massimi in uscita",
+    "noLimit": "Nessun limite",
+    "apiKey": "Chiave API",
+    "apiKeyStored": "(salvata — digitare per sostituire)",
+    "apiKeyPlaceholder": "Lasciare vuoto per i server locali",
+    "apiKeyHint": "Salvata nel portachiavi del sistema. Non viene mai scritta in indice, impostazioni o log.",
+    "test": "Prova connessione"
   }
 }

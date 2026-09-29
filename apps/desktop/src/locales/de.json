@@ -14,7 +14,9 @@
     "loading": "Wird geladen …",
     "remove": "Entfernen",
     "previous": "Zurück",
-    "next": "Weiter"
+    "next": "Weiter",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert"
   },
   "errors": {
     "ragcore_unreachable": "ragcore nicht erreichbar: {{reason}}",
@@ -54,6 +56,74 @@
         "label": "Updates",
         "blurb": "Verwendete Version und wie neue ankommen."
       }
+    },
+    "saved": "Einstellungen gespeichert",
+    "saveFailed": "Speichern nicht möglich",
+    "connections": {
+      "removed": "Verbindung entfernt",
+      "remote": "Entfernt",
+      "outputLimit": "{{count}} Ausgabe",
+      "noOutputLimit": "kein Ausgabelimit",
+      "keyInKeychain": "Schlüssel im Schlüsselbund",
+      "add": "Verbindung hinzufügen"
+    },
+    "retrieval": {
+      "topK": "An das Modell gesendete Passagen",
+      "topKHint": "Top-k nach dem Reranker. Mehr Kontext, langsamere Antworten.",
+      "minScore": "Mindestscore",
+      "minScoreHint": "Darunter wird eine Passage verworfen. Dadurch kann die App „nicht gefunden“ antworten.",
+      "rerank": "Kandidaten für das Reranking",
+      "rerankHint": "Der Aufwand ist hier linear. Vierzig auf einer GPU, zwanzig auf der CPU.",
+      "advanced": "Erweitert",
+      "dense": "Dense-Kandidaten",
+      "denseHint": "Tiefe der Vektorsuche vor der Fusion.",
+      "keyword": "Stichwort-Kandidaten",
+      "keywordHint": "BM25-Tiefe vor der Fusion.",
+      "rrf": "RRF-Konstante",
+      "rrfHint": "Kleine Werte vertrauen stark dem ersten Rang; große Werte belohnen breite Übereinstimmung.",
+      "context": "Kontextbudget",
+      "contextHint": "Token an Passagen, die in den Prompt gepackt werden.",
+      "history": "Verlaufsbudget",
+      "historyHint": "Token des Chatverlaufs, bevor ältere Beiträge zusammengefasst werden."
+    },
+    "performance": {
+      "detected": "Erkannt: {{gpu}} · {{ram}} GB RAM · {{cores}} Kerne",
+      "suggested": "Empfohlenes Profil: {{profile}}. Es darf überschrieben werden; das ändert nur Vorgaben.",
+      "profile": "Profil",
+      "profileHint": "Legt Kandidatenzahlen und Batchgrößen fest.",
+      "cpuOnly": "Nur CPU",
+      "balanced": "Ausgewogen (GPU ≤ 8 GB)",
+      "gpu": "GPU (> 8 GB)",
+      "batch": "Embedding-Batch",
+      "batchHint": "Pro Aufruf eingebettete Passagen bei der Indizierung.",
+      "layers": "GPU-Schichten",
+      "layersHint": "Auf die GPU ausgelagerte Schichten. 999 bedeutet alle.",
+      "parsers": "Parallele Parser",
+      "parsersHint": "Gleichzeitig analysierte Dateien. Bei vielen Kernen erhöhen."
+    },
+    "storage": {
+      "wiped": "Index gelöscht",
+      "wipeFailed": "Löschen fehlgeschlagen",
+      "location": "Speicherort",
+      "locationHint": "Wo Index, Modelle und Einstellungen liegen.",
+      "crash": "Absturzberichte",
+      "crashHint": "Nur mit Zustimmung und niemals mit Dokumentinhalten.",
+      "wipeAll": "Alle Daten löschen",
+      "wipeHint": "Löscht jede Quelle, jedes Dokument, jede Passage und jeden Chat aus dem Index. Dateien auf der Festplatte bleiben unberührt, heruntergeladene Modelle bleiben erhalten.",
+      "wipeIndex": "Index löschen",
+      "wipeTitle": "Index löschen?",
+      "wipeBody": "Jedes indizierte Dokument und jeder Chat werden entfernt, und die Einrichtung beginnt von vorn. Ihre Dateien und Verbindungen bleiben.",
+      "wipeConfirm": "Alles löschen"
+    },
+    "updates": {
+      "latest": "Sie nutzen die neueste Version",
+      "downloading": "Version {{version}} wird heruntergeladen",
+      "failed": "Update-Prüfung fehlgeschlagen",
+      "auto": "Automatische Updates",
+      "autoHint": "Prüft beim Start, installiert im Hintergrund und startet dann neu.",
+      "checking": "Prüfung läuft …",
+      "check": "Nach Updates suchen",
+      "current": "Aktuelle Version {{version}}"
     }
   },
   "nav": {
@@ -404,5 +474,53 @@
     "follow": "Folgen",
     "empty": "Noch keine Ausgabe.",
     "noMatch": "Keine Zeile passt."
+  },
+  "connection": {
+    "hintOpenrouter": "Leitet an jedes von OpenRouter angebotene Modell weiter",
+    "hintOpenai": "GPT-Modelle, native OpenAI-API",
+    "hintAnthropic": "Claude-Modelle, native API",
+    "hintCustom": "LM Studio, Ollama, llama.cpp, vLLM oder ein anderer OpenAI-kompatibler Server",
+    "providerCustom": "Benutzerdefiniert / localhost",
+    "reachable": "Erreichbar",
+    "notReachable": "Nicht erreichbar",
+    "inMs": "in {{ms}}",
+    "modelFound": "Modell gefunden",
+    "streaming": "Streaming unterstützt",
+    "testFailed": "Test fehlgeschlagen",
+    "updated": "Verbindung aktualisiert",
+    "added": "Verbindung hinzugefügt",
+    "editTitle": "Verbindung bearbeiten",
+    "addTitle": "Verbindung hinzufügen",
+    "lead": "Das Modell schreibt die Antwort. Embedding und Reranking bleiben immer auf diesem Gerät.",
+    "provider": "Anbieter",
+    "name": "Name",
+    "routing": "Anbieter-Routing",
+    "sort": {
+      "auto": "Auto (OpenRouter-Standard)",
+      "price": "Günstigster",
+      "throughput": "Schnellster (Durchsatz)",
+      "latency": "Schnellster (erstes Token)"
+    },
+    "preferred": "Bevorzugte Anbieter",
+    "preferredPlaceholder": "z. B. together, fireworks",
+    "preferredHint": "Kommagetrennt, in dieser Reihenfolge versucht. Leer lassen, damit OpenRouter wählt.",
+    "baseUrl": "Basis-URL",
+    "remoteNote": "Entfernt: gefundene Passagen verlassen dieses Gerät.",
+    "localNote": "Lokal: nichts verlässt dieses Gerät.",
+    "modelId": "Modell-ID",
+    "thinking": "Denkaufwand",
+    "level": {
+      "off": "aus",
+      "low": "niedrig",
+      "medium": "mittel",
+      "high": "hoch"
+    },
+    "maxOutput": "Max. Ausgabe-Token",
+    "noLimit": "Kein Limit",
+    "apiKey": "API-Schlüssel",
+    "apiKeyStored": "(gespeichert — zum Ersetzen eingeben)",
+    "apiKeyPlaceholder": "Für lokale Server leer lassen",
+    "apiKeyHint": "Im Schlüsselbund des Systems gespeichert. Wird nie in Index, Einstellungen oder Protokolle geschrieben.",
+    "test": "Verbindung testen"
   }
 }
