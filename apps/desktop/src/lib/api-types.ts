@@ -1793,7 +1793,7 @@ export interface components {
              * @default it
              * @enum {string}
              */
-            language: "it" | "en";
+            language: "it" | "en" | "fr" | "de" | "es";
             /**
              * Depth
              * @default deep

@@ -47,6 +47,8 @@ import {
 } from "@/lib/ipc";
 import { connectionsQuery, hardwareQuery, keys, settingsQuery } from "@/lib/queries";
 import {
+  LANGUAGES,
+  LANGUAGE_NAMES,
   currentLanguage,
   getLanguagePref,
   setLanguagePref,
@@ -407,11 +409,11 @@ function GeneralSection() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="system">{t("settings.language.system")}</SelectItem>
-            <SelectItem value="en">English</SelectItem>
-            <SelectItem value="it">Italiano</SelectItem>
-            <SelectItem value="fr">Français</SelectItem>
-            <SelectItem value="de">Deutsch</SelectItem>
-            <SelectItem value="es">Español</SelectItem>
+            {LANGUAGES.map((language) => (
+              <SelectItem key={language} value={language}>
+                {LANGUAGE_NAMES[language]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </Field>

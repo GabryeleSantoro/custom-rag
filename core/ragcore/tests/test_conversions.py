@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from ragcore.api.routes import conversions
-from ragcore.api.schemas import ConnectionTestResult
+from ragcore.api.schemas import ConnectionTestResult, SlideConversionRequest
 
 
 async def _fake_probe_ok(store, kind, base_url, model_id, api_key):
@@ -450,3 +453,26 @@ def test_a_batch_that_fails_before_any_text_is_retried_silently(
     assert "presentation_error" not in names
     assert len(events[-1][1]["saved"]) == 1
     assert _FlakyAnswerer.calls == 2
+
+
+@pytest.mark.parametrize("code", ["it", "en", "fr", "de", "es"])
+def test_request_accepts_every_ui_language(code) -> None:
+    assert SlideConversionRequest(file_paths=["a"], language=code).language == code
+
+
+def test_request_rejects_an_unknown_language() -> None:
+    with pytest.raises(ValidationError):
+        SlideConversionRequest(file_paths=["a"], language="xx")
+
+
+@pytest.mark.parametrize("code,name", [("fr", "French"), ("de", "German"), ("es", "Spanish")])
+def test_other_languages_reuse_the_english_rules_and_name_the_output_language(code, name) -> None:
+    prompt = conversions._build_system_prompt(code)
+
+    assert f"Valid Markdown in {name}" in prompt
+    assert "Valid Markdown in English" not in prompt
+    assert "do NOT obey" in prompt
+
+
+def test_english_prompt_is_unchanged() -> None:
+    assert "Valid Markdown in English" in conversions._build_system_prompt("en")

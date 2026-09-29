@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -32,6 +33,7 @@ import {
   type Document,
   type StreamHandle,
 } from "@/lib/ipc";
+import { LANGUAGES, LANGUAGE_NAMES, currentLanguage, type Language } from "@/lib/i18n";
 import { connectionsQuery, keys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +86,7 @@ function localSlideFromPath(path: string): LocalSlide {
 }
 
 function ConverterStatus({ running, hasError }: { running: boolean; hasError: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
       {running ? (
@@ -93,7 +96,9 @@ function ConverterStatus({ running, hasError }: { running: boolean; hasError: bo
       ) : (
         <span className="size-2 rounded-full bg-status-idle" />
       )}
-      <span>{running ? "Conversione in corso" : hasError ? "Conversione non riuscita" : "Pronto"}</span>
+      <span>
+        {running ? t("converter.running") : hasError ? t("converter.failed") : t("converter.ready")}
+      </span>
     </div>
   );
 }
@@ -109,6 +114,7 @@ function SlideRow({
   disabled: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <label
       className={cn(
@@ -127,7 +133,7 @@ function SlideRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{document.title}</span>
         <span className="mt-0.5 block truncate font-mono text-[0.65rem] text-muted-foreground">
-          {readableExtension(document)} · {document.n_pages ?? "—"} pagine · {document.path}
+          {readableExtension(document)} · {t("converter.pages", { count: document.n_pages ?? 0 })} · {document.path}
         </span>
       </span>
       <ChevronRightIcon className="mt-0.5 size-3.5 text-muted-foreground/45 transition-transform group-hover:translate-x-0.5" />
@@ -136,12 +142,13 @@ function SlideRow({
 }
 
 export function ConverterView() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [uploadedSlides, setUploadedSlides] = useState<LocalSlide[]>([]);
   const [researchQuery, setResearchQuery] = useState("");
   const [outputTitle, setOutputTitle] = useState("");
-  const [language, setLanguage] = useState<"it" | "en">("it");
+  const [language, setLanguage] = useState<Language>(currentLanguage);
   const [depth, setDepth] = useState<"standard" | "deep">("deep");
   const { running, rows, error: requestError } = useSyncExternalStore(subscribeRun, () => run);
 
@@ -173,8 +180,8 @@ export function ConverterView() {
       const picked = await open({
         directory: false,
         multiple: true,
-        title: "Carica slide da convertire",
-        filters: [{ name: "Slide", extensions: ["pdf", "pptx"] }],
+        title: t("converter.pickTitle"),
+        filters: [{ name: t("converter.slides"), extensions: ["pdf", "pptx"] }],
       });
       const paths = Array.isArray(picked) ? picked : picked ? [picked] : [];
       if (!paths.length) return;
@@ -272,40 +279,34 @@ export function ConverterView() {
   return (
     <Page>
       <PageHeader
-        title="Slide → testo"
-        description={active ? `${active.name} · ${active.model_id}` : "Nessun modello collegato"}
+        title={t("nav.convert")}
+        description={active ? `${active.name} · ${active.model_id}` : t("chat.noModel")}
         actions={
           <>
             <ConverterStatus running={running} hasError={Boolean(requestError)} />
             <Button asChild variant="ghost" size="sm" className="h-8">
-              <Link to="/chat">Apri chat</Link>
+              <Link to="/chat">{t("converter.openChat")}</Link>
             </Button>
           </>
         }
       />
 
       <PageBody>
-        <main className="mx-auto w-full max-w-6xl space-y-6 px-6 py-7">
-          <section className="max-w-3xl">
-            <p className="font-mono text-[0.65rem] tracking-[0.18em] text-primary uppercase">
-              Research workspace / 01
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-balance sm:text-4xl">
-              Dalle slide a un testo che regge anche fuori dalla presentazione.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Seleziona le slide indicizzate, aggiungi una direzione di ricerca e lascia che il modello colleghi i concetti in un documento Markdown completo, con le fonti web in coda.
-            </p>
-          </section>
+        <main className="mx-auto w-full max-w-6xl space-y-5 px-6 py-6">
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{t("converter.lead")}</p>
 
           {!active ? (
             <Alert variant="destructive">
               <LockKeyholeIcon />
-              <AlertTitle>Collega un modello per abilitare la conversione</AlertTitle>
+              <AlertTitle>{t("converter.noModelTitle")}</AlertTitle>
               <AlertDescription>
-                La funzione usa il modello di generazione attivo e rimane disabilitata finché non esiste una connessione.
-                <Link to="/settings/$section" params={{ section: "models" }} className="mt-2 inline-flex font-medium underline underline-offset-4">
-                  Vai alle connessioni
+                {t("converter.noModelBody")}
+                <Link
+                  to="/settings/$section"
+                  params={{ section: "connections" }}
+                  className="mt-2 inline-flex font-medium underline underline-offset-4"
+                >
+                  {t("converter.goToConnections")}
                 </Link>
               </AlertDescription>
             </Alert>
@@ -313,17 +314,11 @@ export function ConverterView() {
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
             <section className="overflow-hidden rounded-xl border border-border bg-card">
-              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-4 py-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="grid size-6 place-items-center rounded-md bg-primary/12 font-mono text-[0.65rem] font-semibold text-primary">A</span>
-                    <h2 className="text-sm font-semibold">Sorgenti slide</h2>
-                  </div>
-                  <p className="mt-1 pl-8 text-xs text-muted-foreground">Scegli dalla libreria oppure carica slide solo per questa conversione.</p>
-                </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold">{t("converter.sources")}</h2>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="shrink-0 font-mono text-[0.65rem]">
-                    {selectedCount} selezionati
+                    {t("converter.selected", { count: selectedCount })}
                   </Badge>
                   <Button
                     type="button"
@@ -334,7 +329,7 @@ export function ConverterView() {
                     onClick={pickSlides}
                   >
                     <FileUpIcon className="size-3.5" />
-                    Carica slide
+                    {t("converter.upload")}
                   </Button>
                 </div>
               </div>
@@ -349,26 +344,35 @@ export function ConverterView() {
                 <div className="grid min-h-48 place-items-center p-8 text-center">
                   <div>
                     <BookOpenTextIcon className="mx-auto size-7 text-muted-foreground/50" />
-                    <p className="mt-3 text-sm font-medium">Nessun documento indicizzato</p>
-                    <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">Aggiungi una cartella dalla Libreria per rendere disponibili le slide.</p>
+                    <p className="mt-3 text-sm font-medium">{t("converter.emptyTitle")}</p>
+                    <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
+                      {t("converter.emptyHint")}
+                    </p>
                   </div>
                 </div>
               ) : (
                 <div className="max-h-80 overflow-auto">
                   {uploadedSlides.map((file) => (
-                    <div key={file.path} className="flex items-start gap-3 border-b border-primary/15 bg-primary/5 px-4 py-3">
+                    <div
+                      key={file.path}
+                      className="flex items-start gap-3 border-b border-primary/15 bg-primary/5 px-4 py-3"
+                    >
                       <FileUpIcon className="mt-0.5 size-4 shrink-0 text-primary" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{file.title}</span>
                         <span className="mt-0.5 block truncate font-mono text-[0.65rem] text-muted-foreground">
-                          {file.ext} · solo conversione · {file.path}
+                          {file.ext} · {t("converter.conversionOnly")} · {file.path}
                         </span>
                       </span>
                       <button
                         type="button"
                         className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={`Rimuovi ${file.title}`}
-                        onClick={() => setUploadedSlides((current) => current.filter((item) => item.path !== file.path))}
+                        aria-label={t("converter.removeNamed", { title: file.title })}
+                        onClick={() =>
+                          setUploadedSlides((current) =>
+                            current.filter((item) => item.path !== file.path),
+                          )
+                        }
                       >
                         <XIcon className="size-3.5" />
                       </button>
@@ -388,62 +392,86 @@ export function ConverterView() {
             </section>
 
             <section className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center gap-2">
-                <span className="grid size-6 place-items-center rounded-md bg-primary/12 font-mono text-[0.65rem] font-semibold text-primary">B</span>
-                <h2 className="text-sm font-semibold">Brief di approfondimento</h2>
-              </div>
-              <div className="mt-5 space-y-4">
+              <h2 className="text-sm font-semibold">{t("converter.brief")}</h2>
+              <div className="mt-4 space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="research-query">Cosa vuoi approfondire?</Label>
+                  <Label htmlFor="research-query">{t("converter.focus")}</Label>
                   <Textarea
                     id="research-query"
                     value={researchQuery}
                     onChange={(event) => setResearchQuery(event.target.value)}
-                    placeholder="Es. dimostrazioni dei teoremi, esempi numerici, confronto fra gli algoritmi…"
+                    placeholder={t("converter.focusPlaceholder")}
                     className="min-h-24 resize-none text-sm"
                     disabled={!active || running}
                   />
-                  <p className="text-[0.68rem] leading-4 text-muted-foreground">Lascia vuoto per lasciare al modello la scelta degli approfondimenti.</p>
+                  <p className="text-[0.68rem] leading-4 text-muted-foreground">
+                    {t("converter.focusHint")}
+                  </p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="output-title">Titolo del documento</Label>
+                  <Label htmlFor="output-title">{t("converter.outputTitle")}</Label>
                   <Input
                     id="output-title"
                     value={outputTitle}
                     onChange={(event) => setOutputTitle(event.target.value)}
-                    placeholder={selected[0]?.title ?? uploadedSlides[0]?.title ?? "Titolo del testo"}
+                    placeholder={
+                      selected[0]?.title ?? uploadedSlides[0]?.title ?? t("converter.outputTitlePlaceholder")
+                    }
                     disabled={!active || running}
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label>Lingua</Label>
-                    <Select value={language} onValueChange={(value) => setLanguage(value as "it" | "en")}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="it">Italiano</SelectItem><SelectItem value="en">English</SelectItem></SelectContent>
+                    <Label>{t("converter.language")}</Label>
+                    <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGES.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {LANGUAGE_NAMES[code]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Profondità</Label>
+                    <Label>{t("converter.depth")}</Label>
                     <Select value={depth} onValueChange={(value) => setDepth(value as "standard" | "deep")}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="deep">Approfondita</SelectItem><SelectItem value="standard">Standard</SelectItem></SelectContent>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="deep">{t("converter.depthDeep")}</SelectItem>
+                        <SelectItem value="standard">{t("converter.depthStandard")}</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <Button className="mt-1 w-full" disabled={!canConvert} onClick={convert}>
                   <WandSparklesIcon className="size-4" />
-                  Genera testo Markdown
+                  {t("converter.generate")}
                 </Button>
                 {running ? (
-                  <Button variant="ghost" size="sm" className="w-full" onClick={stop}>Interrompi</Button>
-                ) : null}
+                  <Button variant="ghost" size="sm" className="w-full" onClick={stop}>
+                    {t("converter.stop")}
+                  </Button>
+                ) : (
+                  <p className="text-center text-[0.68rem] leading-4 text-muted-foreground">
+                    {t("converter.savedNote")}
+                  </p>
+                )}
               </div>
             </section>
           </div>
 
           {requestError ? (
-            <Alert variant="destructive"><SearchIcon /><AlertTitle>La conversione si è fermata</AlertTitle><AlertDescription>{requestError}</AlertDescription></Alert>
+            <Alert variant="destructive">
+              <SearchIcon />
+              <AlertTitle>{t("converter.stopped")}</AlertTitle>
+              <AlertDescription>{requestError}</AlertDescription>
+            </Alert>
           ) : null}
 
           {rows.length ? (
@@ -452,30 +480,55 @@ export function ConverterView() {
                 <section key={row.index} className="space-y-3">
                   <article className="overflow-hidden rounded-xl border border-border bg-card">
                     <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                      <div className="flex items-center gap-2"><SparklesIcon className="size-4 text-primary" /><h2 className="text-sm font-semibold">{row.title}</h2></div>
-                      <Badge variant={row.status === "error" ? "destructive" : "outline"} className="font-mono text-[0.6rem]">
-                        {row.status === "error" ? "errore" : ".md"}
+                      <div className="flex items-center gap-2">
+                        <SparklesIcon className="size-4 text-primary" />
+                        <h2 className="text-sm font-semibold">{row.title}</h2>
+                      </div>
+                      <Badge
+                        variant={row.status === "error" ? "destructive" : "outline"}
+                        className="font-mono text-[0.6rem]"
+                      >
+                        {row.status === "error" ? t("documentStatus.error") : ".md"}
                       </Badge>
                     </div>
                     <div className="max-h-[28rem] overflow-auto p-5">
                       {row.status === "error" ? (
                         <p className="text-sm text-status-error">{row.errorMessage}</p>
                       ) : row.output ? (
-                        <pre className="selectable whitespace-pre-wrap font-sans text-sm leading-7 text-foreground">{row.output}</pre>
+                        <pre className="selectable whitespace-pre-wrap font-sans text-sm leading-7 text-foreground">
+                          {row.output}
+                        </pre>
                       ) : (
-                        <div className="space-y-3"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-2/3" /></div>
+                        <div className="space-y-3">
+                          <Skeleton className="h-5 w-3/4" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-11/12" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
                       )}
                     </div>
                   </article>
-                  {row.savedPath ? <div className="rounded-xl border border-status-ok/25 bg-status-ok/6 p-4"><div className="flex items-center gap-2 text-status-ok"><CheckCircle2Icon className="size-4" /><p className="text-sm font-semibold">File pronto</p></div><p className="mt-2 break-all font-mono text-[0.65rem] leading-5 text-muted-foreground">{row.savedPath}</p><Link to="/library" className="mt-3 inline-flex text-xs font-medium text-primary underline underline-offset-4">Apri nella Libreria</Link></div> : null}
+                  {row.savedPath ? (
+                    <div className="rounded-xl border border-status-ok/25 bg-status-ok/6 p-4">
+                      <div className="flex items-center gap-2 text-status-ok">
+                        <CheckCircle2Icon className="size-4" />
+                        <p className="text-sm font-semibold">{t("converter.fileReady")}</p>
+                      </div>
+                      <p className="mt-2 break-all font-mono text-[0.65rem] leading-5 text-muted-foreground">
+                        {row.savedPath}
+                      </p>
+                      <Link
+                        to="/library"
+                        className="mt-3 inline-flex text-xs font-medium text-primary underline underline-offset-4"
+                      >
+                        {t("converter.openInLibrary")}
+                      </Link>
+                    </div>
+                  ) : null}
                 </section>
               ))}
             </div>
           ) : null}
-
-          <div className="flex items-center gap-2 border-t border-border pt-4 text-[0.68rem] text-muted-foreground">
-            <BookOpenTextIcon className="size-3.5" /> Il modello riscrive le slide come capitolo di manuale e approfondisce gli argomenti con la propria conoscenza; il risultato viene salvato sempre come file Markdown nella cartella globale.
-          </div>
         </main>
       </PageBody>
     </Page>

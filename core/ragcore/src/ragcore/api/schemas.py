@@ -292,7 +292,7 @@ class SlideConversionRequest(BaseModel):
     file_paths: list[str] = Field(default_factory=list)
     research_query: str | None = None  # topics the model should dig into
     output_title: str | None = None
-    language: Literal["it", "en"] = "it"
+    language: Literal["it", "en", "fr", "de", "es"] = "it"
     depth: Literal["standard", "deep"] = "deep"
 
     @model_validator(mode="after")

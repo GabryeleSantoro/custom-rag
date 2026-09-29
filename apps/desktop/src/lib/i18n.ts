@@ -9,6 +9,15 @@ import it from "@/locales/it.json";
 
 export const LANGUAGES = ["en", "it", "fr", "de", "es"] as const;
 export type Language = (typeof LANGUAGES)[number];
+
+/** Each language in its own name: a picker must stay readable in a language you cannot read. */
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  en: "English",
+  it: "Italiano",
+  fr: "Français",
+  de: "Deutsch",
+  es: "Español",
+};
 export type LanguagePref = "system" | Language;
 
 const STORAGE_KEY = "language";
