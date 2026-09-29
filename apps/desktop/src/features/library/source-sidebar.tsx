@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDownIcon,
@@ -46,6 +47,7 @@ export function SourceSidebar({
   selectedFolder: string | null;
   onSelectFolder: (folderId: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const sources = useQuery(sourcesQuery);
   const projects = useQuery(projectsQuery);
@@ -61,7 +63,7 @@ export function SourceSidebar({
   const rescan = useMutation({
     mutationFn: (id: string) => api.rescanSource(id),
     onSuccess: invalidate,
-    onError: (error: Error) => toast.error("Rescan failed", { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.rescanFailed"), { description: error.message }),
   });
 
   const remove = useMutation({
@@ -69,22 +71,22 @@ export function SourceSidebar({
     onSuccess: (_result, id) => {
       if (selected === id) onSelect(null);
       invalidate();
-      toast.success("Source removed");
+      toast.success(t("library.sourceRemoved"));
     },
-    onError: (error: Error) => toast.error("Could not remove the source", { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.removeSourceFailed"), { description: error.message }),
   });
 
   return (
     <ContextSidebar
-      title="Library"
+      title={t("nav.library")}
       action={
         <AddSourceDialog
           trigger={
-            <Button variant="ghost" size="icon" className="size-7" aria-label="Add source">
+            <Button variant="ghost" size="icon" className="size-7" aria-label={t("library.addSource")}>
               <PlusIcon className="size-4" />
             </Button>
           }
-          triggerLabel="Add source"
+          triggerLabel={t("library.addSource")}
         />
       }
     >
@@ -98,13 +100,13 @@ export function SourceSidebar({
             : "hover:bg-sidebar-accent/60",
         )}
       >
-        All documents
+        {t("library.allDocuments")}
       </button>
 
       <FolderList selected={selectedFolder} onSelect={onSelectFolder} />
 
       <p className="mt-3 px-2 py-1 text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase">
-        Sources
+        {t("library.sources")}
       </p>
 
       {sources.isLoading ? <Skeleton className="mt-2 h-14 w-full" /> : null}
@@ -113,14 +115,14 @@ export function SourceSidebar({
         <div className="px-2 py-8 text-center">
           <FolderIcon className="mx-auto size-5 text-muted-foreground" strokeWidth={1.5} />
           <p className="mt-2 text-xs text-muted-foreground">
-            No folders yet. Add one to start indexing.
+            {t("library.noSources")}
           </p>
         </div>
       ) : null}
 
       <div className="mt-1 space-y-1">
         <SourceFolder
-          label="Global knowledge"
+          label={t("chat.globalKnowledge")}
           count={(sources.data ?? []).filter((source) => source.project_id === null).length}
           open={globalOpen}
           onOpenChange={setGlobalOpen}
@@ -195,13 +197,14 @@ function SourceFolder({
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <CollapsibleTrigger asChild>
         <button
           type="button"
           className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left hover:bg-sidebar-accent/60"
-          aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
+          aria-label={open ? t("library.collapseNamed", { name: label }) : t("library.expandNamed", { name: label })}
         >
           {open ? (
             <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -235,6 +238,7 @@ function SourceRow({
   onRescan: (sourceId: string) => void;
   onRemove: (sourceId: string) => void;
 }) {
+  const { t } = useTranslation();
   const job = bySource.get(source.id);
   const active = selected === source.id;
 
@@ -256,7 +260,8 @@ function SourceRow({
           </span>
         </div>
         <p className="mt-0.5 truncate pl-3.5 text-[0.6875rem] text-muted-foreground">
-          {source.indexed_count}/{source.document_count} indexed · {relativeTime(source.last_scan_at)}
+          {t("library.sourceStats", { indexed: source.indexed_count, total: source.document_count })} ·{" "}
+          {relativeTime(source.last_scan_at)}
         </p>
       </button>
 
@@ -276,32 +281,30 @@ function SourceRow({
             onClick={() => onRescan(source.id)}
           >
             <RefreshCwIcon className="size-3" />
-            Rescan
+            {t("library.rescan")}
           </Button>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[0.6875rem]">
                 <Trash2Icon className="size-3" />
-                Remove
+                {t("common.remove")}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Remove this source?</AlertDialogTitle>
+                <AlertDialogTitle>{t("library.removeSourceTitle")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {source.document_count} document
-                  {source.document_count === 1 ? "" : "s"} and their passages are deleted from the
-                  index. The files on disk are not touched.
+                  {t("library.removeSourceBody", { count: source.document_count })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onRemove(source.id)}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Remove source
+                  {t("library.removeSource")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

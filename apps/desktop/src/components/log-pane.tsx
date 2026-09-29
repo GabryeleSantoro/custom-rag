@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SearchIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +21,7 @@ export function levelOf(line: string): Level {
 
 /** `fill` stretches the pane to its parent's height instead of a fixed box. */
 export function LogPane({ lines, fill = false }: { lines: string[]; fill?: boolean }) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState("");
   const [problemsOnly, setProblemsOnly] = useState(false);
   const [follow, setFollow] = useState(true);
@@ -53,16 +55,16 @@ export function LogPane({ lines, fill = false }: { lines: string[]; fill?: boole
           <Input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Filter lines"
+            placeholder={t("logs.filter")}
             className="h-7 pl-7 text-xs"
           />
         </div>
         <label className="flex shrink-0 items-center gap-2 text-[0.6875rem] text-muted-foreground">
-          Errors & warnings
+          {t("logs.problemsOnly")}
           <Switch checked={problemsOnly} onCheckedChange={setProblemsOnly} />
         </label>
         <label className="flex shrink-0 items-center gap-2 text-[0.6875rem] text-muted-foreground">
-          Follow
+          {t("logs.follow")}
           <Switch checked={follow} onCheckedChange={setFollow} />
         </label>
         <span className="shrink-0 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
@@ -76,7 +78,7 @@ export function LogPane({ lines, fill = false }: { lines: string[]; fill?: boole
       >
         {shown.length === 0 ? (
           <p className="py-8 text-center text-xs text-muted-foreground">
-            {lines.length === 0 ? "No output yet." : "No line matches."}
+            {lines.length === 0 ? t("logs.empty") : t("logs.noMatch")}
           </p>
         ) : (
           shown.map((line, index) => {

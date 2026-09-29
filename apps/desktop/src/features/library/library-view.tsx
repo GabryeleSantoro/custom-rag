@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -41,6 +42,7 @@ import { useJobs } from "@/lib/jobs-context";
 import { foldersQuery, keys } from "@/lib/queries";
 
 export function LibraryView() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null);
@@ -66,14 +68,14 @@ export function LibraryView() {
 
   const reindex = useMutation({
     mutationFn: (docIds: string[]) => api.rebuild({ doc_ids: docIds }),
-    onSuccess: () => toast.success("Re-indexing started"),
-    onError: (error: Error) => toast.error("Re-index failed", { description: error.message }),
+    onSuccess: () => toast.success(t("library.reindexStarted")),
+    onError: (error: Error) => toast.error(t("library.reindexFailed"), { description: error.message }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.removeDocument(id),
     onSuccess: invalidate,
-    onError: (error: Error) => toast.error("Could not remove", { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.removeFailed"), { description: error.message }),
   });
 
   const move = useMutation({
@@ -83,7 +85,7 @@ export function LibraryView() {
       void queryClient.invalidateQueries({ queryKey: keys.folders });
       void queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
-    onError: (error: Error) => toast.error("Could not move", { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.moveFailed"), { description: error.message }),
   });
 
   const folderOf = new Map<string, string>();
@@ -111,13 +113,12 @@ export function LibraryView() {
 
       <Page>
         <PageHeader
-          title={folders.data?.find((folder) => folder.id === folderId)?.name ?? "Library"}
+          title={folders.data?.find((folder) => folder.id === folderId)?.name ?? t("nav.library")}
           description={
             documents.data
-              ? `${documents.data.total} document${documents.data.total === 1 ? "" : "s"}${
-                  active.length ? ` · ${active.length} job${active.length === 1 ? "" : "s"} running` : ""
-                }`
-              : "Loading…"
+              ? t("library.documentCount", { count: documents.data.total }) +
+                (active.length ? ` · ${t("library.jobsRunning", { count: active.length })}` : "")
+              : t("common.loading")
           }
           actions={
             <>
@@ -126,7 +127,7 @@ export function LibraryView() {
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Filter by title or path"
+                  placeholder={t("library.filter")}
                   className="h-8 w-56 pl-8 text-xs"
                 />
               </div>
@@ -138,7 +139,7 @@ export function LibraryView() {
                 onClick={() => reindex.mutate(items.map((document) => document.id))}
               >
                 <RefreshCwIcon className="size-3.5" />
-                Re-index all
+                {t("library.reindexAll")}
               </Button>
             </>
           }
@@ -147,8 +148,8 @@ export function LibraryView() {
         <PageBody>
           {errored.length > 0 ? (
             <div className="border-b border-status-error/25 bg-status-error/8 px-5 py-2 text-xs text-status-error">
-              {errored.length} document{errored.length === 1 ? "" : "s"} failed to index.
-              {errored[0].error ? ` First error: ${errored[0].error}` : ""}
+              {t("library.failedToIndex", { count: errored.length })}
+              {errored[0].error ? ` ${t("library.firstError", { error: errored[0].error })}` : ""}
             </div>
           ) : null}
 
@@ -161,19 +162,18 @@ export function LibraryView() {
           ) : items.length === 0 && folderId ? (
             <div className="grid h-full place-items-center p-10 text-center">
               <div className="max-w-sm">
-                <p className="text-sm font-medium">This folder is empty</p>
+                <p className="text-sm font-medium">{t("library.folderEmpty")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  In All documents, use the folder button on a row to file it here.
+                  {t("library.folderEmptyHint")}
                 </p>
               </div>
             </div>
           ) : items.length === 0 ? (
             <div className="grid h-full place-items-center p-10 text-center">
               <div className="max-w-sm">
-                <p className="text-sm font-medium">Nothing indexed yet</p>
+                <p className="text-sm font-medium">{t("library.emptyTitle")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Add a source folder from the sidebar. Files are parsed and embedded on this
-                  machine.
+                  {t("library.emptyHint")}
                 </p>
               </div>
             </div>
@@ -181,12 +181,12 @@ export function LibraryView() {
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow>
-                  <TableHead className="w-[42%]">Document</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Pages</TableHead>
-                  <TableHead className="text-right">Passages</TableHead>
-                  <TableHead className="text-right">Size</TableHead>
-                  <TableHead className="text-right">Modified</TableHead>
+                  <TableHead className="w-[42%]">{t("library.colDocument")}</TableHead>
+                  <TableHead>{t("library.colStatus")}</TableHead>
+                  <TableHead className="text-right">{t("library.colPages")}</TableHead>
+                  <TableHead className="text-right">{t("library.colPassages")}</TableHead>
+                  <TableHead className="text-right">{t("library.colSize")}</TableHead>
+                  <TableHead className="text-right">{t("library.colModified")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -202,7 +202,7 @@ export function LibraryView() {
                     <TableCell>
                       <StatusChip
                         tone={documentTone(document.status)}
-                        label={document.status}
+                        label={t(`documentStatus.${document.status}`)}
                         pulse={!["indexed", "error", "skipped"].includes(document.status)}
                       />
                     </TableCell>
@@ -221,13 +221,13 @@ export function LibraryView() {
                     <TableCell>
                       <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100">
                         <DropdownMenu>
-                          <IconTooltip label="Move to folder">
+                          <IconTooltip label={t("library.moveToFolder")}>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="size-7"
-                                aria-label="Move to folder"
+                                aria-label={t("library.moveToFolder")}
                               >
                                 <FolderInputIcon className="size-3.5" />
                               </Button>
@@ -236,7 +236,7 @@ export function LibraryView() {
                           <DropdownMenuContent align="end" className="w-48">
                             {(folders.data ?? []).length === 0 ? (
                               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                                Create a folder in the sidebar first
+                                {t("library.createFolderFirst")}
                               </DropdownMenuLabel>
                             ) : null}
                             {(folders.data ?? []).map((folder) => (
@@ -256,40 +256,40 @@ export function LibraryView() {
                                   onSelect={() => move.mutate({ docId: document.id, folderId: null })}
                                 >
                                   <FolderMinusIcon className="size-3.5" />
-                                  Remove from folder
+                                  {t("library.removeFromFolder")}
                                 </DropdownMenuItem>
                               </>
                             ) : null}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <IconTooltip label={`Open ${document.title}`}>
+                        <IconTooltip label={t("library.openNamed", { title: document.title })}>
                           <Button asChild variant="ghost" size="icon" className="size-7">
                             <Link
                               to="/reader/$docId"
                               params={{ docId: document.id }}
-                              aria-label={`Open ${document.title}`}
+                              aria-label={t("library.openNamed", { title: document.title })}
                             >
                               <BookOpenIcon className="size-3.5" />
                             </Link>
                           </Button>
                         </IconTooltip>
-                        <IconTooltip label="Re-index">
+                        <IconTooltip label={t("library.reindex")}>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="size-7"
-                            aria-label="Re-index"
+                            aria-label={t("library.reindex")}
                             onClick={() => reindex.mutate([document.id])}
                           >
                             <RefreshCwIcon className="size-3.5" />
                           </Button>
                         </IconTooltip>
-                        <IconTooltip label="Remove">
+                        <IconTooltip label={t("common.remove")}>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="size-7"
-                            aria-label="Remove"
+                            aria-label={t("common.remove")}
                             onClick={() => remove.mutate(document.id)}
                           >
                             <Trash2Icon className="size-3.5" />

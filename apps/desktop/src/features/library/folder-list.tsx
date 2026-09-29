@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderIcon, FolderPlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ export function FolderList({
   selected: string | null;
   onSelect: (folderId: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const folders = useQuery(foldersQuery);
   const [creating, setCreating] = useState(false);
@@ -36,7 +38,7 @@ export function FolderList({
     void queryClient.invalidateQueries({ queryKey: keys.folders });
     void queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
-  const onError = (error: Error) => toast.error("Folder not saved", { description: error.message });
+  const onError = (error: Error) => toast.error(t("library.folderNotSaved"), { description: error.message });
 
   const create = useMutation({
     mutationFn: api.createFolder,
@@ -65,13 +67,13 @@ export function FolderList({
     <div className="mt-3">
       <div className="flex items-center justify-between px-2 py-1">
         <span className="text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase">
-          Folders
+          {t("library.folders")}
         </span>
         <Button
           variant="ghost"
           size="icon"
           className="size-6"
-          aria-label="New folder"
+          aria-label={t("library.newFolder")}
           onClick={() => setCreating(true)}
         >
           <FolderPlusIcon className="size-3.5" />
@@ -80,7 +82,7 @@ export function FolderList({
 
       {creating ? (
         <NameInput
-          placeholder="Folder name"
+          placeholder={t("library.folderName")}
           onSubmit={(name) => create.mutate(name)}
           onCancel={() => setCreating(false)}
         />
@@ -88,7 +90,7 @@ export function FolderList({
 
       {folders.data?.length === 0 && !creating ? (
         <p className="px-2 py-1 text-[0.6875rem] text-muted-foreground">
-          Group documents your way. Files stay where they are.
+          {t("library.foldersHint")}
         </p>
       ) : null}
 
@@ -121,6 +123,7 @@ function FolderRow({
   onRename: (name: string) => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -159,32 +162,31 @@ function FolderRow({
           variant="ghost"
           size="icon"
           className="size-6"
-          aria-label={`Rename ${folder.name}`}
+          aria-label={t("library.renameNamed", { name: folder.name })}
           onClick={() => setEditing(true)}
         >
           <PencilIcon className="size-3" />
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-6" aria-label={`Delete ${folder.name}`}>
+            <Button variant="ghost" size="icon" className="size-6" aria-label={t("chat.deleteNamed", { name: folder.name })}>
               <Trash2Icon className="size-3" />
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete “{folder.name}”?</AlertDialogTitle>
+              <AlertDialogTitle>{t("library.deleteFolderTitle", { name: folder.name })}</AlertDialogTitle>
               <AlertDialogDescription>
-                Only the folder goes. Its {folder.doc_ids.length} document
-                {folder.doc_ids.length === 1 ? "" : "s"} stay in the library and on disk.
+                {t("library.deleteFolderBody", { count: folder.doc_ids.length })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={onDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Delete folder
+                {t("library.deleteFolder")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

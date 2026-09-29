@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChevronLeftIcon, ChevronRightIcon, MessageSquareIcon } from "lucide-react";
@@ -26,6 +27,7 @@ function segments(text: string, chunk: DocumentChunkRef | undefined) {
 }
 
 export function ReaderView() {
+  const { t } = useTranslation();
   const { docId } = useParams({ from: "/_shell/reader/$docId" });
   const search = useSearch({ from: "/_shell/reader/$docId" });
   const navigate = useNavigate();
@@ -65,17 +67,17 @@ export function ReaderView() {
   const askAbout = useMutation({
     mutationFn: () =>
       api.createSession({
-        title: `About ${document.data?.title ?? docId}`,
+        title: t("reader.aboutTitle", { title: document.data?.title ?? docId }),
         scope_doc_id: docId,
       }),
     onSuccess: (session) =>
       navigate({ to: "/chat/$sessionId", params: { sessionId: session.id } }),
-    onError: (error: Error) => toast.error("Could not start a chat", { description: error.message }),
+    onError: (error: Error) => toast.error(t("reader.startChatFailed"), { description: error.message }),
   });
 
   return (
     <>
-      <ContextSidebar title="Pages">
+      <ContextSidebar title={t("reader.pages")}>
         {content.isLoading ? <Skeleton className="h-40 w-full" /> : null}
         <nav className="flex flex-col gap-0.5 pt-1">
           {pages.map((entry) => {
@@ -102,7 +104,7 @@ export function ReaderView() {
                       entry.page === currentPage && "font-medium",
                     )}
                   >
-                    {entry.section_path?.split(" > ").at(-1) ?? `Page ${entry.page}`}
+                    {entry.section_path?.split(" > ").at(-1) ?? t("reader.pageN", { page: entry.page })}
                   </span>
                   {hasHighlight ? <span className="size-1.5 rounded-full bg-primary" /> : null}
                 </div>
@@ -124,17 +126,17 @@ export function ReaderView() {
                 onClick={() => askAbout.mutate()}
               >
                 <MessageSquareIcon className="size-3.5" />
-                Ask about this document
+                {t("reader.askAbout")}
               </Button>
               <Button asChild variant="ghost" size="sm" className="h-8">
-                <Link to="/library">Library</Link>
+                <Link to="/library">{t("nav.library")}</Link>
               </Button>
             </>
           }
         >
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold tracking-tight">
-              {document.data?.title ?? "Loading…"}
+              {document.data?.title ?? t("common.loading")}
             </h1>
             <p className="truncate font-mono text-[0.6875rem] text-muted-foreground">
               {document.data
@@ -152,12 +154,12 @@ export function ReaderView() {
             </div>
           ) : !page ? (
             <div className="grid h-full place-items-center text-sm text-muted-foreground">
-              This document has no extractable text.
+              {t("reader.noText")}
             </div>
           ) : (
             <article className="mx-auto max-w-2xl px-10 py-10">
               <p className="mb-6 font-mono text-[0.6875rem] tracking-wide text-muted-foreground uppercase">
-                {page.section_path ?? `Page ${page.page}`}
+                {page.section_path ?? t("reader.pageN", { page: page.page })}
               </p>
               <div className="selectable font-reader text-[0.9375rem] leading-[1.75] whitespace-pre-wrap">
                 {segments(page.text, highlighted?.page === page.page ? highlighted : undefined).map(
@@ -188,7 +190,7 @@ export function ReaderView() {
             onClick={() => goTo(currentPage - 1)}
           >
             <ChevronLeftIcon className="size-3.5" />
-            Previous
+            {t("common.previous")}
           </Button>
           <span className="font-mono text-[0.6875rem] text-muted-foreground tabular-nums">
             {currentPage} / {content.data?.n_pages ?? "?"}
@@ -200,7 +202,7 @@ export function ReaderView() {
             disabled={currentPage >= (content.data?.n_pages ?? 1)}
             onClick={() => goTo(currentPage + 1)}
           >
-            Next
+            {t("common.next")}
             <ChevronRightIcon className="size-3.5" />
           </Button>
         </footer>

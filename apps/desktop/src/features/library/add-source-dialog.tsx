@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpenIcon } from "lucide-react";
@@ -40,6 +41,7 @@ export function AddSourceDialog({
   triggerLabel?: string;
   projectId?: string;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [openDialog, setOpenDialog] = useState(false);
   const [path, setPath] = useState("");
@@ -63,13 +65,13 @@ export function AddSourceDialog({
       void queryClient.invalidateQueries({ queryKey: ["documents"] });
       setOpenDialog(false);
       setPath("");
-      toast.success("Source added", { description: source.path });
+      toast.success(t("library.sourceAdded"), { description: source.path });
     },
-    onError: (error: Error) => toast.error("Could not add the source", { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.addSourceFailed"), { description: error.message }),
   });
 
   const pick = async () => {
-    const selected = await open({ directory: true, multiple: false, title: "Choose a folder" });
+    const selected = await open({ directory: true, multiple: false, title: t("library.chooseFolder") });
     if (typeof selected === "string") setPath(selected);
   };
 
@@ -84,16 +86,15 @@ export function AddSourceDialog({
       )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add a source folder</DialogTitle>
+          <DialogTitle>{t("library.addSourceTitle")}</DialogTitle>
           <DialogDescription>
-            Files matching the include patterns are parsed, chunked and embedded locally. Nothing
-            leaves the device during indexing.
+            {t("library.addSourceLead")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="source-path">Folder</Label>
+            <Label htmlFor="source-path">{t("library.folder")}</Label>
             <div className="flex gap-2">
               <Input
                 id="source-path"
@@ -103,25 +104,25 @@ export function AddSourceDialog({
               />
               <Button type="button" variant="secondary" onClick={pick}>
                 <FolderOpenIcon className="size-4" />
-                Browse
+                {t("library.browse")}
               </Button>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="include">Include</Label>
+              <Label htmlFor="include">{t("library.include")}</Label>
               <Input id="include" value={include} onChange={(e) => setInclude(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="exclude">Exclude</Label>
+              <Label htmlFor="exclude">{t("library.exclude")}</Label>
               <Input id="exclude" value={exclude} onChange={(e) => setExclude(e.target.value)} />
             </div>
           </div>
 
           <div className="flex items-end gap-6">
             <div className="w-32 space-y-1.5">
-              <Label htmlFor="max-mb">Max file size</Label>
+              <Label htmlFor="max-mb">{t("library.maxFileSize")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="max-mb"
@@ -136,7 +137,7 @@ export function AddSourceDialog({
             <div className="flex items-center gap-2 pb-2">
               <Switch id="watch" checked={watch} onCheckedChange={setWatch} />
               <Label htmlFor="watch" className="font-normal">
-                Re-index when files change
+                {t("library.watch")}
               </Label>
             </div>
           </div>
@@ -144,10 +145,10 @@ export function AddSourceDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpenDialog(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button disabled={!path.trim() || add.isPending} onClick={() => add.mutate()}>
-            {add.isPending ? "Adding…" : "Add source"}
+            {add.isPending ? t("library.adding") : t("library.addSource")}
           </Button>
         </DialogFooter>
       </DialogContent>
