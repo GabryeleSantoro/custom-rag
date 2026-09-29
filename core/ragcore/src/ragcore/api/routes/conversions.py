@@ -429,7 +429,9 @@ async def convert_slides(
                 for part, batch in enumerate(batches, start=1):
                     prompt = instruction
                     if len(batches) > 1:
-                        logger.info("%s: part %d/%d (%d slides)", title, part, len(batches), len(batch))
+                        logger.info(
+                            "%s: part %d/%d (%d slides)", title, part, len(batches), len(batch)
+                        )
                         prompt += _part_note(payload.language, part, len(batches))
                         if part > 1:
                             output.append("\n\n")
@@ -449,7 +451,7 @@ async def convert_slides(
                                 yield frame("token", {"text": piece})
                             break
                         except Exception as exc:  # noqa: BLE001
-                            # Silent retry, only while nothing reached the user (no duplicated text).
+                            # Silent retry, only while nothing reached the user (no duplicate text).
                             if wrote or attempt == BATCH_ATTEMPTS:
                                 raise
                             logger.warning(

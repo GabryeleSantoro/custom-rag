@@ -64,7 +64,18 @@ pub async fn api_request(state: State<'_, AppState>, req: ApiRequest) -> Result<
     result
 }
 
+/// Paths are appended to the sidecar's base URL; one that doesn't start with
+/// `/` (e.g. `@evil.host/x`) would change the host and leak the bearer token.
+fn check_path(path: &str) -> Result<(), String> {
+    if path.starts_with('/') && !path.starts_with("//") {
+        Ok(())
+    } else {
+        Err(format!("invalid path {path}"))
+    }
+}
+
 async fn forward(state: &State<'_, AppState>, req: ApiRequest) -> Result<Value, String> {
+    check_path(&req.path)?;
     state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), req.path);
     let method = reqwest::Method::from_bytes(req.method.to_uppercase().as_bytes())
@@ -114,6 +125,7 @@ pub async fn api_stream(
     body: Option<Value>,
     channel: Channel<StreamFrame>,
 ) -> Result<(), String> {
+    check_path(&path)?;
     state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), path);
     let http_method = reqwest::Method::from_bytes(method.to_uppercase().as_bytes())
@@ -158,7 +170,7 @@ pub async fn api_stream(
     }
 
     let mut stream = response.bytes_stream();
-    let mut buffer = String::new();
+    let mut buffer: Vec<u8> = Vec::new();
     let mut reason = "complete";
 
     while let Some(chunk) = stream.next().await {
@@ -184,12 +196,14 @@ pub async fn api_stream(
                 break;
             }
         };
-        buffer.push_str(&String::from_utf8_lossy(&bytes));
+        buffer.extend_from_slice(&bytes);
 
         // Frames are separated by a blank line; anything after the last one is
         // a partial frame and stays in the buffer.
-        while let Some(split) = buffer.find("\n\n") {
-            let raw = buffer[..split].to_string();
+        // Split on bytes and decode whole frames only: a multi-byte character
+        // can straddle two network chunks.
+        while let Some(split) = buffer.windows(2).position(|w| w == b"\n\n") {
+            let raw = String::from_utf8_lossy(&buffer[..split]).into_owned();
             buffer.drain(..split + 2);
             if let Some(frame) = parse_frame(&raw) {
                 let _ = channel.send(frame);
@@ -225,6 +239,7 @@ pub async fn api_cancel(
         .insert(stream_id);
 
     if let Some(path) = cancel_path {
+        check_path(&path)?;
         let url = format!("{}{}", state.supervisor.base_url(), path);
         let _ = state
             .http
@@ -373,6 +388,32 @@ mod tests {
 
         assert!(without.body.is_none());
         assert_eq!(without.path, "/health");
+    }
+
+    #[test]
+    fn paths_must_stay_on_the_sidecar_host() {
+        assert!(check_path("/health").is_ok());
+        assert!(check_path("@evil.host/x").is_err());
+        assert!(check_path("//evil.host/x").is_err());
+        assert!(check_path("").is_err());
+    }
+
+    #[test]
+    fn a_character_split_across_chunks_survives() {
+        let full = "data: \"è\"\n\n".as_bytes();
+        let cut = full.iter().position(|&b| b == 0xC3).unwrap() + 1; // mid-"è"
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut out = Vec::new();
+        for chunk in [&full[..cut], &full[cut..]] {
+            buffer.extend_from_slice(chunk);
+            while let Some(split) = buffer.windows(2).position(|w| w == b"\n\n") {
+                let raw = String::from_utf8_lossy(&buffer[..split]).into_owned();
+                buffer.drain(..split + 2);
+                out.push(event(&raw).1);
+            }
+        }
+
+        assert_eq!(out, [Value::String("è".into())]);
     }
 
     #[test]

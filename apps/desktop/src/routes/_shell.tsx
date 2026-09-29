@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { IconRail } from "@/components/shell/icon-rail";
@@ -13,6 +13,8 @@ function Shell() {
   const navigate = useNavigate();
   const settings = useQuery(settingsQuery);
   const onboarded = settings.data?.onboarded;
+  // Re-key per section (not per param) so /chat/:id switches don't replay it.
+  const section = useRouterState({ select: (s) => s.location.pathname.split("/")[1] ?? "" });
 
   // Deliberately not a `beforeLoad` redirect: the core may still be starting
   // when the window opens, and a failed settings fetch must not strand the
@@ -24,7 +26,9 @@ function Shell() {
   return (
     <div className="flex h-full overflow-hidden">
       <IconRail devMode={import.meta.env.DEV} />
-      <Outlet />
+      <div key={section} className="page-enter flex min-w-0 flex-1">
+        <Outlet />
+      </div>
     </div>
   );
 }

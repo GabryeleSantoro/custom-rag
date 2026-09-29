@@ -59,7 +59,7 @@ Per avviare soltanto l'API, utile per esplorare OpenAPI e gli endpoint:
 uv run --directory core/ragcore ragcore serve --port 8765
 ```
 
-La documentazione interattiva sarà disponibile su `http://127.0.0.1:8765/docs`. Se si passa `--token`, tutti gli endpoint tranne `/health` e OpenAPI richiedono `Authorization: Bearer <token>`.
+La documentazione interattiva sarà disponibile su `http://127.0.0.1:8765/docs`. Senza `--token` ne viene generato uno casuale e scritto nel log. Tutti gli endpoint tranne `/health` e OpenAPI richiedono `Authorization: Bearer <token>`.
 
 ## Modello generativo (es. OpenRouter)
 

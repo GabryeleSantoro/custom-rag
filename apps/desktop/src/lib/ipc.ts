@@ -149,6 +149,9 @@ export const api = {
     limit?: number;
   } = {}) => request<DocumentList>("GET", `/documents${query(params)}`),
 
+  suggestQuestions: (doc_ids: string[]) =>
+    request<{ questions: string[] }>("POST", "/suggestions", { doc_ids }),
+
   listFolders: () => request<Folder[]>("GET", "/folders"),
   createFolder: (name: string) => request<Folder>("POST", "/folders", { name }),
   renameFolder: (id: string, name: string) => request<Folder>("PATCH", `/folders/${id}`, { name }),
@@ -326,11 +329,32 @@ export function streamQuery(
 
 /** Job progress for the Library and Model Manager. One frame per job update. */
 export function streamJobs(onJob: (job: Job) => void): StreamHandle {
-  return openStream({ method: "GET", path: "/jobs/stream" }, (frame) => {
-    if (frame.kind === "event" && frame.event === "job") {
-      onJob(frame.data as Job);
-    }
-  });
+  // The sidecar restarts after a crash; a dead stream must not stay dead.
+  let stopped = false;
+  let current: StreamHandle;
+  const open = (): StreamHandle =>
+    openStream({ method: "GET", path: "/jobs/stream" }, (frame) => {
+      if (frame.kind === "event" && frame.event === "job") {
+        onJob(frame.data as Job);
+      } else if (!stopped && (frame.kind === "closed" || frame.kind === "failed")) {
+        setTimeout(() => {
+          if (!stopped) current = open();
+        }, 2000);
+      }
+    });
+  current = open();
+  return {
+    get streamId() {
+      return current.streamId;
+    },
+    get done() {
+      return current.done;
+    },
+    cancel: () => {
+      stopped = true;
+      return current.cancel();
+    },
+  };
 }
 
 /** Frames the /eval/run route emits. Dev builds only; the route 403s otherwise. */

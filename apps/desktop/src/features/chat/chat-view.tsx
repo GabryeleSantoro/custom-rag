@@ -23,12 +23,6 @@ import type { CitationTarget } from "@/features/chat/answer-text";
 import { api, type ChatMessage, type QueryMode } from "@/lib/ipc";
 import { connectionsQuery, keys, projectsQuery, sourcesQuery } from "@/lib/queries";
 
-const SUGGESTIONS = [
-  "How many candidates should the reranker get?",
-  "Why can't the embedder be swapped without re-indexing?",
-  "What does reciprocal rank fusion actually combine?",
-];
-
 export function ChatView({ sessionId }: { sessionId: string | null }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<QueryMode>("auto");
@@ -130,6 +124,16 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
     availableDocumentIds;
 
   const selectedDocumentCount = includedDocumentIds.length;
+
+  const suggestionDocIds = [...includedDocumentIds].sort();
+  const suggestions = useQuery({
+    queryKey: ["suggestions", suggestionDocIds],
+    queryFn: () => api.suggestQuestions(suggestionDocIds),
+    enabled: !sessionId && suggestionDocIds.length > 0,
+    staleTime: Infinity,
+    retry: false,
+  });
+  const questions = suggestions.data?.questions ?? [];
 
   const onSend = (text: string) => {
     send(text, {
@@ -233,7 +237,10 @@ export function ChatView({ sessionId }: { sessionId: string | null }) {
                   the page it came from.
                 </p>
                 <div className="mt-5 grid gap-2">
-                  {SUGGESTIONS.map((suggestion) => (
+                  {suggestions.isFetching
+                    ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-9 w-full rounded-lg" />)
+                    : null}
+                  {questions.map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"

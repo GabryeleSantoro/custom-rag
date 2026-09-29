@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -23,6 +24,7 @@ from ragcore.api.routes import (
     query,
     settings,
     sources,
+    suggestions,
 )
 from ragcore.backend import build_backend
 from ragcore.config import Config
@@ -32,6 +34,9 @@ PUBLIC_PATHS = {"/health", "/openapi.json", "/docs", "/redoc", "/docs/oauth2-red
 
 
 def create_app(config: Config) -> FastAPI:
+    if not config.token:
+        raise ValueError("ragcore refuses to serve without a session token")
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.config = config
@@ -57,10 +62,10 @@ def create_app(config: Config) -> FastAPI:
 
     @app.middleware("http")
     async def require_token(request: Request, call_next):
-        if config.token and request.url.path not in PUBLIC_PATHS:
+        if request.url.path not in PUBLIC_PATHS:
             header = request.headers.get("authorization", "")
             presented = header.removeprefix("Bearer ").strip()
-            if presented != config.token:
+            if not secrets.compare_digest(presented.encode(), config.token.encode()):
                 return JSONResponse({"detail": "unauthorized"}, status_code=401)
         return await call_next(request)
 
@@ -77,6 +82,7 @@ def create_app(config: Config) -> FastAPI:
         settings.router,
         evals.router,
         folders.router,
+        suggestions.router,
     ):
         app.include_router(router)
 

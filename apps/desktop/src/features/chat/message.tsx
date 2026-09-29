@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function UserMessage({ text }: { text: string }) {
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end animate-in fade-in slide-in-from-bottom-1 duration-200">
       <div className="selectable max-w-[80%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-2 text-sm leading-[1.55]">
         {text}
       </div>

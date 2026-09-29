@@ -2,13 +2,14 @@
 
 The Rust shell spawns this with an explicit port, session token and the
 hardware budget it measured. Running it by hand works too: every flag has a
-sensible default and auth is off when no token is given.
+sensible default and a random session token is generated (and logged) when none is given.
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import secrets
 from pathlib import Path
 
 import uvicorn
@@ -26,7 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
     serve = sub.add_parser("serve", help="Run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765, help="0 picks a free port")
-    serve.add_argument("--token", default="", help="Session token; empty disables auth")
+    serve.add_argument(
+        "--token", default="", help="Session token; a random one is logged if empty"
+    )
     serve.add_argument("--data-dir", type=Path, default=Path.home() / ".custom-rag")
     serve.add_argument("--ram-mb", type=int, default=None)
     serve.add_argument("--vram-mb", type=int, default=0)
@@ -48,10 +51,15 @@ def main(argv: list[str] | None = None) -> int:
         level=args.log_level.upper(), format="%(levelname)s %(name)s: %(message)s"
     )
 
+    token = args.token
+    if not token:
+        token = secrets.token_urlsafe(24)
+        logging.getLogger("ragcore").warning("no --token given; generated one: %s", token)
+
     config = Config(
         host=args.host,
         port=args.port,
-        token=args.token,
+        token=token,
         data_dir=args.data_dir,
         dev_mode=not args.prod,
         vram_mb=args.vram_mb,

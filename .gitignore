@@ -12,3 +12,6 @@ wheels/
 # Superpowers SDD scratch (ledger, briefs, review packages)
 .superpowers/
 apps/desktop/src-tauri/binaries/
+
+# graphify output (knowledge graph, cache, manifest)
+graphify-out/

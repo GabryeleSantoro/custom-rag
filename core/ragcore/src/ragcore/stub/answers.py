@@ -264,7 +264,7 @@ async def llm_stream(
                 line = await asyncio.wait_for(anext(lines), max(remaining, 0.01))
             except StopAsyncIteration:
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error("%s: no data for %.0fs, giving up", connection.name, IDLE_TIMEOUT)
                 raise RuntimeError(
                     f"{connection.name} sent nothing for {IDLE_TIMEOUT:.0f}s "
@@ -305,7 +305,8 @@ async def llm_stream(
             detail = f"{reasoning} chars of reasoning, no text" if reasoning else "no text"
             raise RuntimeError(
                 f"{connection.name} closed the stream after "
-                f"{time.perf_counter() - started:.0f}s with {detail} and {'finish reason error' if finish else 'no finish reason'}, "
+                f"{time.perf_counter() - started:.0f}s with {detail} and "
+                f"{'finish reason error' if finish else 'no finish reason'}, "
                 "most likely still reasoning when the provider cut it off. Lower Thinking, "
                 "use a non-reasoning model, or convert fewer slides at a time."
             )
