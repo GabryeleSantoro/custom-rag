@@ -6,10 +6,16 @@
 
 use keyring::Entry;
 
-const SERVICE: &str = "com.customrag.desktop";
+const SERVICE: &str = "com.ibid.desktop";
+/// Keys saved before the rename to Ibid; moved to `SERVICE` on first read.
+const LEGACY_SERVICE: &str = "com.customrag.desktop";
 
 fn entry(connection_id: &str) -> Result<Entry, String> {
     Entry::new(SERVICE, connection_id).map_err(|e| e.to_string())
+}
+
+fn legacy_entry(connection_id: &str) -> Result<Entry, String> {
+    Entry::new(LEGACY_SERVICE, connection_id).map_err(|e| e.to_string())
 }
 
 pub fn set(connection_id: &str, secret: &str) -> Result<(), String> {
@@ -21,14 +27,25 @@ pub fn set(connection_id: &str, secret: &str) -> Result<(), String> {
 pub fn get(connection_id: &str) -> Result<Option<String>, String> {
     match entry(connection_id)?.get_password() {
         Ok(secret) => Ok(Some(secret)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(keyring::Error::NoEntry) => match legacy_entry(connection_id)?.get_password() {
+            Ok(secret) => {
+                set(connection_id, &secret)?;
+                let _ = legacy_entry(connection_id)?.delete_credential();
+                Ok(Some(secret))
+            }
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(e) => Err(e.to_string()),
+        },
         Err(e) => Err(e.to_string()),
     }
 }
 
 pub fn delete(connection_id: &str) -> Result<(), String> {
-    match entry(connection_id)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(e) => Err(e.to_string()),
+    for e in [entry(connection_id)?, legacy_entry(connection_id)?] {
+        match e.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => {}
+            Err(e) => return Err(e.to_string()),
+        }
     }
+    Ok(())
 }

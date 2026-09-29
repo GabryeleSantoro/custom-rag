@@ -1,5 +1,5 @@
 {
-  "name": "@custom-rag/desktop",
+  "name": "@ibid/desktop",
   "private": true,
   "type": "module",
   "scripts": {

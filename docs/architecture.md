@@ -1,4 +1,4 @@
-# Custom RAG architecture
+# Ibid architecture
 
 These diagrams describe the current prototype as implemented in the repository.
 Solid edges are active paths; dashed edges are planned or optional integrations.

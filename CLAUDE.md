@@ -12,7 +12,7 @@ Local-first desktop RAG app (README and docs are in Italian). Three runtime laye
 
 UI calls go `lib/ipc.ts` → Tauri commands → Rust proxy → FastAPI. Don't have the frontend call the sidecar directly; `bun run dev` alone therefore can't exercise the API.
 
-Full diagrams (runtime boundaries, ingestion, query/SSE): `docs/architecture.md`. Roadmap: `plan/custom-rag-build-plan.md`.
+Full diagrams (runtime boundaries, ingestion, query/SSE): `docs/architecture.md`. Roadmap: `plan/ibid-build-plan.md`.
 
 ## Commands
 
@@ -41,7 +41,7 @@ cd src-tauri && cargo test --lib
 
 Other scripts: `scripts/fetch-models.sh` + `scripts/dev/serve-models.sh` (EmbeddingGemma embedder + Qwen3 reranker via llama-server), `scripts/build-sidecar.sh` (PyInstaller → `src-tauri/binaries/ragcore`), `scripts/install-local.sh`.
 
-**After every change, run `scripts/install-local.sh`** (builds the app and swaps it into /Applications; data in `~/.custom-rag` and keychain are untouched). Do not cut a release unless asked.
+**After every change, run `scripts/install-local.sh`** (builds the app and swaps it into /Applications; data in `~/.ibid` and keychain are untouched). Do not cut a release unless asked.
 
 Releases: pushing a `v*` tag triggers `.github/workflows/release.yml`; the version comes from the tag and is stamped into `src-tauri/Cargo.toml` (the single version source; `tauri.conf.json` inherits it). `scripts/next-version.sh` computes the next patch.
 

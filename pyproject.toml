@@ -1,5 +1,5 @@
 [project]
-name = "custom-rag"
+name = "ibid"
 version = "0.1.0"
 description = "Local-first RAG desktop app"
 readme = "README.md"

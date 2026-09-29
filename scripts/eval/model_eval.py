@@ -15,8 +15,8 @@ import json, math, os, re, resource, subprocess, sys, time, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MODELS = Path(os.environ.get("EVAL_MODEL_DIR", Path.home() / ".custom-rag/eval-models"))
-DEFAULT = Path.home() / ".custom-rag/models"
+MODELS = Path(os.environ.get("EVAL_MODEL_DIR", Path.home() / ".ibid/eval-models"))
+DEFAULT = Path.home() / ".ibid/models"
 THREADS = os.environ.get("EVAL_THREADS", "4")
 TOPN = 20
 MAXCH = 1500
@@ -63,7 +63,7 @@ QUERIES = [  # (query, [gold substrings])
 
 def build_corpus():
     files = sorted((ROOT / "fixtures/docs").glob("*.md")) + [
-        ROOT / "README.md", ROOT / "docs/architecture.md", ROOT / "plan/custom-rag-build-plan.md"]
+        ROOT / "README.md", ROOT / "docs/architecture.md", ROOT / "plan/ibid-build-plan.md"]
     out = []
     for f in files:
         title, parts, cur = f.stem, [], None

@@ -26,7 +26,7 @@ class Config:
     host: str = "127.0.0.1"
     port: int = 8765
     token: str = ""
-    data_dir: Path = field(default_factory=lambda: Path.home() / ".custom-rag")
+    data_dir: Path = field(default_factory=lambda: Path.home() / ".ibid")
     dev_mode: bool = True
     ram_mb: int = field(default_factory=_default_ram_mb)
     vram_mb: int = 0
