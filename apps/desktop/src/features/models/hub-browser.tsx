@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { DownloadIcon, HeartIcon, SearchIcon, SparklesIcon } from "lucide-react";
 
@@ -16,12 +17,7 @@ import { api, type HubModel, type ModelRole } from "@/lib/ipc";
 import { keys } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-const SORTS = [
-  { value: "downloads", label: "Most downloaded" },
-  { value: "likes", label: "Most liked" },
-  { value: "trendingScore", label: "Trending" },
-  { value: "lastModified", label: "Recently updated" },
-];
+const SORTS = ["downloads", "likes", "trendingScore", "lastModified"];
 
 function useDebounced<T>(value: T, delay = 350): T {
   const [debounced, setDebounced] = useState(value);
@@ -41,6 +37,7 @@ function ModelCard({
   installed: boolean;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -61,7 +58,7 @@ function ModelCard({
         </div>
         {installed ? (
           <span className="shrink-0 rounded-full bg-status-ok/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-status-ok">
-            Installed
+            {t("models.installed")}
           </span>
         ) : null}
       </div>
@@ -96,6 +93,7 @@ export function HubBrowser({
   installedRepos: Set<string>;
   onOpen: (repoId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("downloads");
   const debounced = useDebounced(search);
@@ -121,7 +119,7 @@ export function HubBrowser({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={`Search Hugging Face for ${role} models in GGUF`}
+            placeholder={t("models.searchHub", { role: t(`models.roles.${role}`) })}
             className="h-9 pl-8"
           />
         </div>
@@ -131,8 +129,8 @@ export function HubBrowser({
           </SelectTrigger>
           <SelectContent>
             {SORTS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+              <SelectItem key={option} value={option}>
+                {t(`models.sort.${option}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -143,10 +141,10 @@ export function HubBrowser({
         <section>
           <h3 className="flex items-center gap-1.5 text-[0.8125rem] font-semibold tracking-tight">
             <SparklesIcon className="size-3.5 text-primary" />
-            Recommended for your hardware
+            {t("models.recommended")}
           </h3>
           <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
-            Known-good models whose smallest quantisation this machine can actually run.
+            {t("models.recommendedHint")}
           </p>
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -167,7 +165,7 @@ export function HubBrowser({
 
       <section>
         <h3 className="text-[0.8125rem] font-semibold tracking-tight">
-          {debounced ? `Results for “${debounced}”` : "Popular on Hugging Face"}
+          {debounced ? t("models.resultsFor", { query: debounced }) : t("models.popular")}
         </h3>
 
         {results.isError ? (
@@ -192,8 +190,7 @@ export function HubBrowser({
 
         {results.data?.items.length === 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            Nothing matched. GGUF is required, so repositories that only publish safetensors are
-            filtered out.
+            {t("models.noMatch")}
           </p>
         ) : null}
       </section>

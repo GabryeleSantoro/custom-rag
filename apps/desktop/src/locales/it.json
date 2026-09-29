@@ -77,9 +77,55 @@
     "fitUnknown": "Sconosciuto",
     "roles": {
       "embedding": "embedding",
-      "reranking": "reranking",
-      "llm": "LLM"
-    }
+      "reranking": "reranking"
+    },
+    "shipped": "Incluso",
+    "added": "aggiunto {{when}}",
+    "use": "Usa",
+    "activated": "Modello attivato",
+    "activateFailed": "Impossibile attivare",
+    "removed": "Modello rimosso",
+    "memory": "{{ram}} GB di RAM",
+    "vramUsable": "{{vram}} GB utilizzabili dalla GPU",
+    "role": {
+      "embedding": {
+        "label": "Embedder",
+        "blurb": "Trasforma i passaggi in vettori. Cambiarlo impone una reindicizzazione completa."
+      },
+      "reranking": {
+        "label": "Reranker",
+        "blurb": "Valuta quanto ogni candidato risponde alla domanda. Sostituibile in qualsiasi momento."
+      }
+    },
+    "noneActive": "Nessuno attivo",
+    "installed": "Installati",
+    "browseHub": "Sfoglia Hugging Face",
+    "noneInstalled": "Nessun {{role}} installato",
+    "browseToInstall": "Sfogliare Hugging Face per installarne uno.",
+    "downloadStarted": "Download avviato",
+    "downloadFailed": "Download non riuscito",
+    "downloading": "Download in corso",
+    "useAfterDownload": "Usa dopo il download",
+    "useIt": "Usalo",
+    "reindexWarning_one": "Cambiare l'embedder rende inutili tutti i vettori memorizzati. Il {{count}} documento va reindicizzato prima che la ricerca funzioni di nuovo.",
+    "reindexWarning_other": "Cambiare l'embedder rende inutili tutti i vettori memorizzati. Tutti i {{count}} documenti vanno reindicizzati prima che la ricerca funzioni di nuovo.",
+    "reindexConfirm": "Digitare REINDEX per confermare",
+    "pickQuant": "Scegliere una quantizzazione. I file più piccoli perdono un po' di qualità; il badge di compatibilità è calcolato su questo computer, come {{role}}.",
+    "downloads": "{{count}} download",
+    "noGguf": "Questo repository non pubblica file GGUF, quindi non può girare in llama.cpp.",
+    "searchHub": "Cerca su Hugging Face modelli {{role}} in GGUF",
+    "sort": {
+      "downloads": "Più scaricati",
+      "likes": "Più apprezzati",
+      "trendingScore": "In tendenza",
+      "lastModified": "Aggiornati di recente"
+    },
+    "recommended": "Consigliati per il tuo hardware",
+    "recommendedHint": "Modelli collaudati la cui quantizzazione più piccola questo computer può davvero eseguire.",
+    "resultsFor": "Risultati per “{{query}}”",
+    "popular": "Popolari su Hugging Face",
+    "noMatch": "Nessun risultato. Serve il formato GGUF, quindi i repository che pubblicano solo safetensors sono esclusi.",
+    "rolesTitle": "Ruoli"
   },
   "onboarding": {
     "steps": {

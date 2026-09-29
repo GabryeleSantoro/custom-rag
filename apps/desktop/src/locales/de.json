@@ -77,9 +77,55 @@
     "fitUnknown": "Unbekannt",
     "roles": {
       "embedding": "Embedding",
-      "reranking": "Reranking",
-      "llm": "LLM"
-    }
+      "reranking": "Reranking"
+    },
+    "shipped": "Mitgeliefert",
+    "added": "hinzugefügt {{when}}",
+    "use": "Verwenden",
+    "activated": "Modell aktiviert",
+    "activateFailed": "Aktivierung nicht möglich",
+    "removed": "Modell entfernt",
+    "memory": "{{ram}} GB RAM",
+    "vramUsable": "{{vram}} GB für die GPU nutzbar",
+    "role": {
+      "embedding": {
+        "label": "Embedder",
+        "blurb": "Wandelt Passagen in Vektoren um. Ein Wechsel erzwingt eine vollständige Neuindizierung."
+      },
+      "reranking": {
+        "label": "Reranker",
+        "blurb": "Bewertet, wie gut jeder Kandidat die Frage beantwortet. Jederzeit austauschbar."
+      }
+    },
+    "noneActive": "Keines aktiv",
+    "installed": "Installiert",
+    "browseHub": "Hugging Face durchsuchen",
+    "noneInstalled": "Kein {{role}} installiert",
+    "browseToInstall": "Hugging Face durchsuchen, um eines zu installieren.",
+    "downloadStarted": "Download gestartet",
+    "downloadFailed": "Download fehlgeschlagen",
+    "downloading": "Wird heruntergeladen",
+    "useAfterDownload": "Nach dem Download verwenden",
+    "useIt": "Verwenden",
+    "reindexWarning_one": "Ein Wechsel des Embedders macht alle gespeicherten Vektoren wertlos. Das {{count}} Dokument muss neu indiziert werden, bevor die Suche wieder funktioniert.",
+    "reindexWarning_other": "Ein Wechsel des Embedders macht alle gespeicherten Vektoren wertlos. Alle {{count}} Dokumente müssen neu indiziert werden, bevor die Suche wieder funktioniert.",
+    "reindexConfirm": "Zur Bestätigung REINDEX eingeben",
+    "pickQuant": "Eine Quantisierung wählen. Kleinere Dateien verlieren etwas Qualität; das Eignungs-Badge bezieht sich auf diesen Rechner, als {{role}}.",
+    "downloads": "{{count}} Downloads",
+    "noGguf": "Dieses Repository veröffentlicht keine GGUF-Dateien und läuft daher nicht in llama.cpp.",
+    "searchHub": "Auf Hugging Face nach {{role}}-Modellen im GGUF-Format suchen",
+    "sort": {
+      "downloads": "Am häufigsten heruntergeladen",
+      "likes": "Am beliebtesten",
+      "trendingScore": "Im Trend",
+      "lastModified": "Kürzlich aktualisiert"
+    },
+    "recommended": "Empfohlen für Ihre Hardware",
+    "recommendedHint": "Bewährte Modelle, deren kleinste Quantisierung dieser Rechner tatsächlich ausführen kann.",
+    "resultsFor": "Ergebnisse für „{{query}}“",
+    "popular": "Beliebt auf Hugging Face",
+    "noMatch": "Keine Treffer. GGUF ist erforderlich, daher werden Repositories mit nur safetensors ausgefiltert.",
+    "rolesTitle": "Rollen"
   },
   "onboarding": {
     "steps": {

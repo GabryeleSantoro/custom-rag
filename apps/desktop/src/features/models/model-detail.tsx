@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DownloadIcon, HeartIcon, ScaleIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -22,11 +23,6 @@ import { api, type HubFile, type ModelRole } from "@/lib/ipc";
 import { useJobs } from "@/lib/jobs-context";
 import { keys } from "@/lib/queries";
 
-const ROLE_LABEL: Record<ModelRole, string> = {
-  embedding: "embedder",
-  reranking: "reranker",
-};
-
 function modelJobId(repoId: string, filename: string) {
   return `${repoId}/${filename}`.replaceAll("/", "_").toLowerCase();
 }
@@ -48,6 +44,7 @@ function DownloadButton({
   role: ModelRole;
   documentCount: number;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { byModel } = useJobs();
   const [activate, setActivate] = useState(role !== "embedding");
@@ -68,9 +65,9 @@ function DownloadButton({
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.models });
-      toast.success("Download started", { description: file.path });
+      toast.success(t("models.downloadStarted"), { description: file.path });
     },
-    onError: (error: Error) => toast.error("Download failed", { description: error.message }),
+    onError: (error: Error) => toast.error(t("models.downloadFailed"), { description: error.message }),
   });
 
   if (job) {
@@ -78,7 +75,7 @@ function DownloadButton({
       <div className="w-40">
         <Progress value={job.progress * 100} className="h-1.5" />
         <p className="mt-1 text-[0.625rem] text-muted-foreground">
-          {job.detail ?? "Downloading"} · {Math.round(job.progress * 100)}%
+          {job.detail ?? t("models.downloading")} · {Math.round(job.progress * 100)}%
         </p>
       </div>
     );
@@ -91,10 +88,10 @@ function DownloadButton({
           id={`activate-${file.path}`}
           checked={activate}
           onCheckedChange={setActivate}
-          aria-label="Use after download"
+          aria-label={t("models.useAfterDownload")}
         />
         <Label htmlFor={`activate-${file.path}`} className="text-[0.6875rem] font-normal">
-          Use it
+          {t("models.useIt")}
         </Label>
         <Button
           size="sm"
@@ -103,20 +100,19 @@ function DownloadButton({
           onClick={() => download.mutate()}
         >
           <DownloadIcon className="size-3.5" />
-          Download
+          {t("common.download")}
         </Button>
       </div>
 
       {needsReindexConfirm ? (
         <div className="w-64 rounded-md border border-status-error/30 bg-status-error/8 p-2">
           <p className="text-[0.6875rem] leading-[1.45] text-status-error">
-            Switching the embedder makes every stored vector meaningless. All {documentCount}{" "}
-            document{documentCount === 1 ? "" : "s"} must be re-indexed before search works again.
+            {t("models.reindexWarning", { count: documentCount })}
           </p>
           <Input
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
-            placeholder="Type REINDEX to confirm"
+            placeholder={t("models.reindexConfirm")}
             className="mt-1.5 h-7 text-[0.6875rem]"
           />
         </div>
@@ -136,6 +132,7 @@ export function ModelDetailSheet({
   documentCount: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const detail = useQuery({
     queryKey: keys.hubDetail(repoId ?? ""),
     queryFn: () => api.hubDetail(repoId as string, role),
@@ -148,8 +145,7 @@ export function ModelDetailSheet({
         <SheetHeader>
           <SheetTitle className="font-mono text-sm">{repoId}</SheetTitle>
           <SheetDescription>
-            Pick a quantisation. Smaller files lose some quality; the fit badge is measured against
-            this machine, as the {ROLE_LABEL[role]}.
+            {t("models.pickQuant", { role: t(`models.roles.${role}`) })}
           </SheetDescription>
         </SheetHeader>
 
@@ -168,7 +164,7 @@ export function ModelDetailSheet({
               <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-[0.6875rem] text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <DownloadIcon className="size-3" />
-                  {count(detail.data.model.downloads)} downloads
+                  {t("models.downloads", { count: count(detail.data.model.downloads) })}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <HeartIcon className="size-3" />
@@ -184,7 +180,7 @@ export function ModelDetailSheet({
 
               {detail.data.files.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  This repository publishes no GGUF files, so it cannot run in llama.cpp.
+                  {t("models.noGguf")}
                 </p>
               ) : null}
 

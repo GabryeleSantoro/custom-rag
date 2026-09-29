@@ -77,9 +77,55 @@
     "fitUnknown": "Desconocido",
     "roles": {
       "embedding": "embedding",
-      "reranking": "reranking",
-      "llm": "LLM"
-    }
+      "reranking": "reranking"
+    },
+    "shipped": "Incluido",
+    "added": "añadido {{when}}",
+    "use": "Usar",
+    "activated": "Modelo activado",
+    "activateFailed": "No se pudo activar",
+    "removed": "Modelo eliminado",
+    "memory": "{{ram}} GB de RAM",
+    "vramUsable": "{{vram}} GB utilizables por la GPU",
+    "role": {
+      "embedding": {
+        "label": "Embedder",
+        "blurb": "Convierte los pasajes en vectores. Cambiarlo obliga a una reindexación completa."
+      },
+      "reranking": {
+        "label": "Reranker",
+        "blurb": "Puntúa cuánto responde cada candidato a la pregunta. Se puede cambiar en cualquier momento."
+      }
+    },
+    "noneActive": "Ninguno activo",
+    "installed": "Instalados",
+    "browseHub": "Explorar Hugging Face",
+    "noneInstalled": "Ningún {{role}} instalado",
+    "browseToInstall": "Explorar Hugging Face para instalar uno.",
+    "downloadStarted": "Descarga iniciada",
+    "downloadFailed": "Falló la descarga",
+    "downloading": "Descargando",
+    "useAfterDownload": "Usar tras la descarga",
+    "useIt": "Usarlo",
+    "reindexWarning_one": "Cambiar el embedder inutiliza todos los vectores almacenados. El {{count}} documento debe reindexarse antes de que la búsqueda vuelva a funcionar.",
+    "reindexWarning_other": "Cambiar el embedder inutiliza todos los vectores almacenados. Los {{count}} documentos deben reindexarse antes de que la búsqueda vuelva a funcionar.",
+    "reindexConfirm": "Escribir REINDEX para confirmar",
+    "pickQuant": "Elegir una cuantización. Los archivos más pequeños pierden algo de calidad; la insignia de compatibilidad se mide en este equipo, como {{role}}.",
+    "downloads": "{{count}} descargas",
+    "noGguf": "Este repositorio no publica archivos GGUF, así que no puede ejecutarse en llama.cpp.",
+    "searchHub": "Buscar en Hugging Face modelos {{role}} en GGUF",
+    "sort": {
+      "downloads": "Más descargados",
+      "likes": "Más valorados",
+      "trendingScore": "Tendencia",
+      "lastModified": "Actualizados recientemente"
+    },
+    "recommended": "Recomendados para tu hardware",
+    "recommendedHint": "Modelos probados cuya cuantización más pequeña este equipo puede ejecutar de verdad.",
+    "resultsFor": "Resultados para «{{query}}»",
+    "popular": "Populares en Hugging Face",
+    "noMatch": "Sin resultados. Se requiere GGUF, por lo que se excluyen los repositorios que solo publican safetensors.",
+    "rolesTitle": "Roles"
   },
   "onboarding": {
     "steps": {

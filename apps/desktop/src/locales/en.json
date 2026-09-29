@@ -77,9 +77,55 @@
     "fitUnknown": "Unknown",
     "roles": {
       "embedding": "embedding",
-      "reranking": "reranking",
-      "llm": "LLM"
-    }
+      "reranking": "reranking"
+    },
+    "shipped": "Shipped",
+    "added": "added {{when}}",
+    "use": "Use",
+    "activated": "Model activated",
+    "activateFailed": "Could not activate",
+    "removed": "Model removed",
+    "memory": "{{ram}} GB RAM",
+    "vramUsable": "{{vram}} GB usable by the GPU",
+    "role": {
+      "embedding": {
+        "label": "Embedder",
+        "blurb": "Turns passages into vectors. Changing it forces a full re-index."
+      },
+      "reranking": {
+        "label": "Reranker",
+        "blurb": "Scores how well each candidate answers the question. Swappable at any time."
+      }
+    },
+    "noneActive": "None active",
+    "installed": "Installed",
+    "browseHub": "Browse Hugging Face",
+    "noneInstalled": "No {{role}} installed",
+    "browseToInstall": "Browse Hugging Face to install one.",
+    "downloadStarted": "Download started",
+    "downloadFailed": "Download failed",
+    "downloading": "Downloading",
+    "useAfterDownload": "Use after download",
+    "useIt": "Use it",
+    "reindexWarning_one": "Switching the embedder makes every stored vector meaningless. The {{count}} document must be re-indexed before search works again.",
+    "reindexWarning_other": "Switching the embedder makes every stored vector meaningless. All {{count}} documents must be re-indexed before search works again.",
+    "reindexConfirm": "Type REINDEX to confirm",
+    "pickQuant": "Pick a quantisation. Smaller files lose some quality; the fit badge is measured against this machine, as the {{role}}.",
+    "downloads": "{{count}} downloads",
+    "noGguf": "This repository publishes no GGUF files, so it cannot run in llama.cpp.",
+    "searchHub": "Search Hugging Face for {{role}} models in GGUF",
+    "sort": {
+      "downloads": "Most downloaded",
+      "likes": "Most liked",
+      "trendingScore": "Trending",
+      "lastModified": "Recently updated"
+    },
+    "recommended": "Recommended for your hardware",
+    "recommendedHint": "Known-good models whose smallest quantisation this machine can actually run.",
+    "resultsFor": "Results for “{{query}}”",
+    "popular": "Popular on Hugging Face",
+    "noMatch": "Nothing matched. GGUF is required, so repositories that only publish safetensors are filtered out.",
+    "rolesTitle": "Roles"
   },
   "onboarding": {
     "steps": {

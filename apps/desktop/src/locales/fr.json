@@ -77,9 +77,55 @@
     "fitUnknown": "Inconnu",
     "roles": {
       "embedding": "embedding",
-      "reranking": "reranking",
-      "llm": "LLM"
-    }
+      "reranking": "reranking"
+    },
+    "shipped": "Fourni",
+    "added": "ajouté {{when}}",
+    "use": "Utiliser",
+    "activated": "Modèle activé",
+    "activateFailed": "Impossible d'activer",
+    "removed": "Modèle retiré",
+    "memory": "{{ram}} Go de RAM",
+    "vramUsable": "{{vram}} Go utilisables par le GPU",
+    "role": {
+      "embedding": {
+        "label": "Embedder",
+        "blurb": "Transforme les passages en vecteurs. Le changer impose une réindexation complète."
+      },
+      "reranking": {
+        "label": "Reranker",
+        "blurb": "Évalue dans quelle mesure chaque candidat répond à la question. Remplaçable à tout moment."
+      }
+    },
+    "noneActive": "Aucun actif",
+    "installed": "Installés",
+    "browseHub": "Parcourir Hugging Face",
+    "noneInstalled": "Aucun {{role}} installé",
+    "browseToInstall": "Parcourir Hugging Face pour en installer un.",
+    "downloadStarted": "Téléchargement lancé",
+    "downloadFailed": "Échec du téléchargement",
+    "downloading": "Téléchargement",
+    "useAfterDownload": "Utiliser après le téléchargement",
+    "useIt": "L'utiliser",
+    "reindexWarning_one": "Changer l'embedder rend tous les vecteurs stockés inutilisables. Le {{count}} document doit être réindexé avant que la recherche refonctionne.",
+    "reindexWarning_other": "Changer l'embedder rend tous les vecteurs stockés inutilisables. Les {{count}} documents doivent être réindexés avant que la recherche refonctionne.",
+    "reindexConfirm": "Saisir REINDEX pour confirmer",
+    "pickQuant": "Choisir une quantification. Les fichiers plus petits perdent un peu en qualité ; le badge d'adéquation est évalué pour cette machine, comme {{role}}.",
+    "downloads": "{{count}} téléchargements",
+    "noGguf": "Ce dépôt ne publie aucun fichier GGUF et ne peut donc pas tourner dans llama.cpp.",
+    "searchHub": "Rechercher sur Hugging Face des modèles {{role}} au format GGUF",
+    "sort": {
+      "downloads": "Les plus téléchargés",
+      "likes": "Les plus aimés",
+      "trendingScore": "Tendance",
+      "lastModified": "Récemment mis à jour"
+    },
+    "recommended": "Recommandés pour votre matériel",
+    "recommendedHint": "Modèles éprouvés dont la plus petite quantification tourne réellement sur cette machine.",
+    "resultsFor": "Résultats pour « {{query}} »",
+    "popular": "Populaires sur Hugging Face",
+    "noMatch": "Aucun résultat. Le format GGUF est requis : les dépôts qui ne publient que du safetensors sont exclus.",
+    "rolesTitle": "Rôles"
   },
   "onboarding": {
     "steps": {

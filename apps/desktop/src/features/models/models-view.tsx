@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, CpuIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -16,18 +17,7 @@ import { api, type InstalledModel, type ModelRole } from "@/lib/ipc";
 import { healthQuery, hardwareQuery, keys, modelsQuery } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
-const ROLES: { role: ModelRole; label: string; blurb: string }[] = [
-  {
-    role: "embedding",
-    label: "Embedder",
-    blurb: "Turns passages into vectors. Changing it forces a full re-index.",
-  },
-  {
-    role: "reranking",
-    label: "Reranker",
-    blurb: "Scores how well each candidate answers the question. Swappable at any time.",
-  },
-];
+const ROLES: ModelRole[] = ["embedding", "reranking"];
 
 function InstalledCard({
   model,
@@ -38,6 +28,7 @@ function InstalledCard({
   onActivate: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -51,34 +42,35 @@ function InstalledCard({
           {model.active ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-primary">
               <CheckIcon className="size-2.5" />
-              Active
+              {t("common.active")}
             </span>
           ) : null}
           {model.shipped ? (
             <span className="rounded-full bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
-              Shipped
+              {t("models.shipped")}
             </span>
           ) : null}
         </div>
         <p className="truncate font-mono text-[0.625rem] text-muted-foreground">{model.repo_id}</p>
         <p className="mt-1.5 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-          {model.quant ?? "—"} · {bytes(model.size_bytes)} · added {relativeTime(model.downloaded_at)}
+          {model.quant ?? "—"} · {bytes(model.size_bytes)} ·{" "}
+          {t("models.added", { when: relativeTime(model.downloaded_at) })}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
         {!model.active ? (
           <Button variant="secondary" size="sm" className="h-7" onClick={onActivate}>
-            Use
+            {t("models.use")}
           </Button>
         ) : null}
         {!model.shipped && !model.active ? (
-          <IconTooltip label="Remove">
+          <IconTooltip label={t("common.remove")}>
             <Button
               variant="ghost"
               size="icon"
               className="size-7"
-              aria-label="Remove"
+              aria-label={t("common.remove")}
               onClick={onRemove}
             >
               <Trash2Icon className="size-3.5" />
@@ -91,6 +83,7 @@ function InstalledCard({
 }
 
 export function ModelsView() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [role, setRole] = useState<ModelRole>("reranking");
   const [detailRepo, setDetailRepo] = useState<string | null>(null);
@@ -108,26 +101,26 @@ export function ModelsView() {
       api.activateModel(model.id, model.role === "embedding"),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.models });
-      toast.success("Model activated");
+      toast.success(t("models.activated"));
     },
-    onError: (error: Error) => toast.error("Could not activate", { description: error.message }),
+    onError: (error: Error) => toast.error(t("models.activateFailed"), { description: error.message }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.removeModel(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.models });
-      toast.success("Model removed");
+      toast.success(t("models.removed"));
     },
-    onError: (error: Error) => toast.error("Could not remove", { description: error.message }),
+    onError: (error: Error) => toast.error(t("library.removeFailed"), { description: error.message }),
   });
 
-  const meta = ROLES.find((entry) => entry.role === role)!;
+  const roleLabel = t(`models.role.${role}.label`);
 
   return (
     <>
       <ContextSidebar
-        title="Models"
+        title={t("nav.models")}
         footer={
           hardware.data ? (
             <div className="rounded-md bg-card p-2">
@@ -136,13 +129,14 @@ export function ModelsView() {
                 {hardware.data.gpu_name ?? hardware.data.gpu_backend.toUpperCase()}
               </p>
               <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-                {Math.round(hardware.data.ram_mb / 1024)} GB RAM
+                {t("models.memory", { ram: Math.round(hardware.data.ram_mb / 1024) })}
                 {hardware.data.vram_mb
-                  ? ` · ${Math.round(hardware.data.vram_mb / 1024)} GB usable by the GPU`
+                  ? ` · ${t("models.vramUsable", { vram: Math.round(hardware.data.vram_mb / 1024) })}`
                   : ""}
               </p>
               <p className="mt-0.5 text-[0.625rem] text-muted-foreground">
-                Profile: {hardware.data.profile}
+                {t("onboarding.hardware.profile")}{" "}
+                {t(`onboarding.hardware.profileName.${hardware.data.profile}`)}
               </p>
             </div>
           ) : (
@@ -150,32 +144,32 @@ export function ModelsView() {
           )
         }
       >
-        <SidebarSectionLabel>Roles</SidebarSectionLabel>
+        <SidebarSectionLabel>{t("models.rolesTitle")}</SidebarSectionLabel>
         <nav className="flex flex-col gap-0.5">
           {ROLES.map((entry) => {
             const active = (models.data?.installed ?? []).find(
-              (model) => model.role === entry.role && model.active,
+              (model) => model.role === entry && model.active,
             );
             return (
               <button
-                key={entry.role}
+                key={entry}
                 type="button"
-                onClick={() => setRole(entry.role)}
+                onClick={() => setRole(entry)}
                 className={cn(
                   "rounded-md px-2 py-1.5 text-left transition-colors",
-                  role === entry.role ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
+                  role === entry ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/60",
                 )}
               >
                 <p
                   className={cn(
                     "text-[0.8125rem]",
-                    role === entry.role ? "font-medium" : "text-sidebar-foreground",
+                    role === entry ? "font-medium" : "text-sidebar-foreground",
                   )}
                 >
-                  {entry.label}
+                  {t(`models.role.${entry}.label`)}
                 </p>
                 <p className="truncate text-[0.6875rem] text-muted-foreground">
-                  {active ? active.name : "None active"}
+                  {active ? active.name : t("models.noneActive")}
                 </p>
               </button>
             );
@@ -184,14 +178,14 @@ export function ModelsView() {
       </ContextSidebar>
 
       <Page>
-        <PageHeader title={meta.label} description={meta.blurb} />
+        <PageHeader title={roleLabel} description={t(`models.role.${role}.blurb`)} />
 
         <PageBody>
           <Tabs defaultValue="installed" className="h-full gap-0">
             <div className="border-b border-border px-5 pt-3">
               <TabsList>
-                <TabsTrigger value="installed">Installed</TabsTrigger>
-                <TabsTrigger value="hub">Browse Hugging Face</TabsTrigger>
+                <TabsTrigger value="installed">{t("models.installed")}</TabsTrigger>
+                <TabsTrigger value="hub">{t("models.browseHub")}</TabsTrigger>
               </TabsList>
             </div>
 
@@ -200,9 +194,9 @@ export function ModelsView() {
 
               {forRole.length === 0 && !models.isLoading ? (
                 <div className="rounded-lg border border-dashed border-border p-8 text-center">
-                  <p className="text-sm font-medium">No {meta.label.toLowerCase()} installed</p>
+                  <p className="text-sm font-medium">{t("models.noneInstalled", { role: roleLabel })}</p>
                   <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                    Browse Hugging Face to install one.
+                    {t("models.browseToInstall")}
                   </p>
                 </div>
               ) : null}
