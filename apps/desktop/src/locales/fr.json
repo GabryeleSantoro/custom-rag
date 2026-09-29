@@ -1,0 +1,25 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "close": "Fermer",
+    "retry": "Réessayer",
+    "never": "jamais",
+    "longAgo": "il y a longtemps"
+  },
+  "errors": {
+    "ragcore_unreachable": "ragcore injoignable : {{reason}}",
+    "invalid_path": "Chemin invalide {{path}}",
+    "unsupported_method": "Méthode non prise en charge {{method}}",
+    "invalid_response": "Réponse invalide de ragcore : {{reason}}",
+    "outside_tauri": "Cette version s'exécute dans un navigateur ordinaire. Lancer avec `bun tauri dev` pour que la coque Rust démarre le sidecar ragcore."
+  },
+  "settings": {
+    "language": {
+      "label": "Langue",
+      "hint": "Langue de l'interface et des réponses du chat",
+      "system": "Système"
+    }
+  }
+}

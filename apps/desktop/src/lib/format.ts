@@ -1,5 +1,7 @@
 /** Small formatters shared across features. */
 
+import i18n, { currentLanguage } from "@/lib/i18n";
+
 const UNITS = ["B", "KB", "MB", "GB", "TB"];
 
 export function bytes(value: number | null | undefined): string {
@@ -22,7 +24,6 @@ export function count(value: number): string {
   return `${(value / 1_000_000).toFixed(1)}M`;
 }
 
-const RELATIVE = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 const STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["second", 60],
   ["minute", 60],
@@ -34,13 +35,14 @@ const STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
 ];
 
 export function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return "never";
+  if (!iso) return i18n.t("common.never");
+  const relative = new Intl.RelativeTimeFormat(currentLanguage(), { numeric: "auto" });
   let delta = (new Date(iso).getTime() - Date.now()) / 1000;
   for (const [unit, span] of STEPS) {
-    if (Math.abs(delta) < span) return RELATIVE.format(Math.round(delta), unit);
+    if (Math.abs(delta) < span) return relative.format(Math.round(delta), unit);
     delta /= span;
   }
-  return "long ago";
+  return i18n.t("common.longAgo");
 }
 
 export function shortPath(path: string, segments = 2): string {

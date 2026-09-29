@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CloudIcon, HardDriveIcon, PlusIcon, Trash2Icon } from "lucide-react";
@@ -45,6 +46,7 @@ import {
   type RetrievalSettings,
 } from "@/lib/ipc";
 import { connectionsQuery, hardwareQuery, keys, settingsQuery } from "@/lib/queries";
+import { getLanguagePref, setLanguagePref, type LanguagePref } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function Field({
@@ -371,6 +373,37 @@ function PerformanceSection() {
   );
 }
 
+function GeneralSection() {
+  const { t } = useTranslation();
+  const [pref, setPref] = useState<LanguagePref>(getLanguagePref());
+
+  return (
+    <div className="space-y-6">
+      <Field label={t("settings.language.label")} hint={t("settings.language.hint")}>
+        <Select
+          value={pref}
+          onValueChange={(value) => {
+            setPref(value as LanguagePref);
+            setLanguagePref(value as LanguagePref);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="system">{t("settings.language.system")}</SelectItem>
+            <SelectItem value="en">English</SelectItem>
+            <SelectItem value="it">Italiano</SelectItem>
+            <SelectItem value="fr">Français</SelectItem>
+            <SelectItem value="de">Deutsch</SelectItem>
+            <SelectItem value="es">Español</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+    </div>
+  );
+}
+
 function StorageSection() {
   const queryClient = useQueryClient();
   const { draft, setDraft, save } = useSettingsDraft();
@@ -463,6 +496,7 @@ export function SettingsPanel() {
       <PageHeader title={meta?.label ?? "Settings"} description={meta?.blurb} />
       <PageBody>
         <div className="max-w-3xl p-5">
+          {section === "general" ? <GeneralSection /> : null}
           {section === "connections" ? <ConnectionsSection /> : null}
           {section === "retrieval" ? <RetrievalSection /> : null}
           {section === "performance" ? <PerformanceSection /> : null}

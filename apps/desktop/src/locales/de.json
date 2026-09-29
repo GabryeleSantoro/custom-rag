@@ -1,0 +1,25 @@
+{
+  "common": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "close": "Schließen",
+    "retry": "Erneut versuchen",
+    "never": "nie",
+    "longAgo": "vor langer Zeit"
+  },
+  "errors": {
+    "ragcore_unreachable": "ragcore nicht erreichbar: {{reason}}",
+    "invalid_path": "Ungültiger Pfad {{path}}",
+    "unsupported_method": "Nicht unterstützte Methode {{method}}",
+    "invalid_response": "Ungültige Antwort von ragcore: {{reason}}",
+    "outside_tauri": "Dieser Build läuft in einem normalen Browser. Mit `bun tauri dev` starten, damit die Rust-Shell den ragcore-Sidecar starten kann."
+  },
+  "settings": {
+    "language": {
+      "label": "Sprache",
+      "hint": "Sprache der Oberfläche und der Chat-Antworten",
+      "system": "System"
+    }
+  }
+}

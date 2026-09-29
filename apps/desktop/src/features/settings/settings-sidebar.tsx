@@ -4,6 +4,7 @@ import { ContextSidebar } from "@/components/shell/context-sidebar";
 import { cn } from "@/lib/utils";
 
 export const SETTINGS_SECTIONS = [
+  { slug: "general", label: "General", blurb: "Language and appearance." },
   {
     slug: "connections",
     label: "Connections",
