@@ -7,6 +7,8 @@ store will do; nothing above this layer knows the data is fake.
 from __future__ import annotations
 
 import json
+import logging
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -22,6 +24,7 @@ from ragcore.api.schemas import (
     DocumentContent,
     DocumentPage,
     EvalSet,
+    Folder,
     IndexStats,
     InstalledModel,
     Source,
@@ -30,6 +33,8 @@ from ragcore.api.schemas import (
 from ragcore.config import Config
 from ragcore.stub.corpus import LoadedDoc, find_fixture_dir, load_corpus
 from ragcore.stub.retrieval import Retriever
+
+logger = logging.getLogger("ragcore.library")
 
 SCHEMA_VERSION = 1
 EMBED_MODEL = "Qwen3-Embedding-0.6B-Q8_0"
@@ -54,6 +59,9 @@ class Store:
         self.documents: dict[str, Document] = {}
         self.loaded: dict[str, LoadedDoc] = {}
         self.connections: dict[str, Connection] = {}
+        self.folders: dict[str, Folder] = {}
+        # Files the user removed from the library; rescans must not bring them back.
+        self.removed_paths: set[str] = set()
         # Connection id -> API key. In memory only, for this process' lifetime:
         # the durable copy lives in the OS keychain, held by the Rust shell.
         self.secrets: dict[str, str] = {}
@@ -73,17 +81,29 @@ class Store:
             EvalSet(name="private", n_questions=32, description="Personal documents, local only"),
         ]
 
+        self.load_chats()
         self._seed()
         self.load_connections()
+        self.load_folders()
 
     # ------------------------------------------------------------------ seeding
 
     def _seed(self) -> None:
         self._seed_models()
+        if self.load_library():
+            return
+        # First run only: afterwards the sample docs are the user's to keep or remove.
         fixture_dir = find_fixture_dir()
         if fixture_dir:
             source = self.add_source(
                 SourceCreate(path=str(fixture_dir), include_globs=["**/*.md", "**/*.txt"])
+            )
+            self.ingest_source(source.id)
+        # Slide conversions written before the library was persisted.
+        converted = self.config.data_dir / "global-files"
+        if converted.is_dir():
+            source = self.add_source(
+                SourceCreate(path=str(converted), include_globs=["**/*.md"], watch=True)
             )
             self.ingest_source(source.id)
 
@@ -126,6 +146,7 @@ class Store:
     def add_source(self, payload: SourceCreate) -> Source:
         source = Source(id=_id("src"), added_at=_now(), **payload.model_dump())
         self.sources[source.id] = source
+        self.save_library()
         return source
 
     def remove_source(self, source_id: str) -> int:
@@ -134,8 +155,66 @@ class Store:
         for doc in removed:
             self.documents.pop(doc.id, None)
             self.loaded.pop(doc.id, None)
+            # Re-adding the folder later brings its files back.
+            self.removed_paths.discard(doc.path)
         self.rebuild_index()
+        self.save_library()
         return len(removed)
+
+    def remove_document(self, doc_id: str) -> None:
+        """Out of the index for good: rescans and restarts skip the file too."""
+        document = self.documents.pop(doc_id)
+        self.loaded.pop(doc_id, None)
+        self.removed_paths.add(document.path)
+        logger.info("removed from the library: %s", document.path)
+        self.rebuild_index()
+        self.save_library()
+
+    # ------------------------------------------------------------- persistence
+
+    # Sources and removals are stored, not documents: every start re-reads the
+    # files, so edits made on disk while the app was closed are picked up.
+    # ponytail: re-parses everything at startup (~0.13 s per PDF); cache parsed
+    # pages by path+mtime once libraries outgrow the shell's 120 s ready timeout.
+    # The packaged sample docs live in PyInstaller's per-launch temp dir, so their
+    # path is saved as this placeholder and resolved again on every start.
+    _FIXTURES = "<bundled-fixtures>"
+
+    def _library_path(self) -> Path:
+        return self.config.data_dir / "library.json"
+
+    def load_library(self) -> bool:
+        """Restore the saved sources and re-index them. False on a first run."""
+        path = self._library_path()
+        if not path.is_file():
+            return False
+        data = json.loads(path.read_text())
+        self.removed_paths = set(data.get("removed_paths", []))
+        fixture_dir = find_fixture_dir()
+        for raw in data["sources"]:
+            stale_sample = raw["path"].endswith("fixtures/docs") and not Path(raw["path"]).is_dir()
+            if raw["path"] == self._FIXTURES or stale_sample:
+                if fixture_dir is None:
+                    continue
+                raw = {**raw, "path": str(fixture_dir)}
+            source = Source.model_validate(raw)
+            self.sources[source.id] = source
+            self.ingest_source(source.id)
+        return True
+
+    def save_library(self) -> None:
+        path = self._library_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fixture_dir = str(find_fixture_dir())
+        sources = [s.model_dump(mode="json") for s in self.sources.values()]
+        for source in sources:
+            if source["path"] == fixture_dir:
+                source["path"] = self._FIXTURES
+        payload = {
+            "sources": sources,
+            "removed_paths": sorted(self.removed_paths),
+        }
+        path.write_text(json.dumps(payload, indent=2))
 
     def ingest_source(self, source_id: str) -> list[Document]:
         """Load every file under a source and mark it indexed."""
@@ -144,7 +223,9 @@ class Store:
             return []
         directory = Path(source.path)
         if not directory.is_dir():
+            logger.warning("source folder missing, nothing indexed: %s", directory)
             return []
+        started = time.perf_counter()
 
         docs: list[Document] = []
         for loaded in load_corpus(
@@ -153,6 +234,8 @@ class Store:
             exclude_globs=source.exclude_globs,
             max_file_mb=source.max_file_mb,
         ):
+            if str(loaded.path) in self.removed_paths:
+                continue
             document = Document(
                 id=loaded.doc_id,
                 source_id=source_id,
@@ -178,6 +261,8 @@ class Store:
         source.indexed_count = len([d for d in owned if d.status == "indexed"])
         source.last_scan_at = _now()
         self.rebuild_index()
+        elapsed = time.perf_counter() - started
+        logger.info("indexed %d documents from %s in %.1fs", len(docs), directory, elapsed)
         return docs
 
     def rebuild_index(self) -> None:
@@ -252,6 +337,7 @@ class Store:
             updated_at=now,
         )
         self.projects[project.id] = project
+        self.save_chats()
         return project
 
     def create_session(
@@ -272,6 +358,7 @@ class Store:
         )
         self.sessions[session.id] = session
         self.messages[session.id] = []
+        self.save_chats()
         return session
 
     def append_message(self, message: ChatMessage) -> None:
@@ -282,9 +369,41 @@ class Store:
             session.updated_at = message.created_at
             if session.title == "New chat" and message.role == "user":
                 session.title = message.text[:48].strip() or session.title
+        self.save_chats()
 
     def new_id(self, prefix: str) -> str:
         return _id(prefix)
+
+    # ponytail: rewrites every chat on each change; move to MetaStore's SQLite
+    # tables if long histories make saving noticeable.
+    def load_chats(self) -> None:
+        path = self.config.data_dir / "chats.json"
+        if not path.is_file():
+            return
+        data = json.loads(path.read_text())
+        self.projects = {
+            p.id: p for p in (ChatProject.model_validate(raw) for raw in data["projects"])
+        }
+        self.sessions = {
+            s.id: s for s in (ChatSession.model_validate(raw) for raw in data["sessions"])
+        }
+        self.messages = {
+            session_id: [ChatMessage.model_validate(raw) for raw in items]
+            for session_id, items in data["messages"].items()
+        }
+
+    def save_chats(self) -> None:
+        path = self.config.data_dir / "chats.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "projects": [p.model_dump(mode="json") for p in self.projects.values()],
+            "sessions": [s.model_dump(mode="json") for s in self.sessions.values()],
+            "messages": {
+                session_id: [m.model_dump(mode="json") for m in items]
+                for session_id, items in self.messages.items()
+            },
+        }
+        path.write_text(json.dumps(payload))
 
     # ------------------------------------------------------------- connections
 
@@ -311,6 +430,19 @@ class Store:
             "active_connection_id": self.settings.active_connection_id,
         }
         path.write_text(json.dumps(payload, indent=2))
+
+    def load_folders(self) -> None:
+        path = self.config.data_dir / "folders.json"
+        if path.is_file():
+            raw = json.loads(path.read_text())
+            self.folders = {f.id: f for f in (Folder.model_validate(item) for item in raw)}
+
+    def save_folders(self) -> None:
+        path = self.config.data_dir / "folders.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps([f.model_dump(mode="json") for f in self.folders.values()], indent=2)
+        )
 
     def active_connection(self) -> Connection | None:
         """The one connection that answers, chosen by the user in the app."""

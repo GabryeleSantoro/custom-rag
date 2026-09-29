@@ -1,19 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ClipboardCheckIcon,
-  ClipboardCopyIcon,
-  RotateCwIcon,
-  SearchIcon,
-} from "lucide-react";
+import { ClipboardCheckIcon, ClipboardCopyIcon, RotateCwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
 import { StatusChip } from "@/components/status";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LogPane } from "@/components/log-pane";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { bytes, count, duration, relativeTime } from "@/lib/format";
 import { shell, type Health, type HardwareInfo, type ProcessStatus } from "@/lib/ipc";
 import { hardwareQuery, healthQuery, keys, logsQuery, sidecarsQuery } from "@/lib/queries";
@@ -201,66 +195,6 @@ function EnvironmentSection({
   );
 }
 
-function LogPane({ lines }: { lines: string[] }) {
-  const [filter, setFilter] = useState("");
-  const [follow, setFollow] = useState(true);
-  const viewport = useRef<HTMLDivElement>(null);
-
-  const shown = useMemo(() => {
-    const needle = filter.trim().toLowerCase();
-    return needle ? lines.filter((line) => line.toLowerCase().includes(needle)) : lines;
-  }, [lines, filter]);
-
-  useEffect(() => {
-    if (!follow) return;
-    const node = viewport.current;
-    if (node) node.scrollTop = node.scrollHeight;
-  }, [shown, follow]);
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      <div className="flex items-center gap-3 border-b border-border px-2.5 py-2">
-        <div className="relative min-w-0 flex-1">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder="Filter lines"
-            className="h-7 pl-7 text-xs"
-          />
-        </div>
-        <label className="flex shrink-0 items-center gap-2 text-[0.6875rem] text-muted-foreground">
-          Follow
-          <Switch checked={follow} onCheckedChange={setFollow} />
-        </label>
-        <span className="shrink-0 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-          {shown.length}/{lines.length}
-        </span>
-      </div>
-
-      <div ref={viewport} className="h-72 overflow-auto bg-background/40 px-2.5 py-2">
-        {shown.length === 0 ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">
-            {lines.length === 0 ? "No output yet." : "No line matches that filter."}
-          </p>
-        ) : (
-          shown.map((line, index) => (
-            <p
-              key={`${index}-${line.slice(0, 24)}`}
-              className={cn(
-                "selectable font-mono text-[0.6875rem] leading-[1.55] break-words whitespace-pre-wrap",
-                line.startsWith("[err]") ? "text-status-error" : "text-muted-foreground",
-              )}
-            >
-              {line}
-            </p>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 /**
  * The text behind "copy debug report". Deliberately excludes the session token
  * and every API key: this string is written to be pasted into a bug report.
@@ -433,8 +367,8 @@ export function DiagnosticsView() {
           </Section>
 
           <Section
-            title="Core log"
-            description="Last 500 lines of the sidecar's stdout and stderr."
+            title="Recent log"
+            description="Everything the app, the proxy and the core logged. The Logs page has the full view."
           >
             <LogPane lines={lines} />
           </Section>

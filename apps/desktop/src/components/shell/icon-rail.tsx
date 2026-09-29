@@ -4,6 +4,7 @@ import {
   BoxesIcon,
   FlaskConicalIcon,
   LibraryIcon,
+  ScrollTextIcon,
   FilePenLineIcon,
   MessagesSquareIcon,
   SettingsIcon,
@@ -33,6 +34,7 @@ const PRIMARY: RailItem[] = [
 ];
 
 const SECONDARY: RailItem[] = [
+  { to: "/logs", label: "Logs", icon: ScrollTextIcon, match: ["/logs"] },
   { to: "/diagnostics", label: "Diagnostics", icon: ActivityIcon, match: ["/diagnostics"] },
   { to: "/eval", label: "Eval runner", icon: FlaskConicalIcon, match: ["/eval"], devOnly: true },
 ];

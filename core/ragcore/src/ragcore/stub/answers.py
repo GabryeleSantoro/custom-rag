@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import random
 import re
+import time
 from collections.abc import AsyncIterator
 
 import httpx
@@ -86,8 +88,13 @@ async def scripted_stream(
         yield word if index == 0 else " " + word
 
 
+logger = logging.getLogger("ragcore.llm")
+
 ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
+# Anthropic requires max_tokens. Used when the connection sets no cap.
+# ponytail: one value for every Claude model; per-model limits if one rejects it.
+ANTHROPIC_DEFAULT_MAX_TOKENS = 32000
 
 
 def _user_prompt(question: str, chunks: list[RetrievedChunk]) -> str:
@@ -104,7 +111,7 @@ def _request(
     question: str,
     chunks: list[RetrievedChunk],
     system_prompt: str,
-    max_tokens: int,
+    max_tokens: int | None,
 ) -> tuple[str, dict, dict]:
     """The URL, JSON body and headers for one connection's streaming call."""
     user = _user_prompt(question, chunks)
@@ -116,7 +123,7 @@ def _request(
         body = {
             "model": connection.model_id,
             "stream": True,
-            "max_tokens": max_tokens,
+            "max_tokens": max_tokens or ANTHROPIC_DEFAULT_MAX_TOKENS,
             "system": system_prompt,
             "messages": [{"role": "user", "content": user}],
         }
@@ -129,12 +136,13 @@ def _request(
     body = {
         "model": connection.model_id,
         "stream": True,
-        "max_tokens": max_tokens,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user},
         ],
     }
+    if max_tokens:
+        body["max_tokens"] = max_tokens
     # OpenRouter reads this; every other OpenAI-compatible server ignores it.
     routing = {
         key: value
@@ -147,6 +155,29 @@ def _request(
     if routing:
         body["provider"] = routing
     return f"{base}/chat/completions", body, headers
+
+
+def _raise_on_error(connection: Connection, data: str) -> None:
+    """Providers (OpenRouter, Anthropic) report some failures inside a 200 stream."""
+    try:
+        event = json.loads(data)
+    except json.JSONDecodeError:
+        return
+    error = event.get("error") if isinstance(event, dict) else None
+    if error:
+        message = error.get("message", error) if isinstance(error, dict) else error
+        logger.error("%s: error inside the stream: %s", connection.name, message)
+        raise RuntimeError(f"{connection.name} failed mid-answer: {message}")
+
+
+def _finish_reason(kind: str, data: str) -> str | None:
+    try:
+        event = json.loads(data)
+        if kind == "anthropic":
+            return (event.get("delta") or {}).get("stop_reason")
+        return event["choices"][0].get("finish_reason")
+    except (json.JSONDecodeError, KeyError, IndexError, AttributeError, TypeError):
+        return None
 
 
 def _piece(kind: str, data: str) -> str | None:
@@ -164,6 +195,18 @@ def _piece(kind: str, data: str) -> str | None:
         return (event["choices"][0]["delta"] or {}).get("content")
     except (KeyError, IndexError):
         return None
+
+
+def _reasoning_len(kind: str, data: str) -> int:
+    """Size of the reasoning fragment in one SSE data line (never shown, only counted)."""
+    try:
+        event = json.loads(data)
+        if kind == "anthropic":
+            return len((event.get("delta") or {}).get("thinking") or "")
+        delta = event["choices"][0]["delta"] or {}
+        return len(delta.get("reasoning") or delta.get("reasoning_content") or "")
+    except (json.JSONDecodeError, KeyError, IndexError, AttributeError, TypeError):
+        return 0
 
 
 async def llm_stream(
@@ -187,21 +230,65 @@ async def llm_stream(
         system_prompt or SYSTEM_PROMPT,
         max_tokens or connection.max_output_tokens,
     )
+    cap = max_tokens or connection.max_output_tokens
+    logger.info(
+        "%s: calling %s at %s (%d passages, output cap %s)",
+        connection.name, connection.model_id, url, len(chunks), cap or "none",
+    )
+    started = time.perf_counter()
+    chars = 0
+    reasoning = 0
     async with (
         httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client,
         client.stream("POST", url, json=body, headers=headers) as response,
     ):
         if response.status_code >= 400:
             detail = (await response.aread()).decode(errors="replace").strip()[:500]
+            logger.error("%s: HTTP %s: %s", connection.name, response.status_code, detail)
             raise RuntimeError(
                 f"{connection.name} returned HTTP {response.status_code}: {detail}"
             )
+        produced = False
+        finish: str | None = None
+        done = False
         async for line in response.aiter_lines():
             if not line.startswith("data:"):
                 continue
             data = line[5:].strip()
             if data == "[DONE]":
-                return
+                done = True
+                break
+            _raise_on_error(connection, data)
+            finish = _finish_reason(connection.kind, data) or finish
+            reasoning += _reasoning_len(connection.kind, data)
             piece = _piece(connection.kind, data)
             if piece:
+                produced = True
+                chars += len(piece)
                 yield piece
+
+    logger.info(
+        "%s: finished in %.1fs, %d chars (+%d reasoning chars), finish reason %s",
+        connection.name, time.perf_counter() - started, chars, reasoning, finish or "none",
+    )
+
+    # A 200 with no text is still a failure: saying so beats saving an empty answer.
+    if not produced:
+        if finish in ("length", "max_tokens"):
+            budget = max_tokens or connection.max_output_tokens
+            spent = f"its whole output budget ({budget} tokens)" if budget else "its output limit"
+            raise RuntimeError(
+                f"{connection.name} used {spent} without writing any text, most likely on "
+                "reasoning. Raise or clear Max output tokens, or lower Thinking."
+            )
+        if finish is None and not done:
+            detail = f"{reasoning} chars of reasoning, no text" if reasoning else "no text"
+            raise RuntimeError(
+                f"{connection.name} closed the stream after "
+                f"{time.perf_counter() - started:.0f}s with {detail} and no finish reason, "
+                "most likely still reasoning when the provider cut it off. Lower Thinking, "
+                "use a non-reasoning model, or convert fewer slides at a time."
+            )
+        raise RuntimeError(
+            f"{connection.name} returned an empty answer (finish reason: {finish or 'none'})"
+        )

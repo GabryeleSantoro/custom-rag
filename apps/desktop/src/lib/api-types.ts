@@ -407,6 +407,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connections/{connection_id}/secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Restore Secret
+         * @description The shell hands back a key from the OS keychain after a restart.
+         */
+        put: operations["restore_secret_connections__connection_id__secret_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connections/test": {
         parameters: {
             query?: never;
@@ -649,6 +669,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Folders */
+        get: operations["list_folders_folders_get"];
+        put?: never;
+        /** Create Folder */
+        post: operations["create_folder_folders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/folders/{folder_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Folder
+         * @description The documents stay in the library; only the grouping goes.
+         */
+        delete: operations["delete_folder_folders__folder_id__delete"];
+        options?: never;
+        head?: never;
+        /** Rename Folder */
+        patch: operations["rename_folder_folders__folder_id__patch"];
+        trace?: never;
+    };
+    "/documents/{doc_id}/folder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Move Document
+         * @description A document sits in at most one folder, like a file.
+         */
+        put: operations["move_document_documents__doc_id__folder_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -860,7 +939,7 @@ export interface components {
             /** Model Id */
             model_id: string;
             /** Max Output Tokens */
-            max_output_tokens: number;
+            max_output_tokens?: number | null;
             /**
              * Thinking
              * @enum {string}
@@ -895,11 +974,8 @@ export interface components {
             base_url?: string | null;
             /** Model Id */
             model_id: string;
-            /**
-             * Max Output Tokens
-             * @default 1024
-             */
-            max_output_tokens: number;
+            /** Max Output Tokens */
+            max_output_tokens?: number | null;
             /**
              * Thinking
              * @default off
@@ -926,6 +1002,11 @@ export interface components {
              * @description OpenRouter provider routing: try these providers first, in order. Ignored outside OpenRouter.
              */
             provider_order?: string[] | null;
+        };
+        /** ConnectionSecret */
+        ConnectionSecret: {
+            /** Api Key */
+            api_key: string;
         };
         /** ConnectionTestRequest */
         ConnectionTestRequest: {
@@ -1205,6 +1286,36 @@ export interface components {
             n_questions: number;
             /** Description */
             description?: string | null;
+        };
+        /**
+         * Folder
+         * @description A user-made group of documents. Virtual: files stay where they are on disk.
+         */
+        Folder: {
+            /** Name */
+            name: string;
+            /** Id */
+            id: string;
+            /** Doc Ids */
+            doc_ids?: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** FolderAssignment */
+        FolderAssignment: {
+            /**
+             * Folder Id
+             * @description None takes the document out of every folder.
+             */
+            folder_id: string | null;
+        };
+        /** FolderInput */
+        FolderInput: {
+            /** Name */
+            name: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2033,6 +2144,7 @@ export interface operations {
         parameters: {
             query?: {
                 source_id?: string | null;
+                folder_id?: string | null;
                 status?: ("queued" | "parsing" | "ocr" | "chunking" | "embedding" | "indexed" | "error" | "skipped") | null;
                 q?: string | null;
                 ext?: string | null;
@@ -2807,6 +2919,41 @@ export interface operations {
             };
         };
     };
+    restore_secret_connections__connection_id__secret_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionSecret"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     test_connection_connections_test_post: {
         parameters: {
             query?: never;
@@ -3234,6 +3381,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_folders_folders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Folder"][];
+                };
+            };
+        };
+    };
+    create_folder_folders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FolderInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Folder"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_folder_folders__folder_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                folder_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_folder_folders__folder_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                folder_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FolderInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Folder"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    move_document_documents__doc_id__folder_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FolderAssignment"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
                 };
             };
             /** @description Validation Error */

@@ -173,3 +173,35 @@ def test_deleting_a_project_keeps_its_folders_and_chats(client: TestClient, tmp_
     remaining = {s["id"]: s for s in client.get("/sources").json()}
     assert source["id"] in remaining, "the folder stays indexed as global knowledge"
     assert remaining[source["id"]]["project_id"] is None
+
+
+def test_projects_chats_and_messages_survive_a_restart(client) -> None:
+    from fastapi.testclient import TestClient
+    from ragcore.api.app import create_app
+    from ragcore.api.schemas import ChatMessage
+
+    project = client.post("/chats/projects", json={"name": "Thesis"}).json()
+    session = client.post("/chats", json={"title": "Reranking", "project_id": project["id"]}).json()
+    client.patch(f"/chats/{session['id']}", json={"pinned": True})
+    store = client.app.state.store
+    store.append_message(
+        ChatMessage.model_validate(
+            {
+                "id": "msg_1",
+                "session_id": session["id"],
+                "role": "user",
+                "text": "Why rerank?",
+                "created_at": "2026-09-28T10:00:00Z",
+            }
+        )
+    )
+
+    with TestClient(create_app(client.app.state.config)) as restarted:
+        restarted.headers["Authorization"] = client.headers["Authorization"]
+        [reloaded] = restarted.get("/chats").json()
+        messages = restarted.get(f"/chats/{session['id']}/messages").json()
+        projects = restarted.get("/chats/projects").json()
+
+    assert reloaded["project_id"] == project["id"] and reloaded["pinned"] is True
+    assert [m["text"] for m in messages] == ["Why rerank?"]
+    assert [p["name"] for p in projects] == ["Thesis"]

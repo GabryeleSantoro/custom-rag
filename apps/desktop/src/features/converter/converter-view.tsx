@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -45,6 +45,29 @@ type PresentationRow = {
   errorMessage: string | null;
 };
 type LocalSlide = { path: string; title: string; ext: string };
+
+type RunState = { running: boolean; rows: PresentationRow[]; error: string | null };
+
+// Module-level, not component state: a conversion keeps streaming while the user
+// is on another page, and its progress must still be here when they come back.
+let run: RunState = { running: false, rows: [], error: null };
+let runStream: StreamHandle | null = null;
+const runListeners = new Set<() => void>();
+
+function setRun(patch: Partial<RunState> | ((current: RunState) => Partial<RunState>)) {
+  run = { ...run, ...(typeof patch === "function" ? patch(run) : patch) };
+  for (const listener of runListeners) listener();
+}
+
+function subscribeRun(listener: () => void) {
+  runListeners.add(listener);
+  return () => runListeners.delete(listener);
+}
+
+const setRows = (next: PresentationRow[] | ((rows: PresentationRow[]) => PresentationRow[])) =>
+  setRun((current) => ({ rows: typeof next === "function" ? next(current.rows) : next }));
+const setRunning = (running: boolean) => setRun({ running });
+const setRequestError = (error: string | null) => setRun({ error });
 
 function readableExtension(document: Document) {
   return document.ext.replace(".", "").toUpperCase() || "FILE";
@@ -120,10 +143,7 @@ export function ConverterView() {
   const [outputTitle, setOutputTitle] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [depth, setDepth] = useState<"standard" | "deep">("deep");
-  const [running, setRunning] = useState(false);
-  const [rows, setRows] = useState<PresentationRow[]>([]);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const stream = useRef<StreamHandle | null>(null);
+  const { running, rows, error: requestError } = useSyncExternalStore(subscribeRun, () => run);
 
   const connections = useQuery(connectionsQuery);
   const documents = useQuery({
@@ -194,7 +214,7 @@ export function ConverterView() {
     } else if (event.event === "conversion_saved") {
       updateRow(event.data.presentation_index, { status: "saved", savedPath: event.data.path });
     } else if (event.event === "presentation_error") {
-      const existing = rows.some((row) => row.index === event.data.presentation_index);
+      const existing = run.rows.some((row) => row.index === event.data.presentation_index);
       if (!existing) {
         setRows((current) => [
           ...current,
@@ -225,7 +245,7 @@ export function ConverterView() {
     setRunning(true);
     setRows([]);
     setRequestError(null);
-    stream.current = streamSlideConversion(
+    runStream = streamSlideConversion(
       {
         slide_ids: selectedIds,
         file_paths: uploadedSlides.map((file) => file.path),
@@ -245,7 +265,7 @@ export function ConverterView() {
   };
 
   const stop = () => {
-    void stream.current?.cancel();
+    void runStream?.cancel();
     setRunning(false);
   };
 

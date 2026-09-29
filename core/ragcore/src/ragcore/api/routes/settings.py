@@ -35,7 +35,10 @@ def wipe(payload: WipeRequest, store: StoreDep) -> Ok:
     store.loaded.clear()
     store.sessions.clear()
     store.messages.clear()
+    store.removed_paths.clear()
     store.rebuild_index()
+    store.save_library()
+    store.save_chats()
     if not payload.keep_connections:
         store.connections.clear()
         store.settings.active_connection_id = None

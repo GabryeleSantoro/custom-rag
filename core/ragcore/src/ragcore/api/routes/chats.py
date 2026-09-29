@@ -46,6 +46,7 @@ def update_project(project_id: str, payload: ChatProjectPatch, store: StoreDep) 
     if payload.use_global_sources is not None:
         project.use_global_sources = payload.use_global_sources
     project.updated_at = datetime.now(tz=UTC)
+    store.save_chats()
     return project
 
 
@@ -62,6 +63,8 @@ def delete_project(project_id: str, store: StoreDep) -> Ok:
     for session in store.sessions.values():
         if session.project_id == project_id:
             session.project_id = None
+    store.save_chats()
+    store.save_library()
     return Ok()
 
 
@@ -93,6 +96,7 @@ def delete_session(session_id: str, store: StoreDep) -> Ok:
         raise HTTPException(404, "session not found")
     store.sessions.pop(session_id)
     store.messages.pop(session_id, None)
+    store.save_chats()
     return Ok()
 
 
@@ -109,4 +113,5 @@ def update_session(session_id: str, payload: ChatSessionPatch, store: StoreDep) 
         session.project_id = payload.project_id
     if payload.pinned is not None:
         session.pinned = payload.pinned
+    store.save_chats()
     return session

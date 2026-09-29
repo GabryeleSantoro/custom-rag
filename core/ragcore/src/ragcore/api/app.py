@@ -16,6 +16,7 @@ from ragcore.api.routes import (
     conversions,
     documents,
     evals,
+    folders,
     health,
     jobs,
     models,
@@ -75,6 +76,7 @@ def create_app(config: Config) -> FastAPI:
         models.router,
         settings.router,
         evals.router,
+        folders.router,
     ):
         app.include_router(router)
 

@@ -20,6 +20,7 @@ router = APIRouter(tags=["documents"])
 def list_documents(
     store: StoreDep,
     source_id: str | None = None,
+    folder_id: str | None = None,
     status: DocumentStatus | None = None,
     q: str | None = None,
     ext: str | None = None,
@@ -29,6 +30,10 @@ def list_documents(
     items = list(store.documents.values())
     if source_id:
         items = [d for d in items if d.source_id == source_id]
+    if folder_id:
+        folder = store.folders.get(folder_id)
+        members = set(folder.doc_ids) if folder else set()
+        items = [d for d in items if d.id in members]
     if status:
         items = [d for d in items if d.status == status]
     if ext:
@@ -76,7 +81,5 @@ async def rebuild(payload: ReindexRequest, store: StoreDep, jobs: JobsDep) -> Jo
 def remove_document(doc_id: str, store: StoreDep) -> Ok:
     if doc_id not in store.documents:
         raise HTTPException(404, "document not found")
-    store.documents.pop(doc_id)
-    store.loaded.pop(doc_id, None)
-    store.rebuild_index()
+    store.remove_document(doc_id)
     return Ok()

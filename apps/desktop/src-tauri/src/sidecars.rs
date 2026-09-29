@@ -10,11 +10,13 @@
 //! state below is keyed by role rather than hard-coded to one child.
 
 use std::collections::VecDeque;
+use std::fs::{File, OpenOptions};
+use std::io::Write;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use tauri::AppHandle;
@@ -24,8 +26,11 @@ use tokio::sync::watch;
 
 use crate::hardware::HardwareInfo;
 
-const LOG_CAPACITY: usize = 500;
-const READY_TIMEOUT: Duration = Duration::from_secs(30);
+const LOG_CAPACITY: usize = 2000;
+/// The log file is moved aside once it passes this, keeping one previous copy.
+const LOG_FILE_MAX_BYTES: u64 = 5 * 1024 * 1024;
+// Generous: ragcore re-reads the whole library before it reports healthy.
+const READY_TIMEOUT: Duration = Duration::from_secs(120);
 const HEALTH_POLL: Duration = Duration::from_millis(250);
 const BACKOFF_MAX: Duration = Duration::from_secs(15);
 
@@ -66,6 +71,30 @@ pub struct Supervisor {
     pub token: String,
     inner: Mutex<Inner>,
     shutdown: watch::Sender<bool>,
+    log_file: Mutex<Option<(PathBuf, File)>>,
+}
+
+/// "2026-09-29 08:15:02Z". UTC, so no timezone database is needed; ragcore's
+/// own lines carry no timestamp and get this one too.
+fn utc_timestamp(now: SystemTime) -> String {
+    let secs = now.duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let (days, rem) = ((secs / 86_400) as i64, secs % 86_400);
+    // Civil-from-days (Howard Hinnant), valid for any date after 1970.
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!(
+        "{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02}Z",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
 }
 
 /// Claim a free port by binding to :0 and letting the OS choose, then release
@@ -143,6 +172,7 @@ impl Supervisor {
             token: session_token(),
             inner: Mutex::new(Inner::default()),
             shutdown,
+            log_file: Mutex::new(None),
         }))
     }
 
@@ -172,7 +202,30 @@ impl Supervisor {
         inner.logs.iter().cloned().collect()
     }
 
-    fn log(&self, line: String) {
+    /// Where every log line is also written, so logs survive a restart.
+    pub fn log_path(&self) -> Option<PathBuf> {
+        let file = self.log_file.lock().expect("log file poisoned");
+        file.as_ref().map(|(path, _)| path.clone())
+    }
+
+    fn open_log_file(&self, dir: PathBuf) -> std::io::Result<()> {
+        std::fs::create_dir_all(&dir)?;
+        let path = dir.join("custom-rag.log");
+        if std::fs::metadata(&path).map(|m| m.len() > LOG_FILE_MAX_BYTES).unwrap_or(false) {
+            std::fs::rename(&path, dir.join("custom-rag.1.log"))?;
+        }
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
+        *self.log_file.lock().expect("log file poisoned") = Some((path, file));
+        Ok(())
+    }
+
+    /// The one funnel for logs: the shell's own events, the proxy's and every
+    /// line ragcore prints. Kept in memory for the Logs page and appended to disk.
+    pub fn log(&self, line: String) {
+        let line = format!("{} {line}", utc_timestamp(SystemTime::now()));
+        if let Some((_, file)) = self.log_file.lock().expect("log file poisoned").as_mut() {
+            let _ = writeln!(file, "{line}");
+        }
         let mut inner = self.inner.lock().expect("sidecar state poisoned");
         if inner.logs.len() == LOG_CAPACITY {
             inner.logs.pop_front();
@@ -227,6 +280,18 @@ impl Supervisor {
     }
 
     pub fn spawn(self: &Arc<Self>, app: AppHandle, hw: HardwareInfo, http: reqwest::Client) {
+        {
+            use tauri::Manager;
+            match app.path().app_log_dir() {
+                Ok(dir) => {
+                    if let Err(err) = self.open_log_file(dir) {
+                        self.log(format!("[shell] log file unavailable: {err}"));
+                    }
+                }
+                Err(err) => self.log(format!("[shell] no log directory: {err}")),
+            }
+        }
+        self.log(format!("[shell] Custom RAG {} starting", env!("CARGO_PKG_VERSION")));
         let supervisor = Arc::clone(self);
         tauri::async_runtime::spawn(async move {
             supervisor.supervise(app, hw, http).await;
@@ -355,7 +420,7 @@ impl Supervisor {
             if *shutdown_rx.borrow() {
                 return Ok(false);
             }
-            if let Ok(response) = http.get(&url).send().await {
+            if let Ok(response) = http.get(&url).timeout(Duration::from_secs(2)).send().await {
                 if response.status().is_success() {
                     return Ok(true);
                 }
@@ -374,6 +439,7 @@ impl Supervisor {
         let connections: Vec<serde_json::Value> = http
             .get(format!("{}/connections", self.base_url()))
             .bearer_auth(&self.token)
+            .timeout(Duration::from_secs(10))
             .send()
             .await
             .and_then(|r| r.error_for_status())
@@ -391,6 +457,7 @@ impl Supervisor {
             http.put(format!("{}/connections/{id}/secret", self.base_url()))
                 .bearer_auth(&self.token)
                 .json(&serde_json::json!({ "api_key": secret }))
+                .timeout(Duration::from_secs(10))
                 .send()
                 .await
                 .and_then(|r| r.error_for_status())
@@ -424,6 +491,15 @@ unsafe fn libc_kill(pid: i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn timestamps_are_utc_calendar_dates() {
+        let at = |secs| utc_timestamp(UNIX_EPOCH + Duration::from_secs(secs));
+
+        assert_eq!(at(0), "1970-01-01 00:00:00Z");
+        assert_eq!(at(951_782_400), "2000-02-29 00:00:00Z");
+        assert_eq!(at(1_790_669_702), "2026-09-29 08:15:02Z");
+    }
 
     #[test]
     fn a_session_token_is_long_and_never_repeats() {
@@ -465,8 +541,8 @@ mod tests {
         let logs = supervisor.logs();
 
         assert_eq!(logs.len(), LOG_CAPACITY);
-        assert_eq!(logs[0], "line 10");
-        assert_eq!(logs[LOG_CAPACITY - 1], format!("line {}", LOG_CAPACITY + 9));
+        assert!(logs[0].ends_with("Z line 10"));
+        assert!(logs[LOG_CAPACITY - 1].ends_with(&format!("Z line {}", LOG_CAPACITY + 9)));
     }
 
     #[test]

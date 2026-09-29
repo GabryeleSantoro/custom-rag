@@ -15,6 +15,23 @@ use tauri::State;
 
 use crate::AppState;
 
+/// Plain calls only. Streams have no overall deadline: a deep conversion can run
+/// for many minutes, and a timeout on the client would cut it off mid-body.
+const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
+
+/// An error with its causes: reqwest's top line ("error decoding response
+/// body") hides the part that explains it ("operation timed out").
+fn describe(err: &dyn std::error::Error) -> String {
+    let mut text = err.to_string();
+    let mut source = err.source();
+    while let Some(cause) = source {
+        text.push_str(": ");
+        text.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    text
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum StreamFrame {
@@ -39,6 +56,15 @@ pub struct ApiRequest {
 /// safe to show in the UI.
 #[tauri::command]
 pub async fn api_request(state: State<'_, AppState>, req: ApiRequest) -> Result<Value, String> {
+    let label = format!("{} {}", req.method.to_uppercase(), req.path);
+    let result = forward(&state, req).await;
+    if let Err(err) = &result {
+        state.supervisor.log(format!("[shell] {label} failed: {err}"));
+    }
+    result
+}
+
+async fn forward(state: &State<'_, AppState>, req: ApiRequest) -> Result<Value, String> {
     state.supervisor.wait_ready().await;
     let url = format!("{}{}", state.supervisor.base_url(), req.path);
     let method = reqwest::Method::from_bytes(req.method.to_uppercase().as_bytes())
@@ -47,7 +73,8 @@ pub async fn api_request(state: State<'_, AppState>, req: ApiRequest) -> Result<
     let mut builder = state
         .http
         .request(method, &url)
-        .bearer_auth(&state.supervisor.token);
+        .bearer_auth(&state.supervisor.token)
+        .timeout(REQUEST_TIMEOUT);
     if let Some(body) = req.body {
         builder = builder.json(&body);
     }
@@ -55,7 +82,7 @@ pub async fn api_request(state: State<'_, AppState>, req: ApiRequest) -> Result<
     let response = builder
         .send()
         .await
-        .map_err(|e| format!("ragcore unreachable: {e}"))?;
+        .map_err(|e| format!("ragcore unreachable: {}", describe(&e)))?;
 
     let status = response.status();
     let text = response.text().await.unwrap_or_default();
@@ -107,12 +134,16 @@ pub async fn api_stream(
         builder = builder.json(&body);
     }
 
+    let label = format!("{} {path}", method.to_uppercase());
+    let started = std::time::Instant::now();
+    state.supervisor.log(format!("[shell] stream {label} opened"));
+
     let response = match builder.send().await {
         Ok(response) => response,
         Err(err) => {
-            let _ = channel.send(StreamFrame::Failed {
-                message: format!("ragcore unreachable: {err}"),
-            });
+            let message = format!("ragcore unreachable: {}", describe(&err));
+            state.supervisor.log(format!("[shell] stream {label} failed: {message}"));
+            let _ = channel.send(StreamFrame::Failed { message });
             return Ok(());
         }
     };
@@ -120,9 +151,9 @@ pub async fn api_stream(
     if !response.status().is_success() {
         let status = response.status().as_u16();
         let text = response.text().await.unwrap_or_default();
-        let _ = channel.send(StreamFrame::Failed {
-            message: format!("{status}: {text}"),
-        });
+        let message = format!("{status}: {text}");
+        state.supervisor.log(format!("[shell] stream {label} failed: {message}"));
+        let _ = channel.send(StreamFrame::Failed { message });
         return Ok(());
     }
 
@@ -143,9 +174,12 @@ pub async fn api_stream(
         let bytes = match chunk {
             Ok(bytes) => bytes,
             Err(err) => {
-                let _ = channel.send(StreamFrame::Failed {
-                    message: format!("stream broken: {err}"),
-                });
+                let message = format!("stream broken: {}", describe(&err));
+                state.supervisor.log(format!(
+                    "[shell] stream {label} broken after {:.0}s: {message}",
+                    started.elapsed().as_secs_f64()
+                ));
+                let _ = channel.send(StreamFrame::Failed { message });
                 reason = "failed";
                 break;
             }
@@ -167,6 +201,10 @@ pub async fn api_stream(
         .lock()
         .expect("cancel set poisoned")
         .remove(&stream_id);
+    state.supervisor.log(format!(
+        "[shell] stream {label} closed ({reason}) after {:.0}s",
+        started.elapsed().as_secs_f64()
+    ));
     let _ = channel.send(StreamFrame::Closed {
         reason: reason.to_string(),
     });

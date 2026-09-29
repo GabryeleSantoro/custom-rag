@@ -8,6 +8,7 @@ sensible default and auth is off when no token is given.
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
 import uvicorn
@@ -41,6 +42,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command != "serve":
         build_parser().print_help()
         return 1
+
+    # No timestamp: the Rust shell stamps every line it collects.
+    logging.basicConfig(
+        level=args.log_level.upper(), format="%(levelname)s %(name)s: %(message)s"
+    )
 
     config = Config(
         host=args.host,

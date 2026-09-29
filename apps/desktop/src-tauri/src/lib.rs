@@ -49,6 +49,12 @@ fn sidecar_restart(state: tauri::State<'_, AppState>) {
     state.supervisor.kill_child();
 }
 
+/// The on-disk log, for "Open log folder". None when it could not be created.
+#[tauri::command]
+fn log_file(state: tauri::State<'_, AppState>) -> Option<String> {
+    state.supervisor.log_path().map(|path| path.display().to_string())
+}
+
 #[tauri::command]
 fn keychain_set(connection_id: String, secret: String) -> Result<(), String> {
     keychain::set(&connection_id, &secret)
@@ -73,7 +79,9 @@ pub fn run() {
     let hardware = hardware::detect();
     let supervisor = Supervisor::new().expect("could not reserve a port for ragcore");
     let http = reqwest::Client::builder()
-        .timeout(Duration::from_secs(300))
+        // No overall timeout here: it would cover the whole response body and cut
+        // off long streams (a deep slide conversion runs for many minutes).
+        // Plain requests set their own in proxy::api_request.
         .connect_timeout(Duration::from_secs(5))
         .build()
         .expect("could not build the HTTP client");
@@ -101,6 +109,7 @@ pub fn run() {
             sidecar_status,
             sidecar_logs,
             sidecar_restart,
+            log_file,
             keychain_set,
             keychain_has,
             keychain_delete,

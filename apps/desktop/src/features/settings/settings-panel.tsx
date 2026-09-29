@@ -140,7 +140,9 @@ function ConnectionsSection() {
               {connection.base_url ? ` · ${connection.base_url}` : ""}
             </p>
             <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-              {connection.max_output_tokens.toLocaleString()} out
+              {connection.max_output_tokens
+                ? `${connection.max_output_tokens.toLocaleString()} out`
+                : "no output limit"}
               {connection.has_api_key ? " · key in keychain" : ""}
             </p>
           </div>

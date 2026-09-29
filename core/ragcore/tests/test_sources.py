@@ -148,3 +148,31 @@ def test_removing_a_source_takes_its_chunks_out_of_retrieval(
     with client.stream("POST", "/query", json={"q": "cobalt launch shipped"}) as response:
         after = dict(read_events(response))["sources"]["chunks"]
     assert all(chunk["doc_id"] != "cobalt" for chunk in after)
+
+
+def test_sources_and_removals_survive_a_restart(client, tmp_path) -> None:
+    from fastapi.testclient import TestClient
+    from ragcore.api.app import create_app
+
+    folder = tmp_path / "notes"
+    folder.mkdir()
+    (folder / "kept.md").write_text("# Kept\n\nStays in the library.")
+    (folder / "gone.md").write_text("# Gone\n\nRemoved by the user.")
+    source = client.post("/sources", json={"path": str(folder)}).json()
+    client.delete("/documents/gone")
+    before = {d["id"] for d in client.get("/documents").json()["items"]}
+
+    with TestClient(create_app(client.app.state.config)) as restarted:
+        restarted.headers["Authorization"] = client.headers["Authorization"]
+        after = {d["id"] for d in restarted.get("/documents").json()["items"]}
+        sources = [s["id"] for s in restarted.get("/sources").json()]
+        # A rescan honours the removal too.
+        restarted.post(f"/sources/{source['id']}/rescan")
+        rescanned = {d["id"] for d in restarted.get("/documents").json()["items"]}
+
+    assert "kept" in after and "gone" not in after
+    assert after == before == rescanned
+    # The sample docs are seeded once, not again on every start.
+    assert sources.count(source["id"]) == 1 and len(sources) == 2
+    # The sample source is saved by placeholder, not by its temp-dir path.
+    assert '"<bundled-fixtures>"' in (tmp_path / "library.json").read_text()

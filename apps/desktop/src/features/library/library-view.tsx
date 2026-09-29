@@ -1,12 +1,28 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpenIcon, RefreshCwIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import {
+  BookOpenIcon,
+  FolderIcon,
+  FolderInputIcon,
+  FolderMinusIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
 import { StatusChip, documentTone } from "@/components/status";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -22,15 +38,22 @@ import { SourceSidebar } from "@/features/library/source-sidebar";
 import { bytes, relativeTime } from "@/lib/format";
 import { api } from "@/lib/ipc";
 import { useJobs } from "@/lib/jobs-context";
-import { keys } from "@/lib/queries";
+import { foldersQuery, keys } from "@/lib/queries";
 
 export function LibraryView() {
   const queryClient = useQueryClient();
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const { active } = useJobs();
+  const folders = useQuery(foldersQuery);
 
-  const params = { source_id: sourceId ?? undefined, q: search || undefined, limit: 500 };
+  const params = {
+    source_id: sourceId ?? undefined,
+    folder_id: folderId ?? undefined,
+    q: search || undefined,
+    limit: 500,
+  };
   const documents = useQuery({
     queryKey: keys.documents(params),
     queryFn: () => api.listDocuments(params),
@@ -53,16 +76,42 @@ export function LibraryView() {
     onError: (error: Error) => toast.error("Could not remove", { description: error.message }),
   });
 
+  const move = useMutation({
+    mutationFn: ({ docId, folderId }: { docId: string; folderId: string | null }) =>
+      api.moveToFolder(docId, folderId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: keys.folders });
+      void queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
+    onError: (error: Error) => toast.error("Could not move", { description: error.message }),
+  });
+
+  const folderOf = new Map<string, string>();
+  for (const folder of folders.data ?? []) {
+    for (const docId of folder.doc_ids) folderOf.set(docId, folder.id);
+  }
+
   const items = documents.data?.items ?? [];
   const errored = items.filter((document) => document.status === "error");
 
   return (
     <>
-      <SourceSidebar selected={sourceId} onSelect={setSourceId} />
+      <SourceSidebar
+        selected={sourceId}
+        onSelect={(id) => {
+          setSourceId(id);
+          setFolderId(null);
+        }}
+        selectedFolder={folderId}
+        onSelectFolder={(id) => {
+          setFolderId(id);
+          setSourceId(null);
+        }}
+      />
 
       <Page>
         <PageHeader
-          title="Library"
+          title={folders.data?.find((folder) => folder.id === folderId)?.name ?? "Library"}
           description={
             documents.data
               ? `${documents.data.total} document${documents.data.total === 1 ? "" : "s"}${
@@ -108,6 +157,15 @@ export function LibraryView() {
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-9 w-full" />
               <Skeleton className="h-9 w-full" />
+            </div>
+          ) : items.length === 0 && folderId ? (
+            <div className="grid h-full place-items-center p-10 text-center">
+              <div className="max-w-sm">
+                <p className="text-sm font-medium">This folder is empty</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  In All documents, use the folder button on a row to file it here.
+                </p>
+              </div>
             </div>
           ) : items.length === 0 ? (
             <div className="grid h-full place-items-center p-10 text-center">
@@ -161,7 +219,49 @@ export function LibraryView() {
                       {relativeTime(document.mtime)}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100">
+                        <DropdownMenu>
+                          <IconTooltip label="Move to folder">
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                aria-label="Move to folder"
+                              >
+                                <FolderInputIcon className="size-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </IconTooltip>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {(folders.data ?? []).length === 0 ? (
+                              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                                Create a folder in the sidebar first
+                              </DropdownMenuLabel>
+                            ) : null}
+                            {(folders.data ?? []).map((folder) => (
+                              <DropdownMenuItem
+                                key={folder.id}
+                                disabled={folderOf.get(document.id) === folder.id}
+                                onSelect={() => move.mutate({ docId: document.id, folderId: folder.id })}
+                              >
+                                <FolderIcon className="size-3.5" />
+                                <span className="truncate">{folder.name}</span>
+                              </DropdownMenuItem>
+                            ))}
+                            {folderOf.has(document.id) ? (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => move.mutate({ docId: document.id, folderId: null })}
+                                >
+                                  <FolderMinusIcon className="size-3.5" />
+                                  Remove from folder
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <IconTooltip label={`Open ${document.title}`}>
                           <Button asChild variant="ghost" size="icon" className="size-7">
                             <Link

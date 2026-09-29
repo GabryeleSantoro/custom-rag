@@ -17,6 +17,7 @@ import { Route as ShellConvertRouteImport } from './routes/_shell.convert'
 import { Route as ShellDiagnosticsRouteImport } from './routes/_shell.diagnostics'
 import { Route as ShellEvalRouteImport } from './routes/_shell.eval'
 import { Route as ShellLibraryRouteImport } from './routes/_shell.library'
+import { Route as ShellLogsRouteImport } from './routes/_shell.logs'
 import { Route as ShellModelsRouteImport } from './routes/_shell.models'
 import { Route as ShellSettingsRouteImport } from './routes/_shell.settings'
 import { Route as ShellChatIndexRouteImport } from './routes/_shell.chat.index'
@@ -64,6 +65,11 @@ const ShellLibraryRoute = ShellLibraryRouteImport.update({
   path: '/library',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellLogsRoute = ShellLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellModelsRoute = ShellModelsRouteImport.update({
   id: '/models',
   path: '/models',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/diagnostics': typeof ShellDiagnosticsRoute
   '/eval': typeof ShellEvalRoute
   '/library': typeof ShellLibraryRoute
+  '/logs': typeof ShellLogsRoute
   '/models': typeof ShellModelsRoute
   '/settings': typeof ShellSettingsRouteWithChildren
   '/chat/$sessionId': typeof ShellChatSessionIdRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/diagnostics': typeof ShellDiagnosticsRoute
   '/eval': typeof ShellEvalRoute
   '/library': typeof ShellLibraryRoute
+  '/logs': typeof ShellLogsRoute
   '/models': typeof ShellModelsRoute
   '/': typeof ShellIndexRoute
   '/chat/$sessionId': typeof ShellChatSessionIdRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/_shell/diagnostics': typeof ShellDiagnosticsRoute
   '/_shell/eval': typeof ShellEvalRoute
   '/_shell/library': typeof ShellLibraryRoute
+  '/_shell/logs': typeof ShellLogsRoute
   '/_shell/models': typeof ShellModelsRoute
   '/_shell/settings': typeof ShellSettingsRouteWithChildren
   '/_shell/': typeof ShellIndexRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/eval'
     | '/library'
+    | '/logs'
     | '/models'
     | '/settings'
     | '/chat/$sessionId'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/eval'
     | '/library'
+    | '/logs'
     | '/models'
     | '/'
     | '/chat/$sessionId'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/_shell/diagnostics'
     | '/_shell/eval'
     | '/_shell/library'
+    | '/_shell/logs'
     | '/_shell/models'
     | '/_shell/settings'
     | '/_shell/'
@@ -259,6 +271,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof ShellLibraryRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/logs': {
+      id: '/_shell/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof ShellLogsRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/models': {
@@ -347,6 +366,7 @@ interface ShellRouteChildren {
   ShellDiagnosticsRoute: typeof ShellDiagnosticsRoute
   ShellEvalRoute: typeof ShellEvalRoute
   ShellLibraryRoute: typeof ShellLibraryRoute
+  ShellLogsRoute: typeof ShellLogsRoute
   ShellModelsRoute: typeof ShellModelsRoute
   ShellSettingsRoute: typeof ShellSettingsRouteWithChildren
   ShellIndexRoute: typeof ShellIndexRoute
@@ -359,6 +379,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellDiagnosticsRoute: ShellDiagnosticsRoute,
   ShellEvalRoute: ShellEvalRoute,
   ShellLibraryRoute: ShellLibraryRoute,
+  ShellLogsRoute: ShellLogsRoute,
   ShellModelsRoute: ShellModelsRoute,
   ShellSettingsRoute: ShellSettingsRouteWithChildren,
   ShellIndexRoute: ShellIndexRoute,

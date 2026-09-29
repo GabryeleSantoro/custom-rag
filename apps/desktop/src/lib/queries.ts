@@ -16,6 +16,7 @@ export const keys = {
   logs: ["sidecar-logs"] as const,
   settings: ["settings"] as const,
   sources: ["sources"] as const,
+  folders: ["folders"] as const,
   documents: (params: Record<string, unknown>) => ["documents", params] as const,
   document: (id: string) => ["document", id] as const,
   content: (id: string) => ["content", id] as const,
@@ -63,6 +64,11 @@ export const settingsQuery = queryOptions({
 export const sourcesQuery = queryOptions({
   queryKey: keys.sources,
   queryFn: api.listSources,
+});
+
+export const foldersQuery = queryOptions({
+  queryKey: keys.folders,
+  queryFn: api.listFolders,
 });
 
 export const sessionsQuery = queryOptions({

@@ -18,6 +18,8 @@ export type IndexStats = Schemas["IndexStats"];
 export type Source = Schemas["Source"];
 export type SourceCreate = Schemas["SourceCreate"];
 export type Document = Schemas["Document"];
+// Defaulted fields come out optional; the server always sends doc_ids.
+export type Folder = Schemas["Folder"] & { doc_ids: string[] };
 export type DocumentList = Schemas["DocumentList"];
 export type DocumentContent = Schemas["DocumentContent"];
 export type DocumentChunkRef = Schemas["DocumentChunkRef"];
@@ -139,12 +141,20 @@ export const api = {
 
   listDocuments: (params: {
     source_id?: string;
+    folder_id?: string;
     status?: DocumentStatus;
     q?: string;
     ext?: string;
     offset?: number;
     limit?: number;
   } = {}) => request<DocumentList>("GET", `/documents${query(params)}`),
+
+  listFolders: () => request<Folder[]>("GET", "/folders"),
+  createFolder: (name: string) => request<Folder>("POST", "/folders", { name }),
+  renameFolder: (id: string, name: string) => request<Folder>("PATCH", `/folders/${id}`, { name }),
+  deleteFolder: (id: string) => request<void>("DELETE", `/folders/${id}`),
+  moveToFolder: (docId: string, folderId: string | null) =>
+    request<void>("PUT", `/documents/${docId}/folder`, { folder_id: folderId }),
   getDocument: (id: string) => request<Document>("GET", `/documents/${id}`),
   getContent: (id: string) => request<DocumentContent>("GET", `/documents/${id}/content`),
   removeDocument: (id: string) => request<void>("DELETE", `/documents/${id}`),
@@ -213,6 +223,7 @@ export const shell = {
   hardware: () => call<HardwareInfo>("hardware_info"),
   sidecars: () => call<SidecarStatus[]>("sidecar_status"),
   logs: () => call<string[]>("sidecar_logs"),
+  logFile: () => call<string | null>("log_file"),
   restart: () => call<void>("sidecar_restart"),
   keychainSet: (connectionId: string, secret: string) =>
     call<void>("keychain_set", { connectionId, secret }),

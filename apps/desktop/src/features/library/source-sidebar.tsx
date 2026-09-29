@@ -28,6 +28,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddSourceDialog } from "@/features/library/add-source-dialog";
+import { FolderList } from "@/features/library/folder-list";
 import { relativeTime, shortPath } from "@/lib/format";
 import { api, type Job, type Source } from "@/lib/ipc";
 import { useJobs } from "@/lib/jobs-context";
@@ -37,9 +38,13 @@ import { cn } from "@/lib/utils";
 export function SourceSidebar({
   selected,
   onSelect,
+  selectedFolder,
+  onSelectFolder,
 }: {
   selected: string | null;
   onSelect: (sourceId: string | null) => void;
+  selectedFolder: string | null;
+  onSelectFolder: (folderId: string | null) => void;
 }) {
   const queryClient = useQueryClient();
   const sources = useQuery(sourcesQuery);
@@ -71,7 +76,7 @@ export function SourceSidebar({
 
   return (
     <ContextSidebar
-      title="Sources"
+      title="Library"
       action={
         <AddSourceDialog
           trigger={
@@ -88,11 +93,19 @@ export function SourceSidebar({
         onClick={() => onSelect(null)}
         className={cn(
           "w-full rounded-md px-2 py-1.5 text-left text-[0.8125rem] transition-colors",
-          selected === null ? "bg-sidebar-accent font-medium" : "hover:bg-sidebar-accent/60",
+          selected === null && selectedFolder === null
+            ? "bg-sidebar-accent font-medium"
+            : "hover:bg-sidebar-accent/60",
         )}
       >
         All documents
       </button>
+
+      <FolderList selected={selectedFolder} onSelect={onSelectFolder} />
+
+      <p className="mt-3 px-2 py-1 text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase">
+        Sources
+      </p>
 
       {sources.isLoading ? <Skeleton className="mt-2 h-14 w-full" /> : null}
 

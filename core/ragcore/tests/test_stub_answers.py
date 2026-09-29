@@ -267,6 +267,13 @@ def test_an_http_error_names_the_connection_and_the_status() -> None:
         answers.httpx.AsyncClient = original
 
 
+def test_a_stream_cut_off_while_reasoning_says_so() -> None:
+    lines = ['data: {"choices": [{"delta": {"reasoning": "thinking hard"}}]}']
+
+    with pytest.raises(RuntimeError, match="13 chars of reasoning.*no finish reason"):
+        run(connection(name="OpenRouter"), lines=lines)
+
+
 def test_a_connection_with_no_key_sends_no_auth_header() -> None:
     _, captured = run(connection(), api_key=None)
 
@@ -361,3 +368,41 @@ def test_a_very_long_sentence_is_elided_rather_than_dumped() -> None:
 
     assert len(lead) <= 240
     assert lead.endswith("…")
+
+
+def _failure(lines: list[str]) -> str:
+    with pytest.raises(RuntimeError) as caught:
+        run(connection(), lines=lines)
+    return str(caught.value)
+
+
+def test_output_spent_entirely_on_reasoning_is_an_error_not_an_empty_answer() -> None:
+    message = _failure(
+        [
+            'data: {"choices": [{"delta": {"reasoning": "long thoughts"}}]}',
+            'data: {"choices": [{"delta": {}, "finish_reason": "length"}]}',
+            "data: [DONE]",
+        ]
+    )
+
+    assert "4096 tokens" in message
+    assert "Max output tokens" in message
+
+
+def test_no_output_cap_leaves_max_tokens_to_the_model() -> None:
+    _, captured = run(connection(max_output_tokens=None))
+    assert "max_tokens" not in captured["payload"]
+
+    # Anthropic rejects a request without one, so it gets a generous default.
+    _, captured = run(connection(kind="anthropic", max_output_tokens=None), lines=ANTHROPIC_LINES)
+    assert captured["payload"]["max_tokens"] == answers.ANTHROPIC_DEFAULT_MAX_TOKENS
+
+
+def test_an_error_inside_a_200_stream_is_raised() -> None:
+    message = _failure(['data: {"error": {"code": 502, "message": "Provider returned error"}}'])
+
+    assert "Provider returned error" in message
+
+
+def test_a_stream_with_no_text_at_all_is_an_error() -> None:
+    assert "empty answer" in _failure(["data: [DONE]"])

@@ -78,7 +78,7 @@ const BLANK = {
   kind: "openai-compatible" as ConnectionKind,
   base_url: "http://localhost:1234/v1",
   model_id: "",
-  max_output_tokens: 1024,
+  max_output_tokens: null as number | null,
   thinking: "off" as const,
   is_remote: false,
   provider_sort: null as "price" | "throughput" | "latency" | null,
@@ -344,8 +344,9 @@ export function ConnectionDialog({
               <Input
                 id="conn-output"
                 type="number"
-                value={form.max_output_tokens}
-                onChange={(event) => set("max_output_tokens", Number(event.target.value) || 0)}
+                placeholder="No limit"
+                value={form.max_output_tokens ?? ""}
+                onChange={(event) => set("max_output_tokens", Number(event.target.value) || null)}
               />
             </div>
           </div>

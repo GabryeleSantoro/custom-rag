@@ -409,3 +409,12 @@ def test_clean_markdown_strips_a_code_fence_the_model_wrapped_it_in() -> None:
     assert conversions._clean_markdown("```# Title\n\nBody.```", "Fallback") == (
         "# Title\n\nBody.\n"
     )
+
+
+def test_long_decks_are_split_into_even_batches() -> None:
+    pages = list(range(54))
+    batches = conversions._batches(pages)
+
+    assert [len(b) for b in batches] == [14, 14, 14, 12]
+    assert sum(batches, []) == pages
+    assert len(conversions._batches(pages[:15])) == 1

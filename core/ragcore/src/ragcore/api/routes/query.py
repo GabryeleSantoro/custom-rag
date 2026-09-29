@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -154,6 +155,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
                 answer.append(piece)
                 yield frame("token", TokenEvent(text=piece))
         except Exception as exc:  # noqa: BLE001 - reported to the UI as an error frame
+            logging.getLogger("ragcore.query").error("answer failed: %s", exc)
             yield frame("error", ErrorEvent(message=str(exc), retryable=True))
             return
         finally:

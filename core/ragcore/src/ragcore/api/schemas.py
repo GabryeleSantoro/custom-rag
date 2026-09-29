@@ -99,6 +99,22 @@ class Document(BaseModel):
     indexed_at: datetime | None = None
 
 
+class FolderInput(BaseModel):
+    name: str
+
+
+class Folder(FolderInput):
+    """A user-made group of documents. Virtual: files stay where they are on disk."""
+
+    id: str
+    doc_ids: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+
+class FolderAssignment(BaseModel):
+    folder_id: str | None = Field(description="None takes the document out of every folder.")
+
+
 class DocumentPage(BaseModel):
     page: int
     section_path: str | None = None
@@ -325,7 +341,8 @@ class ConnectionInput(BaseModel):
     kind: ConnectionKind
     base_url: str | None = None
     model_id: str
-    max_output_tokens: int = 1024
+    # None: no cap, the model writes until its own limit.
+    max_output_tokens: int | None = None
     thinking: ThinkingLevel = "off"
     is_remote: bool = True
     api_key: str | None = Field(
@@ -352,7 +369,7 @@ class Connection(BaseModel):
     kind: ConnectionKind
     base_url: str | None = None
     model_id: str
-    max_output_tokens: int
+    max_output_tokens: int | None = None
     thinking: ThinkingLevel
     is_remote: bool
     has_api_key: bool
