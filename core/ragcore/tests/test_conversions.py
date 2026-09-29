@@ -390,19 +390,21 @@ def test_standard_depth_drops_the_maximum_depth_instruction(
     assert "Maximum depth" not in captured["question"]
 
 
-def test_a_title_of_only_punctuation_still_gets_a_filename(client, monkeypatch, tmp_path) -> None:
+def test_the_output_file_keeps_the_original_name(client, monkeypatch, tmp_path) -> None:
     _mock_ok(client, monkeypatch)
-    slide = tmp_path / "deck.md"
-    slide.write_text("# ??? !!!\n\n## Context\n\nBody.\n")
+    slide = tmp_path / "[IA] L1 - Agenti Intelligenti.md"
+    slide.write_text("# Anything\n\n## Context\n\nBody.\n")
 
     with client.stream("POST", "/conversions/slides", json={"file_paths": [str(slide)]}) as r:
-        done = [line for line in r.iter_lines()]
+        body = "\n".join(r.iter_lines())
 
-    assert any("conversione-slide" in str(line) for line in done)
+    assert "[IA] L1 - Agenti Intelligenti.md" in body
 
 
-def test_slug_shortens_a_very_long_title() -> None:
-    assert len(conversions._slug("word " * 40)) <= 72
+def test_file_stem_strips_only_unsafe_characters() -> None:
+    assert conversions._file_stem("[IA]L1: a/b?") == "[IA]L1 ab"
+    assert conversions._file_stem("???") == "conversione-slide"
+    assert len(conversions._file_stem("word " * 60)) <= 120
 
 
 def test_clean_markdown_strips_a_code_fence_the_model_wrapped_it_in() -> None:
@@ -418,3 +420,33 @@ def test_long_decks_are_split_into_even_batches() -> None:
     assert [len(b) for b in batches] == [14, 14, 14, 12]
     assert sum(batches, []) == pages
     assert len(conversions._batches(pages[:15])) == 1
+
+
+class _FlakyAnswerer:
+    calls = 0
+
+    async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
+        type(self).calls += 1
+        if type(self).calls == 1:
+            raise RuntimeError("returned an empty answer")
+        yield "# Deck\n\nRecovered."
+
+
+def test_a_batch_that_fails_before_any_text_is_retried_silently(
+    client, read_events, monkeypatch, tmp_path
+) -> None:
+    _mock_ok(client, monkeypatch)
+    from ragcore.api import deps
+
+    _FlakyAnswerer.calls = 0
+    monkeypatch.setitem(client.app.dependency_overrides, deps.get_answerer, _FlakyAnswerer)
+    slide = tmp_path / "deck.md"
+    slide.write_text("# Deck\n\n## Context\n\nReadable content.\n")
+
+    with client.stream("POST", "/conversions/slides", json={"file_paths": [str(slide)]}) as r:
+        events = read_events(r)
+
+    names = [name for name, _ in events]
+    assert "presentation_error" not in names
+    assert len(events[-1][1]["saved"]) == 1
+    assert _FlakyAnswerer.calls == 2

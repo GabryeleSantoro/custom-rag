@@ -209,6 +209,9 @@ def _reasoning_len(kind: str, data: str) -> int:
         return 0
 
 
+IDLE_TIMEOUT = 120.0  # seconds without a data line before a call is abandoned
+
+
 async def llm_stream(
     connection: Connection,
     api_key: str | None,
@@ -251,9 +254,26 @@ async def llm_stream(
         produced = False
         finish: str | None = None
         done = False
-        async for line in response.aiter_lines():
+        lines = response.aiter_lines()
+        last_data = time.perf_counter()
+        while True:
+            # Keep-alive comments reset httpx's read timeout forever, so a model that
+            # stalls silently would hang the run; only real data lines count as life.
+            remaining = IDLE_TIMEOUT - (time.perf_counter() - last_data)
+            try:
+                line = await asyncio.wait_for(anext(lines), max(remaining, 0.01))
+            except StopAsyncIteration:
+                break
+            except asyncio.TimeoutError:
+                logger.error("%s: no data for %.0fs, giving up", connection.name, IDLE_TIMEOUT)
+                raise RuntimeError(
+                    f"{connection.name} sent nothing for {IDLE_TIMEOUT:.0f}s "
+                    f"({chars} chars of text, {reasoning} of reasoning so far). Lower "
+                    "Thinking, use a non-reasoning model, or try again."
+                ) from None
             if not line.startswith("data:"):
                 continue
+            last_data = time.perf_counter()
             data = line[5:].strip()
             if data == "[DONE]":
                 done = True
@@ -281,11 +301,11 @@ async def llm_stream(
                 f"{connection.name} used {spent} without writing any text, most likely on "
                 "reasoning. Raise or clear Max output tokens, or lower Thinking."
             )
-        if finish is None and not done:
+        if (finish is None and not done) or (finish == "error" and reasoning):
             detail = f"{reasoning} chars of reasoning, no text" if reasoning else "no text"
             raise RuntimeError(
                 f"{connection.name} closed the stream after "
-                f"{time.perf_counter() - started:.0f}s with {detail} and no finish reason, "
+                f"{time.perf_counter() - started:.0f}s with {detail} and {'finish reason error' if finish else 'no finish reason'}, "
                 "most likely still reasoning when the provider cut it off. Lower Thinking, "
                 "use a non-reasoning model, or convert fewer slides at a time."
             )

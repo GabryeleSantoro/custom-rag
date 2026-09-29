@@ -163,6 +163,7 @@ def _build_system_prompt(language: Literal["it", "en"]) -> str:
 
 # Slides per model call: a long deck in one call outlives provider stream limits.
 BATCH_SLIDES = 15
+BATCH_ATTEMPTS = 2
 
 
 def _batches(pages: list[RetrievedChunk]) -> list[list[RetrievedChunk]]:
@@ -193,10 +194,9 @@ def _part_note(language: str, part: int, parts: int) -> str:
     )
 
 
-def _slug(value: str) -> str:
-    value = re.sub(r"[^\w\s-]", "", value, flags=re.UNICODE).strip().lower()
-    value = re.sub(r"[-\s]+", "-", value)
-    return value[:72] or "conversione-slide"
+def _file_stem(value: str) -> str:
+    """Original name kept as is, minus characters no filesystem accepts."""
+    return re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", value).strip(" .")[:120] or "conversione-slide"
 
 
 def _unique_path(directory: Path, stem: str) -> Path:
@@ -264,6 +264,7 @@ class _PresentationRef:
 class _Presentation:
     slide_id: str | None
     title: str
+    stem: str  # original file name, without extension
     pages: list[RetrievedChunk]
 
 
@@ -289,7 +290,12 @@ def _resolve_presentation(ref: _PresentationRef, index: int, store) -> _Presenta
         )
         if not pages:
             raise ValueError(f"{document.title} does not contain any slide text")
-        return _Presentation(slide_id=document.id, title=document.title, pages=pages)
+        return _Presentation(
+            slide_id=document.id,
+            title=document.title,
+            stem=Path(document.path).stem or document.title,
+            pages=pages,
+        )
 
     assert ref.file_path is not None
     path = Path(ref.file_path).expanduser()
@@ -307,7 +313,7 @@ def _resolve_presentation(ref: _PresentationRef, index: int, store) -> _Presenta
     )
     if not pages:
         raise ValueError(f"{title} does not contain any slide text")
-    return _Presentation(slide_id=None, title=title, pages=pages)
+    return _Presentation(slide_id=None, title=title, stem=path.stem, pages=pages)
 
 
 @router.post("/slides")
@@ -364,8 +370,9 @@ async def convert_slides(
                 continue
 
             title = presentation.title
+            stem = presentation.stem
             if payload.output_title and total == 1:
-                title = payload.output_title
+                title = stem = payload.output_title
 
             yield frame(
                 "conversion_start",
@@ -427,15 +434,28 @@ async def convert_slides(
                         if part > 1:
                             output.append("\n\n")
                             yield frame("token", {"text": "\n\n"})
-                    async for piece in answerer.stream(
-                        prompt,
-                        batch,
-                        set(),
-                        system_prompt=system_prompt,
-                        max_tokens=active.max_output_tokens,
-                    ):
-                        output.append(piece)
-                        yield frame("token", {"text": piece})
+                    for attempt in range(1, BATCH_ATTEMPTS + 1):
+                        wrote = False
+                        try:
+                            async for piece in answerer.stream(
+                                prompt,
+                                batch,
+                                set(),
+                                system_prompt=system_prompt,
+                                max_tokens=active.max_output_tokens,
+                            ):
+                                wrote = True
+                                output.append(piece)
+                                yield frame("token", {"text": piece})
+                            break
+                        except Exception as exc:  # noqa: BLE001
+                            # Silent retry, only while nothing reached the user (no duplicated text).
+                            if wrote or attempt == BATCH_ATTEMPTS:
+                                raise
+                            logger.warning(
+                                "%s: part %d/%d attempt %d failed, retrying: %s",
+                                title, part, len(batches), attempt, exc,
+                            )
             except Exception as exc:  # noqa: BLE001 - reported as a per-presentation error
                 logger.error(
                     "%s: failed after %.0fs and %d chars: %s",
@@ -452,7 +472,7 @@ async def convert_slides(
                 continue
 
             markdown = _clean_markdown("".join(output), title)
-            output_path = _unique_path(global_dir, _slug(title))
+            output_path = _unique_path(global_dir, _file_stem(stem))
             output_path.write_text(markdown, encoding="utf-8")
             logger.info(
                 "%s: saved %s (%d chars) in %.0fs",

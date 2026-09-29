@@ -274,6 +274,20 @@ def test_a_stream_cut_off_while_reasoning_says_so() -> None:
         run(connection(name="OpenRouter"), lines=lines)
 
 
+def test_a_stalled_stream_gives_up_despite_keep_alives(monkeypatch) -> None:
+    monkeypatch.setattr(answers, "IDLE_TIMEOUT", 0.2)
+
+    async def keep_alives(self):
+        while True:
+            await asyncio.sleep(0.05)
+            yield ": OPENROUTER PROCESSING"
+
+    monkeypatch.setattr(_FakeStreamResponse, "aiter_lines", keep_alives)
+
+    with pytest.raises(RuntimeError, match="sent nothing"):
+        run(connection(name="OpenRouter"))
+
+
 def test_a_connection_with_no_key_sends_no_auth_header() -> None:
     _, captured = run(connection(), api_key=None)
 
