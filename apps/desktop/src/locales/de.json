@@ -169,6 +169,43 @@
     "themeDark": "Dunkel",
     "themeSystem": "System"
   },
+  "tour": {
+    "skip": "Tour überspringen",
+    "next": "Weiter",
+    "finish": "Ibid verwenden",
+    "welcome": {
+      "title": "Eine kurze Tour",
+      "body": "Dreißig Sekunden zur Orientierung. Pfeiltasten zum Blättern, Esc zum Überspringen."
+    },
+    "chat": {
+      "title": "Chat",
+      "body": "Stelle Fragen zu deinen Dokumenten. Jede Antwort zitiert die genaue Textstelle."
+    },
+    "library": {
+      "title": "Bibliothek",
+      "body": "Füge hier Ordner und Dateien hinzu. Ibid indiziert sie lokal; nichts verlässt deinen Computer."
+    },
+    "convert": {
+      "title": "Folien zu Text",
+      "body": "Wandle Präsentationen mit deinem verbundenen Modell in sauberen, lesbaren Text um."
+    },
+    "models": {
+      "title": "Modelle",
+      "body": "Die lokalen Modelle, die deine Dokumente durchsuchen und ranken. Hier herunterladen oder wechseln."
+    },
+    "settings": {
+      "title": "Einstellungen",
+      "body": "Verbinde ein generatives Modell, ändere die Sprache und justiere die Suche."
+    },
+    "diagnostics": {
+      "title": "Diagnose",
+      "body": "Wenn etwas nicht stimmt, beginne hier: Status von Core, Modellen und Hardware."
+    },
+    "done": {
+      "title": "Alles bereit",
+      "body": "Füge der Bibliothek ein paar Dokumente hinzu und stelle dann im Chat deine erste Frage."
+    }
+  },
   "models": {
     "fitVram": "Passt in den VRAM",
     "fitRam": "Passt in den RAM",

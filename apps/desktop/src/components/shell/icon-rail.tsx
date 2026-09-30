@@ -50,6 +50,7 @@ function RailButton({ item, active }: { item: RailItem; active: boolean }) {
           to={item.to}
           aria-label={label}
           aria-current={active ? "page" : undefined}
+          data-tour={item.to}
           data-tauri-drag-region="false"
           className={cn(
             "no-drag relative grid size-9 place-items-center rounded-lg transition-[background-color,color,transform] duration-200",

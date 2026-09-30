@@ -14,8 +14,11 @@ if [ ! -x "$sidecar" ] || [ -n "$(find "$root/core/ragcore/src" "$root/fixtures"
 fi
 
 # Updater artifacts need the CI signing key; a local install has no use for them.
+# Stamp the next release's version: Cargo.toml lags the tags, and a lower version
+# gets replaced by the latest release as soon as the auto-updater runs.
+version="$("$root/scripts/next-version.sh")"
 (cd "$root/apps/desktop" && bun tauri build --bundles app \
-  --config '{"bundle":{"createUpdaterArtifacts":false}}')
+  --config "{\"version\":\"$version\",\"bundle\":{\"createUpdaterArtifacts\":false}}")
 
 # Quit through AppKit, not kill: the shell's exit hook takes the sidecar down with it.
 if pgrep -f "/Applications/$app_name/Contents/MacOS/" >/dev/null; then
