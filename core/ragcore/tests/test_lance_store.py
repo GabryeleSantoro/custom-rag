@@ -141,11 +141,15 @@ async def test_asking_for_more_neighbours_than_exist_is_not_an_error(
     assert len(store.dense(vector, k=50)) == 1
 
 
-async def test_full_text_search_is_not_built_yet_and_says_so(tmp_path: Path) -> None:
-    import pytest
+async def test_full_text_search_sees_every_write_without_a_rebuild(tmp_path: Path) -> None:
+    store = VectorStore(tmp_path / "index")
+    store.add_chunks(await rows_for(["Cross encoders rerank passages."], doc_id="doc_old"))
+    store.add_chunks(await rows_for(["Rerank added after the index existed."], doc_id="doc_new"))
+    store.delete_by_doc(["doc_old"])
 
-    with pytest.raises(NotImplementedError, match="Task 12"):
-        VectorStore(tmp_path / "index").fts("reranking", 6)
+    hits = VectorStore(tmp_path / "index").fts("rerank", 6)
+
+    assert [store.get([cid])[0]["doc_id"] for cid, _ in hits] == ["doc_new"]
 
 
 async def test_writing_the_same_meta_key_twice_replaces_it(tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""Retrieval: dense now, plus BM25 fusion and reranking in later tasks."""
+"""Retrieval: dense and BM25 legs, fused by reciprocal rank; reranking lands in Task 13."""
 
 from __future__ import annotations
 
@@ -15,7 +15,18 @@ from ragcore.store.lance import ChunkRow, VectorStore
 from ragcore.stub.retrieval import allowed
 
 
-def _to_chunk(row: ChunkRow, *, dense_rank: int | None, score: float) -> RetrievedChunk:
+def rrf(ranked: list[list[str]], k: int) -> dict[str, float]:
+    """Reciprocal rank fusion. Rank is 1-based; k damps the head of each list."""
+    fused: dict[str, float] = {}
+    for leg in ranked:
+        for rank, chunk_id in enumerate(leg, start=1):
+            fused[chunk_id] = fused.get(chunk_id, 0.0) + 1.0 / (k + rank)
+    return fused
+
+
+def _to_chunk(
+    row: ChunkRow, *, dense_rank: int | None, bm25_rank: int | None, score: float
+) -> RetrievedChunk:
     return RetrievedChunk(
         chunk_id=row["chunk_id"],
         doc_id=row["doc_id"],
@@ -25,6 +36,8 @@ def _to_chunk(row: ChunkRow, *, dense_rank: int | None, score: float) -> Retriev
         section_path=row["section_path"] or None,
         text=row["text"],
         dense_rank=dense_rank,
+        bm25_rank=bm25_rank,
+        rrf_score=round(score, 6),
         rerank_score=score,
     )
 
@@ -58,14 +71,26 @@ class HybridRetriever:
         # index makes queries stall ingest progress.
         t0 = time.perf_counter()
         scoped = sorted(docs) if len(docs) < len(doc_meta) else None
-        hits = self.vectors.dense(vector, k=settings.dense_top_k, doc_ids=scoped)
+        dense = [cid for cid, _ in self.vectors.dense(vector, settings.dense_top_k, doc_ids=scoped)]
         latency.dense_ms = (time.perf_counter() - t0) * 1000
 
-        rows = {row["chunk_id"]: row for row in self.vectors.get([cid for cid, _ in hits])}
+        t0 = time.perf_counter()
+        bm25 = [cid for cid, _ in self.vectors.fts(query, settings.bm25_top_k, doc_ids=scoped)]
+        latency.bm25_ms = (time.perf_counter() - t0) * 1000
+
+        fused = rrf([dense, bm25], settings.rrf_k)
+        order = sorted(fused, key=lambda cid: -fused[cid])[: settings.rerank_candidates]
+        dense_rank = {cid: rank for rank, cid in enumerate(dense, start=1)}
+        bm25_rank = {cid: rank for rank, cid in enumerate(bm25, start=1)}
         scored = [
-            _to_chunk(rows[cid], dense_rank=rank + 1, score=score)
-            for rank, (cid, score) in enumerate(hits)
-            if cid in rows and rows[cid]["doc_id"] in docs
+            _to_chunk(
+                row,
+                dense_rank=dense_rank.get(row["chunk_id"]),
+                bm25_rank=bm25_rank.get(row["chunk_id"]),
+                score=fused[row["chunk_id"]],
+            )
+            for row in self.vectors.get(order)
+            if row["doc_id"] in docs
         ]
         candidates = len(scored)
 
@@ -75,5 +100,5 @@ class HybridRetriever:
         t0 = time.perf_counter()
         kept = pack(scored[: settings.top_k], settings.context_token_budget)
         latency.pack_ms = (time.perf_counter() - t0) * 1000
-        latency.total_ms = latency.embed_ms + latency.dense_ms + latency.pack_ms
+        latency.total_ms = latency.embed_ms + latency.dense_ms + latency.bm25_ms + latency.pack_ms
         return kept, latency, candidates

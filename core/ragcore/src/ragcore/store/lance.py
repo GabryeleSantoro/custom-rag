@@ -16,6 +16,7 @@ from typing import TypedDict
 
 import lancedb
 import pyarrow as pa
+from lancedb.index import FTS
 
 from ragcore.models.embed import EMBED_DIM
 
@@ -59,6 +60,14 @@ def _sql_list(values: list[str]) -> str:
     return ", ".join("'" + value.replace("'", "''") + "'" for value in values)
 
 
+def _scoped(query, doc_ids: list[str] | None):
+    return (
+        query
+        if doc_ids is None
+        else query.where(f"doc_id IN ({_sql_list(doc_ids)})", prefilter=True)
+    )
+
+
 class VectorStore:
     """Chunk vectors/text and the index_meta guard, both backed by LanceDB tables.
 
@@ -72,6 +81,13 @@ class VectorStore:
         self.db = lancedb.connect(str(root))
         self.chunks = self._table(CHUNKS, CHUNK_SCHEMA)
         self.meta = self._table(META, META_SCHEMA)
+        # Built once: rows written later are searched unindexed until optimize()
+        # folds them in. No stemming or stop words, the corpus is multilingual and
+        # the keyword leg is there for exact terms; the dense leg covers the rest.
+        if "text_idx" not in {index.name for index in self.chunks.list_indices()}:
+            self.chunks.create_index(
+                "text", config=FTS(stem=False, remove_stop_words=False), replace=True
+            )
 
     def _table(self, name: str, schema: pa.Schema):
         # `table_names()` is deprecated in favour of `list_tables()` as of lancedb 0.39.
@@ -113,14 +129,17 @@ class VectorStore:
         the top-k cut, so a scoped query still gets `k` hits from its documents.
         """
         query = self.chunks.search(vector, vector_column_name="vector").metric("cosine")
-        if doc_ids is not None:
-            query = query.where(f"doc_id IN ({_sql_list(doc_ids)})", prefilter=True)
-        hits = query.limit(k).select(["chunk_id", "_distance"]).to_list()
+        hits = _scoped(query, doc_ids).limit(k).select(["chunk_id", "_distance"]).to_list()
         # LanceDB returns cosine *distance*; the pipeline wants similarity.
         return [(hit["chunk_id"], 1.0 - float(hit["_distance"])) for hit in hits]
 
-    def fts(self, query: str, k: int) -> list[tuple[str, float]]:
-        raise NotImplementedError("full-text search lands in Task 12")
+    def fts(
+        self, query: str, k: int, *, doc_ids: list[str] | None = None
+    ) -> list[tuple[str, float]]:
+        """BM25 over chunk text, best first; scoped like `dense`."""
+        search = self.chunks.search(query, query_type="fts")
+        hits = _scoped(search, doc_ids).limit(k).select(["chunk_id", "_score"]).to_list()
+        return [(hit["chunk_id"], float(hit["_score"])) for hit in hits]
 
     def get(self, chunk_ids: list[str]) -> list[ChunkRow]:
         """Fetch rows by id, returned in the order `chunk_ids` was given.

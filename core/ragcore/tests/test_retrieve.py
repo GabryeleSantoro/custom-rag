@@ -142,6 +142,35 @@ async def test_chunks_of_a_document_the_library_no_longer_lists_are_dropped(
     assert "doc_rerank" not in {c.doc_id for c in chunks}
 
 
+async def test_both_legs_contribute_ranks(tmp_path: Path) -> None:
+    retriever = await build(tmp_path)
+
+    chunks, latency, _ = await retriever.asearch(
+        "cross encoders rerank",
+        settings=RetrievalSettings(min_score=0.0),
+        filters=QueryFilters(),
+        doc_meta=DOC_META,
+    )
+
+    top = chunks[0]
+    assert top.bm25_rank is not None
+    assert top.rrf_score > 0
+    assert latency.bm25_ms > 0
+
+
+async def test_the_keyword_leg_is_scoped_before_its_cut_too(tmp_path: Path) -> None:
+    retriever = await build(tmp_path)
+
+    chunks, _, _ = await retriever.asearch(
+        "cross encoders rerank candidate passages text",
+        settings=RetrievalSettings(dense_top_k=1, bm25_top_k=1),
+        filters=QueryFilters(doc_ids=["doc_ocr"]),
+        doc_meta=DOC_META,
+    )
+
+    assert [(c.chunk_id, c.bm25_rank) for c in chunks] == [("chk_ocr", 1)]
+
+
 async def test_top_k_is_honoured(tmp_path: Path) -> None:
     retriever = await build(tmp_path)
 
