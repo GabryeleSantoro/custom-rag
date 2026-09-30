@@ -59,7 +59,7 @@ async def run_eval(payload: EvalRunRequest, store: StoreDep, config: ConfigDep):
     async def events() -> AsyncIterator[str]:
         results: list[EvalQuestionResult] = []
         for index, (question, expected_doc) in enumerate(questions):
-            chunks, latency, _ = store.retriever.search(
+            chunks, latency, _ = await store.retriever.asearch(
                 question,
                 settings=store.settings.retrieval,
                 filters=QueryFilters(),

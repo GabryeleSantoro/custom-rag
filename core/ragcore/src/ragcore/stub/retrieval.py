@@ -19,6 +19,24 @@ K1 = 1.5
 B = 0.75
 
 
+def allowed(doc_id: str, filters: QueryFilters, doc_meta: dict[str, dict]) -> bool:
+    """A document the library no longer lists is never allowed; an empty id list allows nothing."""
+    meta = doc_meta.get(doc_id)
+    if meta is None:
+        return False
+    if filters.doc_ids is not None and doc_id not in filters.doc_ids:
+        return False
+    if filters.source_ids is not None and meta["source_id"] not in filters.source_ids:
+        return False
+    if filters.exts and meta["ext"] not in filters.exts:
+        return False
+    if filters.langs and meta.get("lang") not in filters.langs:
+        return False
+    if filters.after and meta["mtime"] < filters.after:
+        return False
+    return not (filters.before and meta["mtime"] > filters.before)
+
+
 class Retriever:
     def __init__(self, chunks: list[Chunk]) -> None:
         self.chunks = chunks
@@ -56,22 +74,6 @@ class Retriever:
         vec = self._tfidf[index]
         return sum(weight * vec.get(term, 0.0) for term, weight in query_vec.items())
 
-    def _allowed(self, chunk: Chunk, filters: QueryFilters, doc_meta: dict[str, dict]) -> bool:
-        meta = doc_meta.get(chunk.doc_id)
-        if meta is None:
-            return False
-        if filters.doc_ids is not None and chunk.doc_id not in filters.doc_ids:
-            return False
-        if filters.source_ids is not None and meta["source_id"] not in filters.source_ids:
-            return False
-        if filters.exts and meta["ext"] not in filters.exts:
-            return False
-        if filters.langs and meta.get("lang") not in filters.langs:
-            return False
-        if filters.after and meta["mtime"] < filters.after:
-            return False
-        return not (filters.before and meta["mtime"] > filters.before)
-
     def search(
         self,
         query: str,
@@ -90,14 +92,10 @@ class Retriever:
         query_vec = self._vector(terms)
         latency.embed_ms = (time.perf_counter() - t0) * 1000
 
-        candidates = [
-            i for i, c in enumerate(self.chunks) if self._allowed(c, filters, doc_meta)
-        ]
+        candidates = [i for i, c in enumerate(self.chunks) if allowed(c.doc_id, filters, doc_meta)]
 
         t0 = time.perf_counter()
-        dense = sorted(candidates, key=lambda i: -self._dense(query_vec, i))[
-            : settings.dense_top_k
-        ]
+        dense = sorted(candidates, key=lambda i: -self._dense(query_vec, i))[: settings.dense_top_k]
         latency.dense_ms = (time.perf_counter() - t0) * 1000
 
         t0 = time.perf_counter()
@@ -142,7 +140,20 @@ class Retriever:
         ]
         latency.pack_ms = (time.perf_counter() - t0) * 1000
         latency.total_ms = (
-            latency.embed_ms + latency.dense_ms + latency.bm25_ms
-            + latency.rerank_ms + latency.pack_ms
+            latency.embed_ms
+            + latency.dense_ms
+            + latency.bm25_ms
+            + latency.rerank_ms
+            + latency.pack_ms
         )
         return results, latency, n_candidates
+
+    async def asearch(
+        self,
+        query: str,
+        *,
+        settings: RetrievalSettings,
+        filters: QueryFilters,
+        doc_meta: dict[str, dict],
+    ) -> tuple[list[RetrievedChunk], StageLatency, int]:
+        return self.search(query, settings=settings, filters=filters, doc_meta=doc_meta)

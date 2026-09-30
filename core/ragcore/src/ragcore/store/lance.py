@@ -101,21 +101,21 @@ class VectorStore:
         """Merge the small fragments each write leaves and drop superseded versions."""
         self.chunks.optimize(cleanup_older_than=timedelta(0))
 
-    def dense(self, vector: list[float], k: int) -> list[tuple[str, float]]:
+    def dense(
+        self, vector: list[float], k: int, *, doc_ids: list[str] | None = None
+    ) -> list[tuple[str, float]]:
         """Nearest chunks by cosine similarity, best first.
 
         LanceDB's `_distance` under the "cosine" metric is `1 - cosine_similarity`;
         this converts back to similarity before returning. `k` larger than the row
         count, or an empty table, simply yields however many rows exist (LanceDB
-        clamps the limit itself; no error).
+        clamps the limit itself; no error). `doc_ids` restricts the search before
+        the top-k cut, so a scoped query still gets `k` hits from its documents.
         """
-        hits = (
-            self.chunks.search(vector, vector_column_name="vector")
-            .metric("cosine")
-            .limit(k)
-            .select(["chunk_id", "_distance"])
-            .to_list()
-        )
+        query = self.chunks.search(vector, vector_column_name="vector").metric("cosine")
+        if doc_ids is not None:
+            query = query.where(f"doc_id IN ({_sql_list(doc_ids)})", prefilter=True)
+        hits = query.limit(k).select(["chunk_id", "_distance"]).to_list()
         # LanceDB returns cosine *distance*; the pipeline wants similarity.
         return [(hit["chunk_id"], 1.0 - float(hit["_distance"])) for hit in hits]
 

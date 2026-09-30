@@ -119,7 +119,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
         yield frame("mode", ModeEvent(mode=mode, reason=reason))
 
         filters = project_filters(store, session_id, payload.filters)
-        chunks, latency, candidates = store.retriever.search(
+        chunks, latency, candidates = await store.retriever.asearch(
             question,
             settings=store.settings.retrieval,
             filters=filters,

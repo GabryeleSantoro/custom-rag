@@ -33,7 +33,7 @@ from ragcore.api.schemas import (
 
 @runtime_checkable
 class RetrieverPort(Protocol):
-    def search(
+    async def asearch(
         self,
         query: str,
         *,
