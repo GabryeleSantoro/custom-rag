@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 
@@ -22,6 +23,21 @@ class CountingEmbedClient(FakeEmbedClient):
         self, texts: list[str], *, batch_size: int = 32, query: bool = False
     ) -> list[list[float]]:
         self.calls.append(len(texts))
+        return await super().embed(texts, batch_size=batch_size, query=query)
+
+
+class GatedEmbedClient(FakeEmbedClient):
+    """Holds every request until released, so a test can act mid-ingest."""
+
+    def __init__(self) -> None:
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def embed(
+        self, texts: list[str], *, batch_size: int = 32, query: bool = False
+    ) -> list[list[float]]:
+        self.started.set()
+        await self.release.wait()
         return await super().embed(texts, batch_size=batch_size, query=query)
 
 
@@ -262,3 +278,33 @@ async def test_settings_survive_a_restart(tmp_path: Path) -> None:
     store.close()
 
     assert build(tmp_path).settings.onboarded is True
+
+
+async def test_a_reader_mid_iteration_survives_an_ingest(tmp_path: Path) -> None:
+    docs = corpus(tmp_path)
+    store = build(tmp_path)
+    source = add(store, docs)
+    await store.ingest_source_async(source.id)
+    (docs / "fresh.md").write_text("# Fresh\n\nA new note.\n")
+
+    reading = iter(store.documents.values())
+    next(reading)
+    await store.ingest_source_async(source.id)
+
+    assert len(list(reading)) == 1
+    assert len(store.documents) == 3
+
+
+async def test_removing_a_source_mid_ingest_leaves_nothing_behind(tmp_path: Path) -> None:
+    embedder = GatedEmbedClient()
+    store = build(tmp_path, embedder)
+    source = add(store, corpus(tmp_path))
+
+    ingest = asyncio.create_task(store.ingest_source_async(source.id))
+    await embedder.started.wait()
+    store.remove_source(source.id)
+    embedder.release.set()
+    await ingest
+
+    assert store.documents == {}
+    assert store.index_stats().chunks == 0

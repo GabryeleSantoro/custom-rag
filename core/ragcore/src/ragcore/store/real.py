@@ -17,8 +17,10 @@ import hashlib
 import json
 import logging
 import shutil
+import threading
 import time
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -97,6 +99,7 @@ class RealStore(Store):
         self.index_blocked: str | None = None
         self._pages_dir = config.data_dir / "pages"
         self._ingest_lock = asyncio.Lock()
+        self._documents_lock = threading.Lock()
         super().__init__(config)
         if retriever is not None:
             self.retriever = retriever
@@ -147,7 +150,7 @@ class RealStore(Store):
             for d in self.documents.values()
         ]
         self.meta.save_documents(queued, [])
-        self.documents = {d.id: d for d in queued}
+        self._update_documents(put=queued)
 
     # ------------------------------------------------------------------ sources
 
@@ -182,10 +185,25 @@ class RealStore(Store):
         self.save_library()
         logger.info("removed from the library: %s", document.path)
 
+    def _update_documents(self, *, put: Iterable[Document] = (), drop: Iterable[str] = ()) -> None:
+        """Swap in an updated copy instead of mutating in place.
+
+        Ingestion writes from a worker thread while queries iterate
+        ``documents``; a reader keeps the dict it started with. The lock stops
+        two writers (ingest and a threadpool route) from losing each other's update.
+        """
+        with self._documents_lock:
+            documents = dict(self.documents)
+            for doc_id in drop:
+                documents.pop(doc_id, None)
+            for document in put:
+                documents[document.id] = document
+            self.documents = documents
+
     def _forget(self, doc_ids: list[str]) -> None:
         self.vectors.delete_by_doc(doc_ids)
+        self._update_documents(drop=doc_ids)
         for doc_id in doc_ids:
-            self.documents.pop(doc_id, None)
             (self._pages_dir / f"{doc_id}.json").unlink(missing_ok=True)
 
     def _drop(self, doc_ids: list[str]) -> None:
@@ -260,7 +278,13 @@ class RealStore(Store):
 
             if gone:
                 await asyncio.to_thread(self._drop, gone)
-            for document in await self._index(source_id, todo):
+            indexed = await self._index(source_id, todo)
+            if source_id not in self.sources:
+                # Removed (or wiped) while indexing: writes already in flight
+                # landed after its cleanup, so they go now.
+                await asyncio.to_thread(self._drop, [d.id for d in indexed])
+                return []
+            for document in indexed:
                 results[document.id] = document
             if todo or gone:
                 await asyncio.to_thread(self.vectors.optimize)
@@ -320,6 +344,8 @@ class RealStore(Store):
         upcoming = parse_ahead(0)
         try:
             for i in range(len(todo)):
+                if source_id not in self.sources:
+                    break
                 current = await upcoming
                 upcoming = parse_ahead(i + 1)
                 if not current.chunks:  # a parse error or an empty file: nothing to embed
@@ -376,8 +402,7 @@ class RealStore(Store):
         self.meta.save_documents(
             documents, [(str(p.found.path), p.found.sha256) for p in files if p.error is None]
         )
-        for document in documents:
-            self.documents[document.id] = document
+        self._update_documents(put=documents)
         return documents
 
     def _save_pages(self, p: _Parsed) -> None:
