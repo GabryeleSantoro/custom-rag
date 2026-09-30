@@ -100,7 +100,7 @@ export function Tour() {
 
       <div
         key={step.id}
-        className="page-enter fixed w-80 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
+        className="page-enter fixed w-88 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl"
         style={
           rect
             ? { left: rect.right + PAD + 16, top: `clamp(16px, ${rect.top - 12}px, calc(100vh - 220px))` }
@@ -117,9 +117,12 @@ export function Tour() {
           {t(`tour.${step.id}.body`)}
         </p>
         <div className="mt-4 flex items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" className="h-8" onClick={close}>
-            {t("tour.skip")}
-          </Button>
+          {/* Finish already closes it; Skip would only crowd the last card. */}
+          {last ? <span /> : (
+            <Button variant="ghost" size="sm" className="h-8" onClick={close}>
+              {t("tour.skip")}
+            </Button>
+          )}
           <div className="flex gap-2">
             {index > 0 ? (
               <Button variant="outline" size="sm" className="h-8" onClick={back}>
