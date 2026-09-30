@@ -52,6 +52,9 @@ def _id(prefix: str) -> str:
 
 
 class Store:
+    # Set by a store whose vectors came from another embedder; health reports it.
+    index_blocked: str | None = None
+
     def __init__(self, config: Config) -> None:
         self.config = config
         self.started_at = _now()

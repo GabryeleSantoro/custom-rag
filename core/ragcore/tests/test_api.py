@@ -9,9 +9,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 Events = Callable[..., list[tuple[str, dict]]]
+
+
+both_backends = pytest.mark.parametrize("client", ["stub", "real"], indirect=True)
 
 
 def _minimal_text_pdf(text: str) -> bytes:
@@ -53,6 +57,7 @@ def _minimal_text_pdf(text: str) -> bytes:
     return bytes(pdf)
 
 
+@both_backends
 def test_health_is_public(client: TestClient) -> None:
     del client.headers["Authorization"]
     response = client.get("/health")
@@ -64,6 +69,7 @@ def test_health_is_public(client: TestClient) -> None:
     assert body["index"]["documents"] > 0
 
 
+@both_backends
 def test_everything_else_needs_the_session_token(client: TestClient) -> None:
     del client.headers["Authorization"]
 
@@ -72,6 +78,7 @@ def test_everything_else_needs_the_session_token(client: TestClient) -> None:
     assert client.post("/query", json={"q": "anything"}).status_code == 401
 
 
+@both_backends
 def test_openapi_is_reachable_without_a_token(client: TestClient) -> None:
     """`bun run gen:types` reads this unauthenticated."""
     del client.headers["Authorization"]
@@ -82,6 +89,7 @@ def test_openapi_is_reachable_without_a_token(client: TestClient) -> None:
     assert "StreamEnvelope" in schema["components"]["schemas"]
 
 
+@both_backends
 def test_documents_expose_content_the_reader_can_highlight(client: TestClient) -> None:
     listing = client.get("/documents", params={"limit": 5}).json()
     assert listing["total"] > 0
@@ -98,6 +106,7 @@ def test_documents_expose_content_the_reader_can_highlight(client: TestClient) -
         assert text[chunk["char_start"] : chunk["char_end"]] == chunk["text"]
 
 
+@both_backends
 def test_query_streams_frames_in_contract_order(client: TestClient, read_events: Events) -> None:
     with client.stream(
         "POST", "/query", json={"q": "How does reranking improve retrieval?"}
@@ -121,6 +130,7 @@ def test_query_streams_frames_in_contract_order(client: TestClient, read_events:
     assert payload["done"]["latency"]["total_ms"] >= 0
 
 
+@both_backends
 def test_a_citation_nothing_retrieved_is_dropped(client: TestClient, read_events: Events) -> None:
     with client.stream("POST", "/query", json={"q": "!badcite Why rerank?"}) as response:
         events = dict(read_events(response))
@@ -129,6 +139,7 @@ def test_a_citation_nothing_retrieved_is_dropped(client: TestClient, read_events
     assert events["citations"]["grounding"] in {"low", "none"}
 
 
+@both_backends
 def test_an_answer_with_no_citation_reports_low_grounding(
     client: TestClient, read_events: Events
 ) -> None:
@@ -139,6 +150,7 @@ def test_an_answer_with_no_citation_reports_low_grounding(
     assert events["citations"]["grounding"] == "none"
 
 
+@both_backends
 def test_the_error_frame_replaces_the_rest_of_the_stream(
     client: TestClient, read_events: Events
 ) -> None:
@@ -149,6 +161,7 @@ def test_the_error_frame_replaces_the_rest_of_the_stream(
     assert "done" not in names
 
 
+@both_backends
 def test_sources_and_jobs_round_trip(client: TestClient, tmp_path) -> None:
     folder = tmp_path / "notes"
     folder.mkdir()
@@ -201,9 +214,7 @@ def test_project_can_disable_global_knowledge_and_add_project_folder(
     assert project_source.status_code == 201
     assert project_source.json()["project_id"] == project["id"]
 
-    updated = client.patch(
-        f"/chats/projects/{project['id']}", json={"use_global_sources": False}
-    )
+    updated = client.patch(f"/chats/projects/{project['id']}", json={"use_global_sources": False})
     assert updated.status_code == 200
     assert updated.json()["use_global_sources"] is False
 
@@ -259,6 +270,7 @@ def test_wipe_sends_the_user_back_through_onboarding(client: TestClient) -> None
     assert client.get("/connections").json(), "connections were meant to be kept"
 
 
+@both_backends
 def test_wipe_refuses_without_the_literal_confirmation(client: TestClient) -> None:
     response = client.post("/settings/wipe", json={"confirm": "delete"})
 
@@ -266,6 +278,7 @@ def test_wipe_refuses_without_the_literal_confirmation(client: TestClient) -> No
     assert client.get("/documents").json()["total"] > 0
 
 
+@both_backends
 def test_embedder_activation_requires_accepting_the_reindex(client: TestClient) -> None:
     inventory = client.get("/models").json()
     embedder = next(model for model in inventory["installed"] if model["role"] == "embedding")
@@ -277,6 +290,7 @@ def test_embedder_activation_requires_accepting_the_reindex(client: TestClient) 
     assert response.status_code in {200, 409}
 
 
+@both_backends
 def test_eval_reports_progress_then_metrics(client: TestClient, read_events: Events) -> None:
     with client.stream("POST", "/eval/run", json={"set_name": "base"}) as response:
         assert response.status_code == 200

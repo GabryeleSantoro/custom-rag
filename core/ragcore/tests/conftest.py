@@ -18,9 +18,11 @@ from ragcore.config import Config
 TOKEN = "test-token"
 
 
-@pytest.fixture
-def client(tmp_path: Path) -> Iterator[TestClient]:
-    config = Config(
+FIXTURE_DOCS = Path(__file__).resolve().parents[3] / "fixtures" / "docs"
+
+
+def _config(tmp_path: Path, backend: str = "stub") -> Config:
+    return Config(
         host="127.0.0.1",
         port=0,
         token=TOKEN,
@@ -29,9 +31,26 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
         ram_mb=16384,
         vram_mb=0,
         gpu_backend="cpu",
+        backend=backend,
     )
-    with TestClient(create_app(config)) as test_client:
+
+
+@pytest.fixture
+def client(request, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """The stub app, or either backend under ``@both_backends``.
+
+    The real backend indexes the documents the stub seeds itself with, through
+    fake models, so both answer the same corpus.
+    """
+    backend = getattr(request, "param", "stub")
+    monkeypatch.setenv("RAGCORE_FAKE_MODELS", "1")
+    with TestClient(create_app(_config(tmp_path, backend))) as test_client:
         test_client.headers["Authorization"] = f"Bearer {TOKEN}"
+        if backend == "real":
+            response = test_client.post(
+                "/sources", json={"path": str(FIXTURE_DOCS), "include_globs": ["**/*.md"]}
+            )
+            assert response.status_code == 201, response.text
         yield test_client
 
 

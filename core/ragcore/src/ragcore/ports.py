@@ -60,6 +60,7 @@ class StorePort(Protocol):
     messages: dict[str, list[ChatMessage]]
     eval_sets: list[EvalSet]
     retriever: RetrieverPort
+    index_blocked: str | None
 
     def add_source(self, payload: SourceCreate) -> Source: ...
     def remove_source(self, source_id: str) -> int: ...

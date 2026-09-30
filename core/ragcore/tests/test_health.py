@@ -52,3 +52,12 @@ def test_every_sse_frame_shape_reaches_openapi(client: TestClient) -> None:
     assert {"start", "mode", "sources", "token", "citations", "done", "error"} <= set(
         envelope["properties"]
     )
+
+
+def test_a_blocked_index_degrades_health_and_says_why(client: TestClient) -> None:
+    client.app.state.store.index_blocked = "re-index to continue"
+
+    body = client.get("/health").json()
+
+    assert body["status"] == "degraded"
+    assert "re-index to continue" in body["processes"][0]["detail"]

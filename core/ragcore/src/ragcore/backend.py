@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
@@ -18,7 +19,7 @@ class Backend:
     answerer: AnswerEngine
 
 
-class StubAnswerEngine:
+class ConnectionAnswerEngine:
     """Scripted until the user activates a connection; then that connection answers."""
 
     def __init__(self, store: StorePort) -> None:
@@ -49,16 +50,28 @@ class StubAnswerEngine:
 
 
 def build_backend(config: Config) -> Backend:
+    from ragcore.stub.hub import HubClient
+    from ragcore.stub.jobs import JobManager
+
     if config.backend == "stub":
-        from ragcore.stub.hub import HubClient
-        from ragcore.stub.jobs import JobManager
         from ragcore.stub.store import Store
 
         store = Store(config)
-        return Backend(
-            store=store,
-            jobs=JobManager(),
-            hub=HubClient(config),
-            answerer=StubAnswerEngine(store),
+    elif config.backend == "real":
+        from ragcore.models.embed import EmbedClient
+        from ragcore.models.fakes import FakeEmbedClient
+        from ragcore.store.real import RealStore
+
+        # A test affordance; the CLI never sets it.
+        fake = os.getenv("RAGCORE_FAKE_MODELS")
+        store = RealStore(
+            config, embedder=FakeEmbedClient() if fake else EmbedClient(config.embed_url)
         )
-    raise ValueError(f"unknown backend: {config.backend!r}")
+    else:
+        raise ValueError(f"unknown backend: {config.backend!r}")
+    return Backend(
+        store=store,
+        jobs=JobManager(),
+        hub=HubClient(config),
+        answerer=ConnectionAnswerEngine(store),
+    )

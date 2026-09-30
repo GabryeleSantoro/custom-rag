@@ -27,6 +27,14 @@ def test_factory_builds_the_stub_backend(tmp_path: Path) -> None:
     assert isinstance(built.answerer, AnswerEngine)
 
 
+def test_factory_builds_the_real_backend(tmp_path: Path) -> None:
+    built = build_backend(config_for(tmp_path, "real"))
+
+    assert type(built.store).__module__ == "ragcore.store.real"
+    assert type(built.store.retriever).__module__ == "ragcore.retrieve.hybrid"
+    assert isinstance(built.answerer, AnswerEngine)
+
+
 def test_unknown_backend_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="unknown backend"):
         build_backend(config_for(tmp_path, "nonsense"))
@@ -43,10 +51,17 @@ def test_the_active_connection_decides_who_answers(tmp_path: Path, monkeypatch) 
     connection = built.store.connections.setdefault(
         "conn_1",
         Connection(
-            id="conn_1", name="OpenRouter", kind="openai-compatible",
-            base_url="https://openrouter.ai/api/v1", model_id="google/gemma-3-27b-it",
-            max_output_tokens=4096, thinking="off",
-            is_remote=True, has_api_key=True, active=True, created_at=datetime.now(tz=UTC),
+            id="conn_1",
+            name="OpenRouter",
+            kind="openai-compatible",
+            base_url="https://openrouter.ai/api/v1",
+            model_id="google/gemma-3-27b-it",
+            max_output_tokens=4096,
+            thinking="off",
+            is_remote=True,
+            has_api_key=True,
+            active=True,
+            created_at=datetime.now(tz=UTC),
         ),
     )
     built.store.settings.active_connection_id = connection.id

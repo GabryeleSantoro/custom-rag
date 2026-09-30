@@ -34,14 +34,13 @@ def build_parser() -> argparse.ArgumentParser:
     serve = sub.add_parser("serve", help="Run the HTTP API")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765, help="0 picks a free port")
-    serve.add_argument(
-        "--token", default="", help="Session token; a random one is logged if empty"
-    )
+    serve.add_argument("--token", default="", help="Session token; a random one is logged if empty")
     serve.add_argument("--data-dir", type=Path, default=Path.home() / ".ibid")
     serve.add_argument("--ram-mb", type=int, default=None)
     serve.add_argument("--vram-mb", type=int, default=0)
     serve.add_argument("--gpu-backend", default="cpu", choices=["metal", "cuda", "vulkan", "cpu"])
     serve.add_argument("--backend", default="stub", choices=["stub", "real"])
+    serve.add_argument("--embed-url", default="http://127.0.0.1:8770")
     serve.add_argument("--prod", action="store_true", help="Disable dev-only routes")
     serve.add_argument("--log-level", default="info")
     return parser
@@ -54,9 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # No timestamp: the Rust shell stamps every line it collects.
-    logging.basicConfig(
-        level=args.log_level.upper(), format="%(levelname)s %(name)s: %(message)s"
-    )
+    logging.basicConfig(level=args.log_level.upper(), format="%(levelname)s %(name)s: %(message)s")
 
     token = args.token
     if not token:
@@ -72,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         vram_mb=args.vram_mb,
         gpu_backend=args.gpu_backend,
         backend=args.backend,
+        embed_url=args.embed_url,
     )
     if args.ram_mb:
         config.ram_mb = args.ram_mb

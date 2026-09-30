@@ -40,7 +40,7 @@ from ragcore.ingest.chunk import Chunk, chunk_document
 from ragcore.ingest.parse import SUPPORTED_SUFFIXES, ParsedDoc, parse
 from ragcore.ingest.walk import FoundFile, walk_source
 from ragcore.models.embed import EMBED_DIM, EmbedClient
-from ragcore.ports import RetrieverPort
+from ragcore.retrieve.hybrid import HybridRetriever
 from ragcore.store.lance import ChunkRow, VectorStore
 from ragcore.store.meta import MetaStore
 from ragcore.stub.store import EMBED_MODEL, RERANK_MODEL, SCHEMA_VERSION, Store
@@ -90,7 +90,6 @@ class RealStore(Store):
         *,
         embedder: EmbedClient,
         embed_model_id: str = EMBED_MODEL,
-        retriever: RetrieverPort | None = None,
     ) -> None:
         self.meta = MetaStore(config.data_dir / "app.db")
         self.vectors = VectorStore(config.data_dir / "index")
@@ -101,8 +100,7 @@ class RealStore(Store):
         self._ingest_lock = asyncio.Lock()
         self._documents_lock = threading.Lock()
         super().__init__(config)
-        if retriever is not None:
-            self.retriever = retriever
+        self.retriever = HybridRetriever(self.vectors, embedder)
 
     def _seed(self) -> None:
         """Called by ``Store.__init__``: load the saved library instead of scanning fixtures."""

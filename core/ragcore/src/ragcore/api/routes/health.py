@@ -24,16 +24,17 @@ def get_health(request: Request, config: ConfigDep, store: StoreDep) -> Health:
             state="ready",
             port=config.port,
             uptime_s=round(uptime, 1),
-            detail="serving fixture data",
+            detail=store.index_blocked
+            or ("serving fixture data" if config.backend == "stub" else "serving the local index"),
         ),
     ]
 
     return Health(
-        status="ok",
+        status="degraded" if store.index_blocked else "ok",
         version=__version__,
         dev_mode=config.dev_mode,
         uptime_s=round(uptime, 1),
-        stub=True,
+        stub=config.backend == "stub",
         processes=processes,
         index=store.index_stats(),
         models_ready=True,
