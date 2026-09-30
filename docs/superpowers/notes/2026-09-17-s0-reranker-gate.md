@@ -328,3 +328,26 @@ tensor and metadata llama.cpp's RANK pooling requires for this model family,
 which is a known, documented, currently-being-worked-on area of llama.cpp
 (see links above) rather than a fundamental incompatibility. No `models/`
 redesign or ONNX Runtime fallback is warranted on this evidence.
+
+## Throughput (S4, 2026-10-01)
+
+Apple Silicon, llama-server (Homebrew, Metal, `-ngl 999`), `ragcore serve --backend real`.
+Embedder EmbeddingGemma-300M QAT Q4_0 (`-c 2048 -b 2048 -ub 2048`); reranker
+Qwen3-Reranker-0.6B Q8_0 (`-c 8192 -b 2048 -ub 2048`).
+
+| Corpus | Docs | Chunks | First scan | Rescan (unchanged) |
+|---|---|---|---|---|
+| `fixtures/docs` | 6 | 34 | 0.34 s | — |
+| `apps/desktop/node_modules/**/*.md` (code-heavy READMEs) | 285 | 2374 | 39.8 s (~60 chunks/s) | 0.15 s |
+
+Query latency on the 285-doc index (default settings, 40 rerank candidates):
+embed 20 ms, dense 7 ms, BM25 7 ms, **rerank 3.2 s**. Reranking dominates, so
+`rerank_candidates` is the knob a CPU/"balanced" profile should turn down first.
+
+Found by this run: with llama-server's default micro-batch (512) both servers
+reject any input over 512 tokens with HTTP 500 ("input is too large to process"),
+and 256-word chunks of code-heavy text reach 584–773 tokens (120 short code words
+measured 1656 tokens). One such chunk failed the whole source's ingest; on the
+reranker it silently degraded every query to the fused order. Fixed by raising
+`-b/-ub` to 2048 on both servers and capping each model input at 2000 characters
+in the clients (`MAX_INPUT_CHARS`).

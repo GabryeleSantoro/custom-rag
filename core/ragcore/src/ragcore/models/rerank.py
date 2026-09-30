@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import httpx
 
+from ragcore.models.embed import MAX_INPUT_CHARS
+
 
 class RerankClient:
     def __init__(
@@ -29,7 +31,7 @@ class RerankClient:
     async def rerank(
         self, query: str, documents: list[str], *, top_n: int
     ) -> list[tuple[int, float]]:
-        results = await self._post(query, documents, top_n)
+        results = await self._post(query, [d[:MAX_INPUT_CHARS] for d in documents], top_n)
         scored = [(int(r["index"]), float(r["relevance_score"])) for r in results]
         return sorted(scored, key=lambda pair: -pair[1])[:top_n]
 

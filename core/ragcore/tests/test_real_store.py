@@ -308,3 +308,41 @@ async def test_removing_a_source_mid_ingest_leaves_nothing_behind(tmp_path: Path
 
     assert store.documents == {}
     assert store.index_stats().chunks == 0
+
+
+async def test_a_pdf_with_no_text_layer_is_skipped_with_a_reason_once(
+    tmp_path: Path, text_pdf, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    (scans / "scan.pdf").write_bytes(text_pdf("", ""))
+    store = build(tmp_path)
+    source = add(store, scans)
+
+    [first] = await store.ingest_source_async(source.id)
+
+    def never(path: Path):
+        raise AssertionError(f"re-parsed an unchanged scan: {path}")
+
+    monkeypatch.setattr("ragcore.store.real.parse", never)
+    [again] = await store.ingest_source_async(source.id)
+
+    for document in (first, again):
+        assert document.status == "skipped"
+        assert "OCR" in (document.error or "")
+
+
+async def test_pdf_citations_keep_their_page_past_a_blank_one(tmp_path: Path, text_pdf) -> None:
+    pdfs = tmp_path / "pdfs"
+    pdfs.mkdir()
+    (pdfs / "paper.pdf").write_bytes(
+        text_pdf("Cross encoders score pairs.", "", "Hybrid search merges legs.")
+    )
+    store = build(tmp_path)
+    [document] = await store.ingest_source_async(add(store, pdfs).id)
+
+    content = store.content(document.id)
+
+    assert content is not None
+    assert content.n_pages == 3
+    assert [c.page for c in content.chunks if "Hybrid" in c.text] == [3]

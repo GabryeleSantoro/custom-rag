@@ -63,6 +63,11 @@ def doc_id_for(path: str) -> str:
     return "doc_" + hashlib.sha1(path.encode()).hexdigest()[:16]
 
 
+# Statuses whose sha is trusted on rescan: an unchanged file is not read again.
+_SETTLED = frozenset({"indexed", "skipped"})
+NO_TEXT_LAYER = "no text layer; OCR not available in this build"
+
+
 @dataclass(slots=True)
 class _Parsed:
     doc_id: str
@@ -242,7 +247,7 @@ class RealStore(Store):
             known = {
                 d.path: (d.size_bytes, d.mtime, shas[d.path])
                 for d in self.documents.values()
-                if d.source_id == source_id and d.status == "indexed" and d.path in shas
+                if d.source_id == source_id and d.status in _SETTLED and d.path in shas
             }
             found = await asyncio.to_thread(
                 walk_source,
@@ -268,7 +273,7 @@ class RealStore(Store):
                 current = self.documents.get(doc_id)
                 if (
                     current is not None
-                    and current.status == "indexed"
+                    and current.status in _SETTLED
                     and shas.get(str(f.path)) == f.sha256
                 ):
                     results[doc_id] = current.model_copy(update={"status": "skipped"})
@@ -425,6 +430,11 @@ class RealStore(Store):
     @staticmethod
     def _document(source_id: str, p: _Parsed, now: datetime) -> Document:
         found = p.found
+        scan = (
+            p.parsed is not None
+            and p.parsed.needs_ocr
+            and not any(pg.text for pg in p.parsed.pages)
+        )
         return Document(
             id=p.doc_id,
             source_id=source_id,
@@ -435,8 +445,8 @@ class RealStore(Store):
             size_bytes=found.size_bytes,
             n_pages=len(p.parsed.pages) if p.parsed else None,
             n_chunks=len(p.chunks),
-            status="error" if p.error else "indexed",
-            error=p.error,
+            status="error" if p.error else "skipped" if scan else "indexed",
+            error=p.error or (NO_TEXT_LAYER if scan else None),
             mtime=found.mtime,
             indexed_at=None if p.error else now,
         )
