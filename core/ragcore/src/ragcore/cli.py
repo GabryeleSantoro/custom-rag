@@ -41,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--gpu-backend", default="cpu", choices=["metal", "cuda", "vulkan", "cpu"])
     serve.add_argument("--backend", default="stub", choices=["stub", "real"])
     serve.add_argument("--embed-url", default="http://127.0.0.1:8770")
+    serve.add_argument("--rerank-url", default="http://127.0.0.1:8771")
     serve.add_argument("--prod", action="store_true", help="Disable dev-only routes")
     serve.add_argument("--log-level", default="info")
     return parser
@@ -70,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         gpu_backend=args.gpu_backend,
         backend=args.backend,
         embed_url=args.embed_url,
+        rerank_url=args.rerank_url,
     )
     if args.ram_mb:
         config.ram_mb = args.ram_mb

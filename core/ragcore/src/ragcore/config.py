@@ -33,3 +33,4 @@ class Config:
     gpu_backend: str = "cpu"
     backend: Literal["stub", "real"] = "stub"
     embed_url: str = "http://127.0.0.1:8770"
+    rerank_url: str = "http://127.0.0.1:8771"

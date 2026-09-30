@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx
+import pytest
 from ragcore.api.schemas import QueryFilters, RetrievalSettings, RetrievedChunk
-from ragcore.models.fakes import FakeEmbedClient
+from ragcore.models.fakes import FakeEmbedClient, FakeRerankClient
 from ragcore.retrieve.hybrid import HybridRetriever
 from ragcore.retrieve.pack import pack
 from ragcore.store.lance import VectorStore
@@ -169,6 +171,58 @@ async def test_the_keyword_leg_is_scoped_before_its_cut_too(tmp_path: Path) -> N
     )
 
     assert [(c.chunk_id, c.bm25_rank) for c in chunks] == [("chk_ocr", 1)]
+
+
+class ReversingReranker:
+    async def rerank(self, query, documents, *, top_n):
+        scores = [(i, (i + 1) / len(documents)) for i in range(len(documents))]
+        return sorted(scores, key=lambda pair: -pair[1])[:top_n]
+
+
+class DownReranker:
+    async def rerank(self, query, documents, *, top_n):
+        raise httpx.ConnectError("reranker is not up")
+
+
+async def search(retriever: HybridRetriever, query: str, **settings):
+    return await retriever.asearch(
+        query,
+        settings=RetrievalSettings(**settings),
+        filters=QueryFilters(),
+        doc_meta=DOC_META,
+    )
+
+
+async def test_the_reranker_decides_the_order_and_the_scores(tmp_path: Path) -> None:
+    retriever = await build(tmp_path)
+    before, _, _ = await search(retriever, "text", top_k=3)
+
+    retriever.reranker = ReversingReranker()
+    after, latency, _ = await search(retriever, "text", top_k=3)
+
+    assert [c.chunk_id for c in after] == [c.chunk_id for c in reversed(before)]
+    assert [c.rerank_score for c in after] == pytest.approx([1.0, 2 / 3, 1 / 3])
+    assert latency.rerank_ms > 0
+
+
+async def test_min_score_drops_weak_reranked_passages(tmp_path: Path) -> None:
+    retriever = await build(tmp_path)
+    retriever.reranker = FakeRerankClient()
+
+    kept, _, candidates = await search(retriever, "optical character recognition", min_score=0.3)
+
+    assert [c.chunk_id for c in kept] == ["chk_ocr"]
+    assert candidates == 3
+
+
+async def test_a_reranker_that_is_down_leaves_the_fused_order(tmp_path: Path) -> None:
+    retriever = await build(tmp_path)
+    fused, _, _ = await search(retriever, "text")
+
+    retriever.reranker = DownReranker()
+    chunks, _, _ = await search(retriever, "text")
+
+    assert [c.chunk_id for c in chunks] == [c.chunk_id for c in fused]
 
 
 async def test_top_k_is_honoured(tmp_path: Path) -> None:

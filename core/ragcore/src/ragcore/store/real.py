@@ -90,6 +90,7 @@ class RealStore(Store):
         *,
         embedder: EmbedClient,
         embed_model_id: str = EMBED_MODEL,
+        reranker=None,
     ) -> None:
         self.meta = MetaStore(config.data_dir / "app.db")
         self.vectors = VectorStore(config.data_dir / "index")
@@ -100,7 +101,7 @@ class RealStore(Store):
         self._ingest_lock = asyncio.Lock()
         self._documents_lock = threading.Lock()
         super().__init__(config)
-        self.retriever = HybridRetriever(self.vectors, embedder)
+        self.retriever = HybridRetriever(self.vectors, embedder, reranker=reranker)
 
     def _seed(self) -> None:
         """Called by ``Store.__init__``: load the saved library instead of scanning fixtures."""

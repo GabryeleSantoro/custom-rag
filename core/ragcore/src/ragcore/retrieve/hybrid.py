@@ -1,8 +1,11 @@
-"""Retrieval: dense and BM25 legs, fused by reciprocal rank; reranking lands in Task 13."""
+"""Retrieval: dense and BM25 legs, fused by reciprocal rank, then an optional reranker."""
 
 from __future__ import annotations
 
+import logging
 import time
+
+import httpx
 
 from ragcore.api.schemas import (
     QueryFilters,
@@ -13,6 +16,8 @@ from ragcore.api.schemas import (
 from ragcore.retrieve.pack import pack
 from ragcore.store.lance import ChunkRow, VectorStore
 from ragcore.stub.retrieval import allowed
+
+logger = logging.getLogger(__name__)
 
 
 def rrf(ranked: list[list[str]], k: int) -> dict[str, float]:
@@ -94,11 +99,33 @@ class HybridRetriever:
         ]
         candidates = len(scored)
 
-        # `min_score` is calibrated for the reranker's sigmoid probabilities;
-        # cosine and RRF scores sit near 0.0-0.05 and a 0.3 gate would drop
-        # everything. It belongs to the rerank stage (Task 13).
+        if self.reranker is not None and scored:
+            t0 = time.perf_counter()
+            try:
+                ranked = await self.reranker.rerank(
+                    query, [c.text for c in scored], top_n=settings.top_k
+                )
+            except httpx.HTTPError as exc:
+                # A reranker that is down or still loading costs precision, not the answer.
+                logger.warning("rerank skipped, keeping fused order: %s", exc)
+            else:
+                # Only reranker probabilities are on the scale `min_score` describes;
+                # cosine and RRF scores sit near 0.0-0.05 and would all be dropped.
+                scored = [
+                    scored[i].model_copy(update={"rerank_score": score})
+                    for i, score in ranked
+                    if score >= settings.min_score
+                ]
+            latency.rerank_ms = (time.perf_counter() - t0) * 1000
+
         t0 = time.perf_counter()
         kept = pack(scored[: settings.top_k], settings.context_token_budget)
         latency.pack_ms = (time.perf_counter() - t0) * 1000
-        latency.total_ms = latency.embed_ms + latency.dense_ms + latency.bm25_ms + latency.pack_ms
+        latency.total_ms = (
+            latency.embed_ms
+            + latency.dense_ms
+            + latency.bm25_ms
+            + latency.rerank_ms
+            + latency.pack_ms
+        )
         return kept, latency, candidates

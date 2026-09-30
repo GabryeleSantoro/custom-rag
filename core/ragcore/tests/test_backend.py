@@ -32,6 +32,7 @@ def test_factory_builds_the_real_backend(tmp_path: Path) -> None:
 
     assert type(built.store).__module__ == "ragcore.store.real"
     assert type(built.store.retriever).__module__ == "ragcore.retrieve.hybrid"
+    assert type(built.store.retriever.reranker).__module__ == "ragcore.models.rerank"
     assert isinstance(built.answerer, AnswerEngine)
 
 

@@ -60,13 +60,19 @@ def build_backend(config: Config) -> Backend:
     elif config.backend == "real":
         from ragcore.models.embed import EmbedClient
         from ragcore.models.fakes import FakeEmbedClient
+        from ragcore.models.rerank import RerankClient
         from ragcore.store.real import RealStore
 
-        # A test affordance; the CLI never sets it.
-        fake = os.getenv("RAGCORE_FAKE_MODELS")
-        store = RealStore(
-            config, embedder=FakeEmbedClient() if fake else EmbedClient(config.embed_url)
-        )
+        # A test affordance; the CLI never sets it. No reranker under fakes: the
+        # fake's overlap scores sit under min_score and would empty contract answers.
+        if os.getenv("RAGCORE_FAKE_MODELS"):
+            store = RealStore(config, embedder=FakeEmbedClient())
+        else:
+            store = RealStore(
+                config,
+                embedder=EmbedClient(config.embed_url),
+                reranker=RerankClient(config.rerank_url),
+            )
     else:
         raise ValueError(f"unknown backend: {config.backend!r}")
     return Backend(
