@@ -62,6 +62,9 @@ _NOTES_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationship
 _HYPERLINK_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 
 
+OCR_THRESHOLD = 20
+
+
 class UnsupportedFormat(Exception):
     """Raised by ``parse()`` when no handler is registered for a file's suffix."""
 
@@ -85,12 +88,14 @@ def _title(text: str, fallback: str) -> str:
     return match.group(2).strip() if match else fallback
 
 
-def _paginate(sections: list[tuple[str, str]]) -> list[ParsedPage]:
-    """Number non-empty sections 1..n; a section with empty text is dropped."""
+def _paginate(sections: list[tuple[str, str]], *, keep_empty: bool = False) -> list[ParsedPage]:
+    """Number sections 1..n. Empty ones are dropped unless they are physical pages
+    (PDF pages, slides), where dropping one would shift every later citation."""
     return [
         ParsedPage(page=i, section_path=section_path, text=body)
         for i, (section_path, body) in enumerate(
-            ((section_path, body) for section_path, body in sections if body), start=1
+            ((section_path, body) for section_path, body in sections if body or keep_empty),
+            start=1,
         )
     ]
 
@@ -127,9 +132,9 @@ def _clean_pdf_text(text: str) -> str:
 def _pdf(path: Path) -> ParsedDoc:
     """Extract one page per PDF page using PDFium's text layer.
 
-    OCR is intentionally not run here. Pages without a text layer are omitted
-    from the searchable text and flagged so the ingestion job can send them
-    through the OCR stage once that stage is enabled.
+    OCR is intentionally not run here. A page whose text layer is under
+    ``OCR_THRESHOLD`` characters (blank, or a scan with a stray page number) is
+    kept, so later page numbers stay true, and flags the document for OCR.
     """
     try:
         import pypdfium2 as pdfium
@@ -153,14 +158,14 @@ def _pdf(path: Path) -> ParsedDoc:
                     text_page.close()
                 page.close()
 
-            if text:
-                sections.append((f"{path.stem} > Page {page_number + 1}", text))
-            else:
-                needs_ocr = True
+            sections.append((f"{path.stem} > Page {page_number + 1}", text))
+            needs_ocr = needs_ocr or len(text) < OCR_THRESHOLD
     finally:
         document.close()
 
-    return ParsedDoc(title=path.stem, pages=_paginate(sections), needs_ocr=needs_ocr)
+    return ParsedDoc(
+        title=path.stem, pages=_paginate(sections, keep_empty=True), needs_ocr=needs_ocr
+    )
 
 
 def _slide_relationships(archive: ZipFile, slide_name: str) -> dict[str, tuple[str, str]]:
@@ -208,9 +213,7 @@ def _pptx(path: Path) -> ParsedDoc:
     """Extract visible text, speaker notes and external links, one page per slide."""
     with ZipFile(path) as archive:
         slide_names = sorted(
-            name
-            for name in archive.namelist()
-            if re.fullmatch(r"ppt/slides/slide\d+\.xml", name)
+            name for name in archive.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", name)
         )
         slide_names.sort(key=lambda name: int(re.search(r"slide(\d+)\.xml$", name).group(1)))
         sections: list[tuple[str, str]] = []
@@ -231,7 +234,7 @@ def _pptx(path: Path) -> ParsedDoc:
             if links:
                 parts.append("Link nella slide: " + ", ".join(links))
             sections.append((f"{path.stem} > Slide {slide_number}", "\n\n".join(parts)))
-    return ParsedDoc(title=path.stem, pages=_paginate(sections))
+    return ParsedDoc(title=path.stem, pages=_paginate(sections, keep_empty=True))
 
 
 _PARSERS: dict[str, Callable[[Path], ParsedDoc]] = {
