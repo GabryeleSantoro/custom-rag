@@ -1,0 +1,264 @@
+"""The real store end to end, with a fake embedder: ingest, re-ingest, remove, guard."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+from ragcore.api.schemas import Source, SourceCreate
+from ragcore.config import Config
+from ragcore.models.fakes import FakeEmbedClient
+from ragcore.store.real import RealStore
+
+
+class CountingEmbedClient(FakeEmbedClient):
+    """Records how many texts each embedding request carried."""
+
+    def __init__(self) -> None:
+        self.calls: list[int] = []
+
+    async def embed(
+        self, texts: list[str], *, batch_size: int = 32, query: bool = False
+    ) -> list[list[float]]:
+        self.calls.append(len(texts))
+        return await super().embed(texts, batch_size=batch_size, query=query)
+
+
+def corpus(root: Path) -> Path:
+    docs = root / "corpus"
+    docs.mkdir()
+    (docs / "reranking.md").write_text(
+        "# Reranking\n\n## Cross encoders\n\nCross encoders score query passage pairs.\n"
+    )
+    (docs / "chunking.md").write_text(
+        "# Chunking\n\n## Sizes\n\nSmaller chunks retrieve precisely.\n"
+    )
+    return docs
+
+
+def build(tmp_path: Path, embedder: FakeEmbedClient | None = None, **kwargs: str) -> RealStore:
+    config = Config(data_dir=tmp_path, backend="real")
+    return RealStore(config, embedder=embedder or FakeEmbedClient(), **kwargs)
+
+
+def add(store: RealStore, folder: Path) -> Source:
+    return store.add_source(SourceCreate(path=str(folder)))
+
+
+async def test_ingesting_a_source_indexes_its_documents(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+
+    documents = await store.ingest_source_async(source.id)
+
+    assert len(documents) == 2
+    assert {d.status for d in documents} == {"indexed"}
+    assert store.index_stats().chunks > 0
+    assert store.sources[source.id].indexed_count == 2
+
+
+async def test_reingesting_unchanged_files_is_a_no_op(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    await store.ingest_source_async(source.id)
+    chunks_before = store.index_stats().chunks
+
+    again = await store.ingest_source_async(source.id)
+
+    assert {d.status for d in again} == {"skipped"}
+    assert {d.status for d in store.documents.values()} == {"indexed"}
+    assert store.index_stats().chunks == chunks_before
+
+
+async def test_changed_file_is_reindexed(tmp_path: Path) -> None:
+    docs = corpus(tmp_path)
+    store = build(tmp_path)
+    source = add(store, docs)
+    await store.ingest_source_async(source.id)
+
+    (docs / "reranking.md").write_text(
+        "# Reranking\n\n## Cross encoders\n\nRewritten body with different words entirely.\n"
+    )
+    again = await store.ingest_source_async(source.id)
+
+    statuses = {d.title: d.status for d in again}
+    assert statuses["Reranking"] == "indexed"
+    assert statuses["Chunking"] == "skipped"
+    content = store.content(next(d.id for d in again if d.title == "Reranking"))
+    assert content is not None
+    assert "Rewritten" in " ".join(c.text for c in content.chunks)
+    assert store.index_stats().chunks == sum(d.n_chunks for d in store.documents.values())
+
+
+async def test_removing_a_source_drops_its_chunks(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    await store.ingest_source_async(source.id)
+
+    removed = store.remove_source(source.id)
+
+    assert removed == 2
+    assert store.index_stats().chunks == 0
+    assert store.documents == {}
+    assert store.sources == {}
+
+
+async def test_document_content_is_readable_for_the_reader_view(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    documents = await store.ingest_source_async(source.id)
+
+    content = store.content(documents[0].id)
+
+    assert content is not None
+    assert content.n_pages == len(content.pages)
+    assert all(c.page <= content.n_pages for c in content.chunks)
+    page_text = {p.page: p.text for p in content.pages}
+    assert all(
+        c.text and c.text == page_text[c.page][c.char_start : c.char_end] for c in content.chunks
+    )
+
+
+async def test_a_different_embed_model_blocks_the_index(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    await store.ingest_source_async(source.id)
+    store.close()
+
+    reopened = build(tmp_path, embed_model_id="some-other-model")
+
+    assert reopened.index_blocked is not None
+    assert "re-index" in reopened.index_blocked
+
+
+async def test_a_blocked_index_refuses_to_ingest_until_rebuilt(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    await store.ingest_source_async(source.id)
+    store.close()
+    reopened = build(tmp_path, embed_model_id="some-other-model")
+
+    with pytest.raises(RuntimeError, match="re-index"):
+        await reopened.ingest_source_async(source.id)
+
+    reopened.rebuild_index()
+    assert reopened.index_blocked is None
+    assert reopened.index_stats().chunks == 0
+    documents = await reopened.ingest_source_async(source.id)
+    assert {d.status for d in documents} == {"indexed"}
+    reopened.close()
+    assert build(tmp_path, embed_model_id="some-other-model").index_blocked is None
+
+
+async def test_a_restart_restores_the_library_without_re_embedding(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    await store.ingest_source_async(source.id)
+    store.close()
+
+    embedder = CountingEmbedClient()
+    reopened = build(tmp_path, embedder)
+    again = await reopened.ingest_source_async(source.id)
+
+    assert {d.title for d in reopened.documents.values()} == {"Reranking", "Chunking"}
+    assert {d.status for d in again} == {"skipped"}
+    assert embedder.calls == []
+
+
+async def test_small_documents_share_embedding_requests(tmp_path: Path) -> None:
+    docs = tmp_path / "notes"
+    docs.mkdir()
+    for i in range(40):
+        (docs / f"note{i}.md").write_text(f"# Note {i}\n\nBody number {i}.\n")
+    embedder = CountingEmbedClient()
+    store = build(tmp_path, embedder)
+    source = add(store, docs)
+
+    await store.ingest_source_async(source.id)
+
+    assert sum(embedder.calls) == store.index_stats().chunks
+    assert len(embedder.calls) <= 2
+
+
+async def test_a_deleted_file_leaves_the_index_on_rescan(tmp_path: Path) -> None:
+    docs = corpus(tmp_path)
+    store = build(tmp_path)
+    source = add(store, docs)
+    await store.ingest_source_async(source.id)
+
+    (docs / "chunking.md").unlink()
+    again = await store.ingest_source_async(source.id)
+
+    assert [d.title for d in again] == ["Reranking"]
+    assert {d.title for d in store.documents.values()} == {"Reranking"}
+    assert store.sources[source.id].document_count == 1
+    assert store.index_stats().chunks == store.documents[again[0].id].n_chunks
+
+
+async def test_a_removed_document_stays_out_after_a_restart(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    documents = await store.ingest_source_async(source.id)
+    chunking = next(d for d in documents if d.title == "Chunking")
+    store.remove_document(chunking.id)
+    store.close()
+
+    reopened = build(tmp_path)
+    again = await reopened.ingest_source_async(source.id)
+
+    assert [d.title for d in again] == ["Reranking"]
+    assert chunking.id not in reopened.documents
+
+
+async def test_a_quote_in_a_file_name_is_harmless(tmp_path: Path) -> None:
+    docs = tmp_path / "quoted"
+    docs.mkdir()
+    (docs / "it's here.md").write_text("# Quoted\n\nA body worth indexing.\n")
+    store = build(tmp_path)
+    source = add(store, docs)
+
+    [document] = await store.ingest_source_async(source.id)
+    store.remove_document(document.id)
+
+    assert re.fullmatch(r"[A-Za-z0-9_]+", document.id)
+    assert store.index_stats().chunks == 0
+
+
+async def test_an_unreadable_file_is_an_error_not_a_failed_scan(tmp_path: Path) -> None:
+    docs = corpus(tmp_path)
+    (docs / "broken.pdf").write_bytes(b"not a pdf at all")
+    (docs / "photo.png").write_bytes(b"\x89PNG\r\n")
+    store = build(tmp_path)
+    source = add(store, docs)
+
+    documents = await store.ingest_source_async(source.id)
+
+    statuses = {Path(d.path).name: d.status for d in documents}
+    assert statuses == {"reranking.md": "indexed", "chunking.md": "indexed", "broken.pdf": "error"}
+    assert store.sources[source.id].error_count == 1
+
+
+async def test_wipe_empties_the_library_and_the_index(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    source = add(store, corpus(tmp_path))
+    await store.ingest_source_async(source.id)
+
+    store.wipe(keep_connections=True)
+
+    assert store.documents == {}
+    assert store.sources == {}
+    assert store.index_stats().chunks == 0
+    store.close()
+    reopened = build(tmp_path)
+    assert reopened.documents == {}
+    assert reopened.sources == {}
+
+
+async def test_settings_survive_a_restart(tmp_path: Path) -> None:
+    store = build(tmp_path)
+    store.settings.onboarded = True
+    store.save_settings()
+    store.close()
+
+    assert build(tmp_path).settings.onboarded is True

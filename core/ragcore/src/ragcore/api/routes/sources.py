@@ -19,7 +19,7 @@ async def add_source(payload: SourceCreate, store: StoreDep, jobs: JobsDep) -> S
     if payload.project_id is not None and payload.project_id not in store.projects:
         raise api_error(404, "project_not_found", "project not found")
     source = store.add_source(payload)
-    documents = store.ingest_source(source.id)
+    documents = await store.ingest_source_async(source.id)
 
     # The scan is instant on fixtures; the job exists so the UI sees the same
     # progress shape it will see once parsing and embedding are real.
@@ -48,7 +48,7 @@ def remove_source(source_id: str, store: StoreDep) -> Ok:
 async def rescan(source_id: str, store: StoreDep, jobs: JobsDep) -> Job:
     if source_id not in store.sources:
         raise api_error(404, "source_not_found", "source not found")
-    documents = store.ingest_source(source_id)
+    documents = await store.ingest_source_async(source_id)
     job = jobs.create(
         "index", "Rescanning source", total=max(len(documents), 1), source_id=source_id
     )

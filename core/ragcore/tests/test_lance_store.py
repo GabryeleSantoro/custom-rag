@@ -162,3 +162,23 @@ async def test_chunks_survive_a_reopen(tmp_path: Path) -> None:
     VectorStore(root).add_chunks(await rows_for(["a passage"]))
 
     assert VectorStore(root).chunk_count() == 1
+
+
+async def test_a_quote_in_an_id_is_matched_literally(tmp_path: Path) -> None:
+    store = VectorStore(tmp_path / "index")
+    store.add_chunks(await rows_for(["a quoted passage"], doc_id="it's"))
+    store.add_chunks(await rows_for(["a plain passage"], doc_id="doc_2"))
+
+    store.delete_by_doc(["it's"])
+
+    assert store.chunk_count() == 1
+    assert store.get(["chk_0"])[0]["doc_id"] == "doc_2"
+
+
+async def test_clear_empties_the_chunk_table(tmp_path: Path) -> None:
+    store = VectorStore(tmp_path / "index")
+    store.add_chunks(await rows_for(["one passage", "another passage"]))
+
+    store.clear()
+
+    assert store.chunk_count() == 0

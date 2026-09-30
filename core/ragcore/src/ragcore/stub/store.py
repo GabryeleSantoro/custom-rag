@@ -6,6 +6,7 @@ store will do; nothing above this layer knows the data is fake.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -280,6 +281,12 @@ class Store:
         logger.info("indexed %d documents from %s in %.1fs", len(docs), directory, elapsed)
         return docs
 
+    async def ingest_source_async(self, source_id: str) -> list[Document]:
+        """``ingest_source`` with the parse moved off the event loop."""
+        source = self.sources.get(source_id)
+        scanned = await asyncio.to_thread(self.scan, source) if source else None
+        return self.ingest_source(source_id, scanned)
+
     def rebuild_index(self) -> None:
         chunks = [c for doc in self.loaded.values() for c in doc.chunks]
         self.retriever = Retriever(chunks)
@@ -458,6 +465,30 @@ class Store:
         path.write_text(
             json.dumps([f.model_dump(mode="json") for f in self.folders.values()], indent=2)
         )
+
+    # ------------------------------------------------------------------ wipe
+
+    def wipe(self, *, keep_connections: bool) -> None:
+        """Back to a first run: library, index and chats go; connections only if asked."""
+        self.sources.clear()
+        self.documents.clear()
+        self.loaded.clear()
+        self.sessions.clear()
+        self.messages.clear()
+        self.removed_paths.clear()
+        self.rebuild_index()
+        self.save_library()
+        self.save_chats()
+        if not keep_connections:
+            self.connections.clear()
+            self.settings.active_connection_id = None
+            self.secrets.clear()
+            self.save_connections()
+        self.settings.onboarded = False
+        self.save_settings()
+
+    def save_settings(self) -> None:
+        """The stub keeps settings in memory only."""
 
     def active_connection(self) -> Connection | None:
         """The one connection that answers, chosen by the user in the app."""

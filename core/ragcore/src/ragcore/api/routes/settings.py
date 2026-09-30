@@ -23,6 +23,7 @@ def patch_settings(payload: AppSettingsPatch, store: StoreDep) -> AppSettings:
         setattr(store.settings, field, getattr(payload, field))
     if payload.active_connection_id is not None:
         store.save_connections()
+    store.save_settings()
     return store.settings
 
 
@@ -31,19 +32,5 @@ def wipe(payload: WipeRequest, store: StoreDep) -> Ok:
     if payload.confirm != "DELETE":
         raise api_error(400, "wipe_confirm_required", 'confirm must be the literal string "DELETE"')
 
-    store.sources.clear()
-    store.documents.clear()
-    store.loaded.clear()
-    store.sessions.clear()
-    store.messages.clear()
-    store.removed_paths.clear()
-    store.rebuild_index()
-    store.save_library()
-    store.save_chats()
-    if not payload.keep_connections:
-        store.connections.clear()
-        store.settings.active_connection_id = None
-        store.secrets.clear()
-        store.save_connections()
-    store.settings.onboarded = False
+    store.wipe(keep_connections=payload.keep_connections)
     return Ok()

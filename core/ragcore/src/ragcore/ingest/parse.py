@@ -240,6 +240,7 @@ _PARSERS: dict[str, Callable[[Path], ParsedDoc]] = {
     ".pdf": _pdf,
     ".pptx": _pptx,
 }
+SUPPORTED_SUFFIXES = frozenset(_PARSERS)
 
 
 def parse(path: Path) -> ParsedDoc:

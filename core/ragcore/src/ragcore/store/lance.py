@@ -10,6 +10,7 @@ It arrives with real chunking.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 from typing import TypedDict
 
@@ -53,6 +54,11 @@ CHUNK_SCHEMA = pa.schema(
 META_SCHEMA = pa.schema([("key", pa.string()), ("value", pa.string())])
 
 
+def _sql_list(values: list[str]) -> str:
+    """Quote values for an SQL ``IN (...)`` predicate; a ``'`` inside is doubled."""
+    return ", ".join("'" + value.replace("'", "''") + "'" for value in values)
+
+
 class VectorStore:
     """Chunk vectors/text and the index_meta guard, both backed by LanceDB tables.
 
@@ -86,8 +92,14 @@ class VectorStore:
         """
         if not doc_ids:
             return
-        quoted = ", ".join(f"'{doc_id}'" for doc_id in doc_ids)
-        self.chunks.delete(f"doc_id IN ({quoted})")
+        self.chunks.delete(f"doc_id IN ({_sql_list(doc_ids)})")
+
+    def clear(self) -> None:
+        self.chunks.delete("true")
+
+    def optimize(self) -> None:
+        """Merge the small fragments each write leaves and drop superseded versions."""
+        self.chunks.optimize(cleanup_older_than=timedelta(0))
 
     def dense(self, vector: list[float], k: int) -> list[tuple[str, float]]:
         """Nearest chunks by cosine similarity, best first.
@@ -119,9 +131,11 @@ class VectorStore:
         """
         if not chunk_ids:
             return []
-        quoted = ", ".join(f"'{cid}'" for cid in chunk_ids)
         found = (
-            self.chunks.search().where(f"chunk_id IN ({quoted})").limit(len(chunk_ids)).to_list()
+            self.chunks.search()
+            .where(f"chunk_id IN ({_sql_list(chunk_ids)})")
+            .limit(len(chunk_ids))
+            .to_list()
         )
         by_id = {row["chunk_id"]: row for row in found}
         return [by_id[cid] for cid in chunk_ids if cid in by_id]
@@ -133,6 +147,6 @@ class VectorStore:
         return {row["key"]: row["value"] for row in self.meta.search().limit(10_000).to_list()}
 
     def write_meta(self, values: dict[str, str]) -> None:
-        for key in values:
-            self.meta.delete(f"key = '{key}'")
+        if values:
+            self.meta.delete(f"key IN ({_sql_list(list(values))})")
         self.meta.add([{"key": key, "value": value} for key, value in values.items()])

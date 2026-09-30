@@ -18,6 +18,7 @@ from __future__ import annotations
 import sqlite3
 import threading
 import uuid
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -31,6 +32,14 @@ from ragcore.api.schemas import (
 )
 
 _SETTINGS_KEY = "app"
+_UPSERT_DOCUMENT = (
+    "INSERT INTO documents (id, source_id, path, json) VALUES (?, ?, ?, ?) "
+    "ON CONFLICT(id) DO UPDATE SET "
+    "source_id = excluded.source_id, path = excluded.path, json = excluded.json"
+)
+_UPSERT_SHA = (
+    "INSERT INTO shas (path, sha) VALUES (?, ?) ON CONFLICT(path) DO UPDATE SET sha = excluded.sha"
+)
 
 
 def _now() -> datetime:
@@ -55,6 +64,9 @@ class MetaStore:
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
+        # Under WAL, NORMAL skips the fsync per commit; a power cut can lose the
+        # last commits, which only means those files are indexed again.
+        self._conn.execute("PRAGMA synchronous=NORMAL")
         with self._conn:
             self._conn.execute(
                 "CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY, json TEXT NOT NULL)"
@@ -78,6 +90,7 @@ class MetaStore:
             self._conn.execute(
                 "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, json TEXT NOT NULL)"
             )
+            self._conn.execute("CREATE TABLE IF NOT EXISTS removed (path TEXT PRIMARY KEY)")
 
     # ------------------------------------------------------------------ sources
 
@@ -89,6 +102,12 @@ class MetaStore:
                 (source.id, source.model_dump_json()),
             )
         return source
+
+    def replace_sources(self, sources: Iterable[Source]) -> None:
+        rows = [(source.id, source.model_dump_json()) for source in sources]
+        with self._lock, self._conn:
+            self._conn.execute("DELETE FROM sources")
+            self._conn.executemany("INSERT INTO sources (id, json) VALUES (?, ?)", rows)
 
     def list_sources(self) -> dict[str, Source]:
         with self._lock:
@@ -113,13 +132,15 @@ class MetaStore:
     # ---------------------------------------------------------------- documents
 
     def upsert_document(self, doc: Document) -> None:
+        self.save_documents([doc], [])
+
+    def save_documents(self, docs: list[Document], shas: list[tuple[str, str]]) -> None:
+        """Upsert documents and ``(path, sha)`` digests in one transaction."""
         with self._lock, self._conn:
-            self._conn.execute(
-                "INSERT INTO documents (id, source_id, path, json) VALUES (?, ?, ?, ?) "
-                "ON CONFLICT(id) DO UPDATE SET "
-                "source_id = excluded.source_id, path = excluded.path, json = excluded.json",
-                (doc.id, doc.source_id, doc.path, doc.model_dump_json()),
+            self._conn.executemany(
+                _UPSERT_DOCUMENT, [(d.id, d.source_id, d.path, d.model_dump_json()) for d in docs]
             )
+            self._conn.executemany(_UPSERT_SHA, shas)
 
     def list_documents(self) -> dict[str, Document]:
         with self._lock:
@@ -148,17 +169,28 @@ class MetaStore:
         return dict(rows)
 
     def set_sha(self, path: str, sha: str) -> None:
+        self.save_documents([], [(path, sha)])
+
+    def clear_shas(self) -> None:
         with self._lock, self._conn:
-            self._conn.execute(
-                "INSERT INTO shas (path, sha) VALUES (?, ?) "
-                "ON CONFLICT(path) DO UPDATE SET sha = excluded.sha",
-                (path, sha),
-            )
+            self._conn.execute("DELETE FROM shas")
+
+    # ------------------------------------------------------------ removed paths
+
+    def removed_paths(self) -> set[str]:
+        """Files the user took out of the library; rescans must not bring them back."""
+        with self._lock:
+            return {row[0] for row in self._conn.execute("SELECT path FROM removed")}
+
+    def replace_removed_paths(self, paths: Iterable[str]) -> None:
+        with self._lock, self._conn:
+            self._conn.execute("DELETE FROM removed")
+            self._conn.executemany("INSERT INTO removed (path) VALUES (?)", [(p,) for p in paths])
 
     # -------------------------------------------------------------------- wipe
 
     def wipe(self, *, keep_connections: bool) -> None:
-        """Clear sources, documents, shas, sessions and messages.
+        """Clear sources, documents, shas, removed paths, sessions and messages.
 
         Connections are not part of this store's schema (see ``ports.StorePort``);
         ``keep_connections`` is accepted only so callers routed through this store
@@ -171,6 +203,7 @@ class MetaStore:
             self._conn.execute("DELETE FROM shas")
             self._conn.execute("DELETE FROM sessions")
             self._conn.execute("DELETE FROM messages")
+            self._conn.execute("DELETE FROM removed")
 
     # -------------------------------------------------------------------- chats
 

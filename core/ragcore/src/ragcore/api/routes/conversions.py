@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
 import time
@@ -498,9 +497,7 @@ async def convert_slides(
             )
 
             source = _global_source(store, global_dir)
-            # Parsing walks the whole output folder: keep it off the event loop.
-            scanned = await asyncio.to_thread(store.scan, source)
-            indexed = store.ingest_source(source.id, scanned)
+            indexed = await store.ingest_source_async(source.id)
             saved_document = next(
                 (document for document in indexed if Path(document.path) == output_path), None
             )

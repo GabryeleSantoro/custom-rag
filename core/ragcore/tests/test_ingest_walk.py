@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -112,3 +113,40 @@ def test_a_file_that_disappears_mid_walk_does_not_abort_the_walk(
     found = walk_source(tmp_path, include_globs=["**/*.md"], exclude_globs=[], max_file_mb=100)
 
     assert [f.path.name for f in found] == ["keep.md", "zzz.md"]
+
+
+def test_a_suffix_filter_drops_other_files_before_they_are_hashed(tmp_path: Path) -> None:
+    build_corpus(tmp_path)
+
+    found = walk_source(
+        tmp_path, include_globs=["**/*"], exclude_globs=[], max_file_mb=100, suffixes={".md"}
+    )
+
+    assert sorted(f.path.name for f in found) == ["huge.md", "reranking.md"]
+
+
+def test_an_unchanged_file_reuses_its_known_digest(tmp_path: Path) -> None:
+    path = tmp_path / "note.md"
+    path.write_text("# Note\n\nBody.")
+    [first] = walk_source(tmp_path, include_globs=["*.md"], exclude_globs=[], max_file_mb=1)
+    known = {str(path): (first.size_bytes, first.mtime, "digest-from-last-scan")}
+
+    [again] = walk_source(
+        tmp_path, include_globs=["*.md"], exclude_globs=[], max_file_mb=1, known=known
+    )
+
+    assert again.sha256 == "digest-from-last-scan"
+
+
+def test_a_file_whose_mtime_moved_is_hashed_again(tmp_path: Path) -> None:
+    path = tmp_path / "note.md"
+    path.write_text("# Note\n\nBody.")
+    [first] = walk_source(tmp_path, include_globs=["*.md"], exclude_globs=[], max_file_mb=1)
+    stale = first.mtime - timedelta(seconds=5)
+    known = {str(path): (first.size_bytes, stale, "digest-from-last-scan")}
+
+    [again] = walk_source(
+        tmp_path, include_globs=["*.md"], exclude_globs=[], max_file_mb=1, known=known
+    )
+
+    assert again.sha256 == sha256_of(path)
