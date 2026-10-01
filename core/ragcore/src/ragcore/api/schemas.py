@@ -338,7 +338,7 @@ class ConversionDoneEvent(BaseModel):
 # --------------------------------------------------------------------- connections
 
 
-ConnectionKind = Literal["openai-compatible", "anthropic"]
+ConnectionKind = Literal["openai-compatible", "anthropic", "local"]
 ThinkingLevel = Literal["off", "low", "medium", "high"]
 ProviderSort = Literal["price", "throughput", "latency"]
 

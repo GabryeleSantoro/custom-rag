@@ -71,7 +71,7 @@ def test_wipe_can_drop_the_connections_too(client: TestClient) -> None:
 
     client.post("/settings/wipe", json={"confirm": "DELETE", "keep_connections": False})
 
-    assert client.get("/connections").json() == []
+    assert [c for c in client.get("/connections").json() if c["id"] != "local"] == []
     assert client.get("/settings").json()["active_connection_id"] is None
 
 
@@ -83,7 +83,7 @@ def test_wipe_keeps_connections_by_default(client: TestClient) -> None:
 
     client.post("/settings/wipe", json={"confirm": "DELETE"})
 
-    assert client.get("/connections").json()
+    assert [c for c in client.get("/connections").json() if c["id"] != "local"]
 
 
 def test_a_wiped_index_answers_that_it_knows_nothing(client: TestClient, read_events) -> None:

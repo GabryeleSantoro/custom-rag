@@ -17,13 +17,15 @@ class Backend:
     jobs: object
     hub: object
     answerer: AnswerEngine
+    local_llm: object
 
 
 class ConnectionAnswerEngine:
     """Scripted until the user activates a connection; then that connection answers."""
 
-    def __init__(self, store: StorePort) -> None:
+    def __init__(self, store: StorePort, local_llm: object | None = None) -> None:
         self.store = store
+        self.local_llm = local_llm
 
     def stream(
         self,
@@ -47,6 +49,7 @@ class ConnectionAnswerEngine:
             chunks,
             system_prompt=system_prompt,
             max_tokens=max_tokens,
+            local=self.local_llm,
         )
 
 
@@ -76,9 +79,13 @@ def build_backend(config: Config) -> Backend:
             )
     else:
         raise ValueError(f"unknown backend: {config.backend!r}")
+    from ragcore.local_llm import LocalLLM
+
+    local_llm = LocalLLM(config.data_dir)
     return Backend(
         store=store,
         jobs=JobManager(),
         hub=HubClient(config),
-        answerer=ConnectionAnswerEngine(store),
+        answerer=ConnectionAnswerEngine(store, local_llm),
+        local_llm=local_llm,
     )
