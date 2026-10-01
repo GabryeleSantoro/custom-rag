@@ -123,6 +123,7 @@ async def _ask(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     finally:
+        backend.local_llm.stop()
         store.close()
 
     print(answer)
