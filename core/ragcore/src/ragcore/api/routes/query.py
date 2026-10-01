@@ -170,6 +170,9 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
             )
             return
         finally:
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()
             _cancelled.discard(query_id)
 
         text = "".join(answer)
