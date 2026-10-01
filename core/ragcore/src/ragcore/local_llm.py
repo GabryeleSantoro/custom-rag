@@ -24,7 +24,8 @@ logger = logging.getLogger("ragcore.local_llm")
 LLAMA_TAG = "b11261"
 MODEL_FILE = "Qwen3-1.7B-Q4_K_M.gguf"
 MODEL_URL = f"https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/{MODEL_FILE}"
-IDLE_S = 180
+IDLE_S = 60
+CONTEXT = 8192
 START_TIMEOUT_S = 90
 # ponytail: three prebuilt CPU targets; add a row when another platform needs it.
 _ASSETS = {
@@ -53,6 +54,7 @@ class LocalLLM:
         self._url = ""
         self._lock = asyncio.Lock()
         self._idle: asyncio.TimerHandle | None = None
+        self._leases = 0
 
     # ------------------------------------------------------------------ install
 
@@ -134,7 +136,7 @@ class LocalLLM:
                 port = sock.getsockname()[1]
             self._proc = await asyncio.create_subprocess_exec(
                 str(binary), "-m", str(self.dir / MODEL_FILE), "--host", "127.0.0.1",
-                "--port", str(port), "-c", "4096",
+                "--port", str(port), "-c", str(CONTEXT),
                 stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
             )  # fmt: skip
             self._url = f"http://127.0.0.1:{port}"
@@ -149,10 +151,24 @@ class LocalLLM:
             self.stop()
             raise RuntimeError("llama-server did not become healthy")
 
-    def _touch(self) -> None:
+    def _arm(self) -> None:
         if self._idle:
             self._idle.cancel()
         self._idle = asyncio.get_running_loop().call_later(IDLE_S, self.stop)
+
+    @contextlib.asynccontextmanager
+    async def lease(self):
+        """The server's base URL, kept running until the last holder lets go."""
+        self._leases += 1
+        if self._idle:
+            self._idle.cancel()
+            self._idle = None
+        try:
+            yield await self._ensure_server()
+        finally:
+            self._leases -= 1
+            if self._leases == 0:
+                self._arm()
 
     def stop(self) -> None:
         if self._idle:
@@ -163,9 +179,7 @@ class LocalLLM:
                 self._proc.terminate()
 
     async def generate(self, system: str, user: str, max_tokens: int = 200) -> str:
-        url = await self._ensure_server()
-        self._touch()
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with self.lease() as url, httpx.AsyncClient(timeout=120) as client:
             response = await client.post(
                 f"{url}/v1/chat/completions",
                 json={
@@ -179,6 +193,5 @@ class LocalLLM:
                 },
             )
         response.raise_for_status()
-        self._touch()
         text = response.json()["choices"][0]["message"]["content"]
         return re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
