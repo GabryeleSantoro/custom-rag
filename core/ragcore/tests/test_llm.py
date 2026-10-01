@@ -450,3 +450,17 @@ def test_closing_a_local_stream_early_releases_the_lease() -> None:
         llm.httpx.AsyncClient = original
 
     assert fake.released == 1
+
+
+def test_a_local_server_that_fails_to_start_is_reported_as_a_coded_error() -> None:
+    class _Broken(_FakeLocal):
+        @contextlib.asynccontextmanager
+        async def lease(self):
+            raise RuntimeError("llama-server did not become healthy")
+            yield  # pragma: no cover
+
+    with pytest.raises(llm.LlmError) as raised:
+        run(local_connection(active=True), api_key=None, local=_Broken())
+
+    assert raised.value.code == "local_model_failed"
+    assert "did not become healthy" in raised.value.params["reason"]

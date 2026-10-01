@@ -8,6 +8,7 @@ answers, where it lives and with which key comes from the connection alone.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -326,7 +327,15 @@ async def llm_stream(
         return
     if local is None or local.status() != "ready":
         raise LlmError("local_model_missing", "The built-in model is not installed")
-    async with local.lease() as base_url:
+    async with contextlib.AsyncExitStack() as stack:
+        try:
+            base_url = await stack.enter_async_context(local.lease())
+        except (RuntimeError, OSError) as exc:
+            raise LlmError(
+                "local_model_failed",
+                f"The built-in model could not start: {exc}",
+                reason=str(exc),
+            ) from exc
         served = connection.model_copy(
             update={"kind": "openai-compatible", "base_url": f"{base_url}/v1"}
         )

@@ -53,7 +53,9 @@
     "llm_stream_cut": "{{name}} closed the stream after {{seconds}}s with no text, most likely still reasoning when the provider cut it off. Lower Thinking, use a non-reasoning model, or convert fewer slides at a time.",
     "llm_empty_answer": "{{name}} returned an empty answer (finish reason: {{finish}})",
     "model_role_active": "Activate another model for this role first",
-    "local_model_missing": "The built-in model is not installed. Install it in Settings → Connections."
+    "local_model_missing": "The built-in model is not installed. Install it in Settings → Connections.",
+    "local_model_failed": "The built-in model could not start: {{reason}}",
+    "local_model_unsupported_for_slides": "Slide conversion needs a service connection; the built-in model is too small for it."
   },
   "settings": {
     "language": {

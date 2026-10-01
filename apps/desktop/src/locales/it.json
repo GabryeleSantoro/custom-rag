@@ -53,7 +53,9 @@
     "llm_stream_cut": "{{name}} ha chiuso il flusso dopo {{seconds}} s senza testo, probabilmente ancora in fase di ragionamento quando il provider l'ha interrotto. Abbassare il ragionamento, usare un modello senza ragionamento o convertire meno slide alla volta.",
     "llm_empty_answer": "{{name}} ha restituito una risposta vuota (motivo di fine: {{finish}})",
     "model_role_active": "Prima attivare un altro modello per questo ruolo",
-    "local_model_missing": "Il modello integrato non è installato. Installalo in Impostazioni → Connessioni."
+    "local_model_missing": "Il modello integrato non è installato. Installalo in Impostazioni → Connessioni.",
+    "local_model_failed": "Impossibile avviare il modello integrato: {{reason}}",
+    "local_model_unsupported_for_slides": "La conversione delle slide richiede una connessione a un servizio; il modello integrato è troppo piccolo."
   },
   "settings": {
     "language": {

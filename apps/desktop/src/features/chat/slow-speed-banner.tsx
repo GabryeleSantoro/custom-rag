@@ -7,7 +7,7 @@ import {
   loadSlowState,
   recordAnswer,
   saveSlowState,
-  shouldSuggest,
+  shouldShowBanner,
   type SlowState,
 } from "@/lib/slow-speed";
 
@@ -35,7 +35,7 @@ export function SlowSpeedBanner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
 
-  if (!done || !shouldSuggest(state)) return null;
+  if (!shouldShowBanner(state, tokensPerS, done)) return null;
   return (
     <div className="space-y-2 rounded-md border border-status-warn/30 bg-status-warn/8 px-3 py-2 text-xs text-status-warn">
       <p>{t("slowSpeed.text", { speed: Math.round(tokensPerS ?? 0) })}</p>

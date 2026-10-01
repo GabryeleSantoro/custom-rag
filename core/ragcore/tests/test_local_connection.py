@@ -77,3 +77,13 @@ def test_activating_a_remote_connection_deactivates_local(client) -> None:
     listed = client.get("/connections").json()
     assert listed[0]["active"] is False
     assert [c["active"] for c in listed[1:]] == [True]
+
+
+def test_slide_conversion_says_the_built_in_model_cannot_do_it(client) -> None:
+    client.app.state.local_llm = _FakeLocal("ready")
+    client.post("/connections/local/activate")
+
+    response = client.post("/conversions/slides", json={"slide_ids": ["x"]})
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "local_model_unsupported_for_slides"

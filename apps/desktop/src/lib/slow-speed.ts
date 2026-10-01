@@ -11,6 +11,10 @@ export function recordAnswer(state: SlowState, tokensPerS: number | null): SlowS
 
 export const shouldSuggest = (state: SlowState) => !state.dismissed && state.streak >= SLOW_STREAK;
 
+/** Only under a finished answer that was itself timed: cloud and stub answers carry no speed. */
+export const shouldShowBanner = (state: SlowState, tokensPerS: number | null, done: boolean) =>
+  done && tokensPerS !== null && shouldSuggest(state);
+
 export function loadSlowState(): SlowState {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "null");

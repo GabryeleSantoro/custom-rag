@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadSlowState, recordAnswer, saveSlowState, shouldSuggest } from "./slow-speed";
+import {
+  loadSlowState,
+  recordAnswer,
+  saveSlowState,
+  shouldShowBanner,
+  shouldSuggest,
+} from "./slow-speed";
 
 const fresh = { streak: 0, dismissed: false };
 
@@ -22,6 +28,20 @@ describe("recordAnswer", () => {
     const state = { streak: 5, dismissed: true };
     expect(shouldSuggest(state)).toBe(false);
     expect(shouldSuggest(recordAnswer(state, 1))).toBe(false);
+  });
+});
+
+describe("shouldShowBanner", () => {
+  const slow = { streak: 2, dismissed: false };
+
+  it("shows under a finished slow local answer", () => {
+    expect(shouldShowBanner(slow, 3, true)).toBe(true);
+  });
+  it("never shows under an answer with no local speed (cloud or stub)", () => {
+    expect(shouldShowBanner(slow, null, true)).toBe(false);
+  });
+  it("waits for the answer to finish", () => {
+    expect(shouldShowBanner(slow, 3, false)).toBe(false);
   });
 });
 

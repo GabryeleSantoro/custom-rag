@@ -53,7 +53,9 @@
     "llm_stream_cut": "{{name}} hat den Stream nach {{seconds}} s ohne Text beendet, vermutlich noch im Denkmodus, als der Anbieter abbrach. Denkaufwand senken, ein Modell ohne Denkmodus verwenden oder weniger Folien auf einmal konvertieren.",
     "llm_empty_answer": "{{name}} lieferte eine leere Antwort (Abschlussgrund: {{finish}})",
     "model_role_active": "Zuerst ein anderes Modell für diese Rolle aktivieren",
-    "local_model_missing": "Das integrierte Modell ist nicht installiert. Installieren Sie es unter Einstellungen → Verbindungen."
+    "local_model_missing": "Das integrierte Modell ist nicht installiert. Installieren Sie es unter Einstellungen → Verbindungen.",
+    "local_model_failed": "Das integrierte Modell konnte nicht gestartet werden: {{reason}}",
+    "local_model_unsupported_for_slides": "Die Foliensatz-Umwandlung benötigt eine Dienstverbindung; das integrierte Modell ist dafür zu klein."
   },
   "settings": {
     "language": {

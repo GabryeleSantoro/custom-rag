@@ -194,6 +194,8 @@ export function ConnectionDialog({
       // The keychain is the durable copy; the sidecar got a memory-only one in
       // the payload above, because the sidecar is what calls the provider.
       if (apiKey) await shell.keychainSet(saved.id, apiKey);
+      // The slow-speed banner's shortcut exists to switch models, so the new one answers next.
+      if (preset) await api.activateConnection(saved.id);
       return saved;
     },
     onSuccess: () => {

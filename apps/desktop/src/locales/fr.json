@@ -53,7 +53,9 @@
     "llm_stream_cut": "{{name}} a fermé le flux après {{seconds}} s sans texte, probablement encore en réflexion quand le fournisseur l'a coupé. Réduire la réflexion, utiliser un modèle sans réflexion ou convertir moins de diapositives à la fois.",
     "llm_empty_answer": "{{name}} a renvoyé une réponse vide (motif de fin : {{finish}})",
     "model_role_active": "Activer d'abord un autre modèle pour ce rôle",
-    "local_model_missing": "Le modèle intégré n'est pas installé. Installez-le dans Réglages → Connexions."
+    "local_model_missing": "Le modèle intégré n'est pas installé. Installez-le dans Réglages → Connexions.",
+    "local_model_failed": "Le modèle intégré n'a pas pu démarrer : {{reason}}",
+    "local_model_unsupported_for_slides": "La conversion de diapositives nécessite une connexion à un service ; le modèle intégré est trop petit."
   },
   "settings": {
     "language": {
