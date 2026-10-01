@@ -35,5 +35,5 @@ answer the question, which also helps remote models.
 
 ## Not verified here
 - GUI flows (onboarding card, Settings row, banner): typechecked and unit-tested only.
-- Force-quitting the app mid-answer: the shell must kill ragcore; if it uses SIGKILL, the
-  child llama-server can outlive it. Normal quit stops it (lifespan `finally`).
+- Force-quitting the app mid-answer: not exercised in the GUI, but `sidecars.rs` kills ragcore's
+  whole process group (`libc_kill(-pid)`), which includes the llama-server it spawned.
