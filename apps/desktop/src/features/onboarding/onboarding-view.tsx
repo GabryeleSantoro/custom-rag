@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddSourceDialog } from "@/features/library/add-source-dialog";
 import { ConnectionDialog } from "@/features/settings/connection-dialog";
+import { LocalModelControl } from "@/features/settings/local-model";
 import { bytes } from "@/lib/format";
 import { useJobs } from "@/lib/jobs-context";
 import { api, type HardwareInfo, type InstalledModel, type ModelRole } from "@/lib/ipc";
@@ -331,6 +332,7 @@ function ConnectionStep() {
   const { t } = useTranslation();
   const connections = useQuery(connectionsQuery);
   const list = connections.data ?? [];
+  const own = list.filter((connection) => connection.kind !== "local");
 
   return (
     <StepFrame
@@ -347,7 +349,7 @@ function ConnectionStep() {
             tone={connection.active ? "ok" : undefined}
             title={
               <span className="flex items-center gap-2">
-                {connection.name}
+                {connection.kind === "local" ? t("localModel.name") : connection.name}
                 {connection.active ? (
                   <span className="rounded-full bg-primary/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-primary">
                     {t("common.active")}
@@ -356,20 +358,28 @@ function ConnectionStep() {
               </span>
             }
             body={
-              <span className="font-mono text-[0.625rem]">
-                {connection.model_id}
-                {connection.base_url ? ` · ${connection.base_url}` : ""}
-              </span>
+              connection.kind === "local" ? (
+                t("localModel.blurb")
+              ) : (
+                <span className="font-mono text-[0.625rem]">
+                  {connection.model_id}
+                  {connection.base_url ? ` · ${connection.base_url}` : ""}
+                </span>
+              )
             }
             aside={
-              <ConnectionDialog
-                connection={connection}
-                trigger={
-                  <Button variant="ghost" size="sm" className="h-7">
-                    {t("common.edit")}
-                  </Button>
-                }
-              />
+              connection.kind === "local" ? (
+                <LocalModelControl connection={connection} />
+              ) : (
+                <ConnectionDialog
+                  connection={connection}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="h-7">
+                      {t("common.edit")}
+                    </Button>
+                  }
+                />
+              )
             }
           />
         ))}
@@ -377,8 +387,8 @@ function ConnectionStep() {
 
       <ConnectionDialog
         trigger={
-          <Button variant={list.length === 0 ? "default" : "secondary"} size="sm" className="h-7">
-            {list.length === 0 ? t("onboarding.connection.add") : t("onboarding.connection.addAnother")}
+          <Button variant={own.length === 0 ? "default" : "secondary"} size="sm" className="h-7">
+            {own.length === 0 ? t("onboarding.connection.add") : t("onboarding.connection.addAnother")}
           </Button>
         }
       />
@@ -511,7 +521,7 @@ export function OnboardingView() {
     (step === "hardware" && !hardware.data) || (step === "models" && !coreReady);
 
   const optional =
-    (step === "connection" && (connections.data ?? []).length === 0) ||
+    (step === "connection" && !(connections.data ?? []).some((connection) => connection.active)) ||
     (step === "library" && (sources.data ?? []).length === 0);
 
   function next() {

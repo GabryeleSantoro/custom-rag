@@ -52,7 +52,8 @@
     "llm_budget_spent": "{{name}} ha esaurito l'intero budget di output senza scrivere testo, probabilmente per il ragionamento. Aumentare o rimuovere i token massimi in uscita, o abbassare il ragionamento.",
     "llm_stream_cut": "{{name}} ha chiuso il flusso dopo {{seconds}} s senza testo, probabilmente ancora in fase di ragionamento quando il provider l'ha interrotto. Abbassare il ragionamento, usare un modello senza ragionamento o convertire meno slide alla volta.",
     "llm_empty_answer": "{{name}} ha restituito una risposta vuota (motivo di fine: {{finish}})",
-    "model_role_active": "Prima attivare un altro modello per questo ruolo"
+    "model_role_active": "Prima attivare un altro modello per questo ruolo",
+    "local_model_missing": "Il modello integrato non è installato. Installalo in Impostazioni → Connessioni."
   },
   "settings": {
     "language": {
@@ -446,7 +447,8 @@
       "offer": "Ottieni domande migliori scritte da un piccolo modello locale (download di 1,1 GB)",
       "downloading": "Download del modello per le domande… {{percent}}%",
       "failed": "Download non riuscito: {{error}}"
-    }
+    },
+    "waitingModel": "In attesa del modello…"
   },
   "documentStatus": {
     "queued": "in coda",
@@ -696,5 +698,12 @@
     "environmentHint": "Hardware rilevato e build in uso.",
     "recentLog": "Log recente",
     "recentLogHint": "Tutto ciò che app, proxy e core hanno registrato. La pagina Log mostra la vista completa."
+  },
+  "localModel": {
+    "name": "Questo computer",
+    "blurb": "Privato: nulla lascia questo computer",
+    "install": "Installa (~1,1 GB)",
+    "downloading": "Download {{percent}}%",
+    "failed": "Download non riuscito: {{error}}"
   }
 }

@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { ConnectionDialog } from "@/features/settings/connection-dialog";
+import { LocalModelControl } from "@/features/settings/local-model";
 import { SETTINGS_SECTIONS } from "@/features/settings/settings-sidebar";
 import { UpdatesSection } from "@/features/settings/updates";
 import {
@@ -134,7 +135,9 @@ function ConnectionsSection() {
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="truncate text-[0.8125rem] font-medium">{connection.name}</p>
+              <p className="truncate text-[0.8125rem] font-medium">
+                {connection.kind === "local" ? t("localModel.name") : connection.name}
+              </p>
               {connection.active ? (
                 <span className="rounded-full bg-primary/12 px-1.5 py-0.5 text-[0.625rem] font-medium text-primary">
                   {t("common.active")}
@@ -147,20 +150,29 @@ function ConnectionsSection() {
                 </span>
               ) : null}
             </div>
-            <p className="truncate font-mono text-[0.625rem] text-muted-foreground">
-              {connection.model_id}
-              {connection.base_url ? ` · ${connection.base_url}` : ""}
-            </p>
-            <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-              {connection.max_output_tokens
-                ? t("settings.connections.outputLimit", {
-                    value: connection.max_output_tokens.toLocaleString(currentLanguage()),
-                  })
-                : t("settings.connections.noOutputLimit")}
-              {connection.has_api_key ? ` · ${t("settings.connections.keyInKeychain")}` : ""}
-            </p>
+            {connection.kind === "local" ? (
+              <p className="text-[0.6875rem] text-muted-foreground">{t("localModel.blurb")}</p>
+            ) : (
+              <>
+                <p className="truncate font-mono text-[0.625rem] text-muted-foreground">
+                  {connection.model_id}
+                  {connection.base_url ? ` · ${connection.base_url}` : ""}
+                </p>
+                <p className="mt-1 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
+                  {connection.max_output_tokens
+                    ? t("settings.connections.outputLimit", {
+                        value: connection.max_output_tokens.toLocaleString(currentLanguage()),
+                      })
+                    : t("settings.connections.noOutputLimit")}
+                  {connection.has_api_key ? ` · ${t("settings.connections.keyInKeychain")}` : ""}
+                </p>
+              </>
+            )}
           </div>
 
+          {connection.kind === "local" ? (
+            <LocalModelControl connection={connection} />
+          ) : (
           <div className="flex shrink-0 items-center gap-1">
             {!connection.active ? (
               <Button
@@ -192,6 +204,7 @@ function ConnectionsSection() {
               </Button>
             </IconTooltip>
           </div>
+          )}
         </div>
       ))}
 

@@ -52,7 +52,8 @@
     "llm_budget_spent": "{{name}} a épuisé tout son budget de sortie sans écrire de texte, probablement à cause de la réflexion. Augmenter ou retirer les jetons de sortie max., ou réduire la réflexion.",
     "llm_stream_cut": "{{name}} a fermé le flux après {{seconds}} s sans texte, probablement encore en réflexion quand le fournisseur l'a coupé. Réduire la réflexion, utiliser un modèle sans réflexion ou convertir moins de diapositives à la fois.",
     "llm_empty_answer": "{{name}} a renvoyé une réponse vide (motif de fin : {{finish}})",
-    "model_role_active": "Activer d'abord un autre modèle pour ce rôle"
+    "model_role_active": "Activer d'abord un autre modèle pour ce rôle",
+    "local_model_missing": "Le modèle intégré n'est pas installé. Installez-le dans Réglages → Connexions."
   },
   "settings": {
     "language": {
@@ -446,7 +447,8 @@
       "offer": "Obtenir de meilleures questions écrites par un petit modèle local (téléchargement de 1,1 Go)",
       "downloading": "Téléchargement du modèle de questions… {{percent}} %",
       "failed": "Échec du téléchargement : {{error}}"
-    }
+    },
+    "waitingModel": "En attente du modèle…"
   },
   "documentStatus": {
     "queued": "en file d'attente",
@@ -696,5 +698,12 @@
     "environmentHint": "Matériel détecté et build utilisée.",
     "recentLog": "Journal récent",
     "recentLogHint": "Tout ce que l'application, le proxy et le cœur ont journalisé. La page Journaux offre la vue complète."
+  },
+  "localModel": {
+    "name": "Cet ordinateur",
+    "blurb": "Privé : rien ne quitte cet ordinateur",
+    "install": "Installer (~1,1 Go)",
+    "downloading": "Téléchargement {{percent}} %",
+    "failed": "Échec du téléchargement : {{error}}"
   }
 }

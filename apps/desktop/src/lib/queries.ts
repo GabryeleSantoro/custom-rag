@@ -15,6 +15,7 @@ export const keys = {
   sidecars: ["sidecars"] as const,
   logs: ["sidecar-logs"] as const,
   settings: ["settings"] as const,
+  localModel: ["local-model"] as const,
   sources: ["sources"] as const,
   folders: ["folders"] as const,
   documents: (params: Record<string, unknown>) => ["documents", params] as const,

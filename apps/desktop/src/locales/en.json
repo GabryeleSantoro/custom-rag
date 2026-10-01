@@ -52,7 +52,8 @@
     "llm_budget_spent": "{{name}} used its whole output budget without writing any text, most likely on reasoning. Raise or clear Max output tokens, or lower Thinking.",
     "llm_stream_cut": "{{name}} closed the stream after {{seconds}}s with no text, most likely still reasoning when the provider cut it off. Lower Thinking, use a non-reasoning model, or convert fewer slides at a time.",
     "llm_empty_answer": "{{name}} returned an empty answer (finish reason: {{finish}})",
-    "model_role_active": "Activate another model for this role first"
+    "model_role_active": "Activate another model for this role first",
+    "local_model_missing": "The built-in model is not installed. Install it in Settings → Connections."
   },
   "settings": {
     "language": {
@@ -446,7 +447,8 @@
       "offer": "Get better questions written by a small local model (1.1 GB download)",
       "downloading": "Downloading the question model… {{percent}}%",
       "failed": "Download failed: {{error}}"
-    }
+    },
+    "waitingModel": "Waiting for the model…"
   },
   "documentStatus": {
     "queued": "queued",
@@ -696,5 +698,12 @@
     "environmentHint": "Detected hardware and the build in use.",
     "recentLog": "Recent log",
     "recentLogHint": "Everything the app, the proxy and the core logged. The Logs page has the full view."
+  },
+  "localModel": {
+    "name": "This computer",
+    "blurb": "Private: nothing leaves this computer",
+    "install": "Install (~1.1 GB)",
+    "downloading": "Downloading {{percent}}%",
+    "failed": "Download failed: {{error}}"
   }
 }

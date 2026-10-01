@@ -52,7 +52,8 @@
     "llm_budget_spent": "{{name}} hat das gesamte Ausgabebudget verbraucht, ohne Text zu schreiben, vermutlich durch Denkaufwand. Max. Ausgabe-Token erhöhen oder entfernen, oder Denkaufwand senken.",
     "llm_stream_cut": "{{name}} hat den Stream nach {{seconds}} s ohne Text beendet, vermutlich noch im Denkmodus, als der Anbieter abbrach. Denkaufwand senken, ein Modell ohne Denkmodus verwenden oder weniger Folien auf einmal konvertieren.",
     "llm_empty_answer": "{{name}} lieferte eine leere Antwort (Abschlussgrund: {{finish}})",
-    "model_role_active": "Zuerst ein anderes Modell für diese Rolle aktivieren"
+    "model_role_active": "Zuerst ein anderes Modell für diese Rolle aktivieren",
+    "local_model_missing": "Das integrierte Modell ist nicht installiert. Installieren Sie es unter Einstellungen → Verbindungen."
   },
   "settings": {
     "language": {
@@ -446,7 +447,8 @@
       "offer": "Bessere Fragen von einem kleinen lokalen Modell erhalten (1,1 GB Download)",
       "downloading": "Fragenmodell wird geladen… {{percent}} %",
       "failed": "Download fehlgeschlagen: {{error}}"
-    }
+    },
+    "waitingModel": "Warte auf das Modell…"
   },
   "documentStatus": {
     "queued": "in Warteschlange",
@@ -696,5 +698,12 @@
     "environmentHint": "Erkannte Hardware und verwendeter Build.",
     "recentLog": "Aktuelles Protokoll",
     "recentLogHint": "Alles, was App, Proxy und Kern protokolliert haben. Die Seite Protokolle zeigt die vollständige Ansicht."
+  },
+  "localModel": {
+    "name": "Dieser Computer",
+    "blurb": "Privat: nichts verlässt diesen Computer",
+    "install": "Installieren (~1,1 GB)",
+    "downloading": "Download {{percent}} %",
+    "failed": "Download fehlgeschlagen: {{error}}"
   }
 }
