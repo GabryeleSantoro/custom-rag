@@ -233,7 +233,7 @@ async def test_recommended_skips_a_pick_the_hub_cannot_answer_for(tmp_path: Path
 
     models = await hub_with(config_for(tmp_path), handler).recommended("reranking")
 
-    assert "Qwen/Qwen3-Reranker-0.6B-GGUF" not in [m.id for m in models]
+    assert "ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF" not in [m.id for m in models]
     assert models, "the other curated picks still come through"
 
 

@@ -33,7 +33,7 @@ CURATED: dict[ModelRole, list[tuple[str, str]]] = {
         ("nomic-ai/nomic-embed-text-v1.5-GGUF", "Small and fast on CPU"),
     ],
     "reranking": [
-        ("Qwen/Qwen3-Reranker-0.6B-GGUF", "Ships with the app"),
+        ("ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF", "Ships with the app"),
         ("Qwen/Qwen3-Reranker-4B-GGUF", "Best quality; worth it above 8 GB of VRAM"),
         ("BAAI/bge-reranker-v2-m3", "Multilingual alternative"),
     ],
