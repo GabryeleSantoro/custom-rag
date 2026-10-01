@@ -278,6 +278,7 @@ class DoneEvent(BaseModel):
     latency: StageLatency
     connection_id: str | None = None
     remote: bool = False
+    tokens_per_s: float | None = None
 
 
 class ErrorEvent(BaseModel):

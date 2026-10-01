@@ -350,6 +350,7 @@ export type QueryEvent =
         latency: StageLatency;
         connection_id: string | null;
         remote: boolean;
+        tokens_per_s: number | null;
       };
     }
   | {
