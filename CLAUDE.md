@@ -25,7 +25,11 @@ uv run pytest core/ragcore/tests/test_query.py::test_name -v   # single test
 uv run pytest -v -m requires_models             # needs llama-server on 8770 (embed) / 8771 (rerank)
 uv run ruff check .
 uv run --directory core/ragcore ragcore serve --port 8765      # API only; docs at /docs
+uv run ragcore index ./fixtures/docs --data-dir /tmp/rc        # real backend, headless; needs serve-models.sh
+uv run ragcore ask "what does reranking do" --data-dir /tmp/rc # prints answer + validated [doc_id:page] citations
 ```
+
+`serve` defaults to `--backend stub`: the shell passes no `--backend` and doesn't supervise the llama-servers yet. `index`/`ask` always use the real backend.
 
 Frontend / shell (from `apps/desktop`):
 

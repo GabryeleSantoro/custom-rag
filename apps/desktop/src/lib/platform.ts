@@ -7,7 +7,6 @@ const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
 
 export const isMac = /Mac(intosh| OS X)/.test(ua);
 export const isWindows = /Windows/.test(ua);
-export const isLinux = !isMac && !isWindows;
 
 /**
  * macOS keeps its native traffic lights floating over our chrome

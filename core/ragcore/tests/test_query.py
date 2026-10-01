@@ -320,7 +320,7 @@ def test_a_query_without_a_language_keeps_the_default_prompt(
     client: TestClient, read_events
 ) -> None:
     from ragcore.api import deps
-    from ragcore.stub.answers import SYSTEM_PROMPT
+    from ragcore.llm import SYSTEM_PROMPT
 
     captured: dict = {}
 

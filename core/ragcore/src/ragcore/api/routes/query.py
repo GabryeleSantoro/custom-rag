@@ -33,7 +33,7 @@ from ragcore.api.schemas import (
 )
 from ragcore.api.sse import frame, sse_response
 from ragcore.citations import extract_citations, parse_directives
-from ragcore.stub.answers import LlmError, system_prompt_for
+from ragcore.llm import LlmError, system_prompt_for
 
 router = APIRouter(tags=["query"])
 
@@ -119,7 +119,7 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
         yield frame("mode", ModeEvent(mode=mode, reason=reason))
 
         filters = project_filters(store, session_id, payload.filters)
-        chunks, latency, candidates = store.retriever.search(
+        chunks, latency, candidates = await store.retriever.asearch(
             question,
             settings=store.settings.retrieval,
             filters=filters,

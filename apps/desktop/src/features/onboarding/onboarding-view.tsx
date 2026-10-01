@@ -69,8 +69,8 @@ const CORE_MODELS: {
   {
     role: "reranking",
     name: "Qwen3 Reranker 0.6B",
-    repo_id: "Qwen/Qwen3-Reranker-0.6B-GGUF",
-    filename: "Qwen3-Reranker-0.6B-Q8_0.gguf",
+    repo_id: "ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF",
+    filename: "qwen3-reranker-0.6b-q8_0.gguf",
     whyKey: "onboarding.models.rerankingWhy",
   },
 ];

@@ -3,6 +3,7 @@ import { Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/
 import { useQuery } from "@tanstack/react-query";
 
 import { IconRail } from "@/components/shell/icon-rail";
+import { Tour } from "@/components/shell/tour";
 import { settingsQuery } from "@/lib/queries";
 
 export const Route = createFileRoute("/_shell")({
@@ -29,6 +30,7 @@ function Shell() {
       <div key={section} className="page-enter flex min-w-0 flex-1">
         <Outlet />
       </div>
+      {onboarded ? <Tour /> : null}
     </div>
   );
 }

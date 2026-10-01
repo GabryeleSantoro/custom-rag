@@ -8,7 +8,8 @@ def test_suggestions_return_the_topics_so_the_ui_can_phrase_them_in_its_language
 
     assert body["topics"]
     assert len(body["topics"]) <= 3
-    assert all(topic in question for topic, question in zip(body["topics"], body["questions"], strict=True))
+    pairs = zip(body["topics"], body["questions"], strict=True)
+    assert all(topic in question for topic, question in pairs)
 
 
 def test_no_documents_means_no_suggestions(client) -> None:

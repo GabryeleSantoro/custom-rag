@@ -15,6 +15,12 @@ import numpy as np
 EMBED_DIM = 768
 QUERY_PREFIX = "task: search result | query: "
 DOC_PREFIX = "title: none | text: "
+# Both model servers need a whole input inside one micro-batch (`-ub 2048` in
+# scripts/dev/serve-models.sh); past it llama-server answers 500 and the batch is
+# lost. 2000 characters stays under 2048 tokens even for CJK at ~1 char/token.
+# ponytail: a character cap, not a token count; rare byte-fallback text can still
+# overflow. Token-aware chunking removes the need for it.
+MAX_INPUT_CHARS = 2000
 
 
 class EmbedClient:
@@ -48,7 +54,7 @@ class EmbedClient:
         if not texts:
             return []
         prefix = QUERY_PREFIX if query else DOC_PREFIX
-        texts = [prefix + text for text in texts]
+        texts = [prefix + text[:MAX_INPUT_CHARS] for text in texts]
         out: list[list[float]] = []
         for start in range(0, len(texts), batch_size):
             out.extend(await self._post(texts[start : start + batch_size]))

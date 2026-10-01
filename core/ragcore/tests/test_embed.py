@@ -7,7 +7,13 @@ import math
 
 import httpx
 import pytest
-from ragcore.models.embed import DOC_PREFIX, EMBED_DIM, QUERY_PREFIX, EmbedClient
+from ragcore.models.embed import (
+    DOC_PREFIX,
+    EMBED_DIM,
+    MAX_INPUT_CHARS,
+    QUERY_PREFIX,
+    EmbedClient,
+)
 from ragcore.models.fakes import FakeEmbedClient
 
 
@@ -112,9 +118,7 @@ async def test_the_request_names_the_model_and_carries_every_text() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         seen.update(json.loads(request.content))
         assert request.url.path == "/v1/embeddings"
-        return httpx.Response(
-            200, json={"data": [{"index": 0, "embedding": [1.0] * EMBED_DIM}]}
-        )
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [1.0] * EMBED_DIM}]})
 
     client = EmbedClient("http://127.0.0.1:8770/", model="embeddinggemma")
     client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -129,9 +133,7 @@ async def test_queries_get_the_query_prefix_and_documents_the_document_prefix() 
 
     def handler(request: httpx.Request) -> httpx.Response:
         sent.append(json.loads(request.content)["input"])
-        return httpx.Response(
-            200, json={"data": [{"index": 0, "embedding": [1.0] * EMBED_DIM}]}
-        )
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [1.0] * EMBED_DIM}]})
 
     client = EmbedClient("http://127.0.0.1:8770")
     client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -203,3 +205,19 @@ async def test_closing_the_client_is_safe_to_call() -> None:
     await client.aclose()
 
     assert client._client.is_closed
+
+
+async def test_an_oversized_input_is_cut_to_what_the_server_accepts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = EmbedClient("http://127.0.0.1:8770")
+    sent: list[str] = []
+
+    async def fake_post(texts: list[str]) -> list[list[float]]:
+        sent.extend(texts)
+        return [[1.0] * EMBED_DIM for _ in texts]
+
+    monkeypatch.setattr(client, "_post", fake_post)
+    await client.embed(["x" * 10_000, "short"])
+
+    assert sent == [DOC_PREFIX + "x" * MAX_INPUT_CHARS, DOC_PREFIX + "short"]

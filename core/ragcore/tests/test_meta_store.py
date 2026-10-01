@@ -37,7 +37,7 @@ def test_state_survives_a_reopen(tmp_path: Path) -> None:
     db = tmp_path / "app.db"
     store = MetaStore(db)
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
+    store.save_documents([a_document("doc_1", source.id)], [])
     store.close()
 
     reopened = MetaStore(db)
@@ -49,8 +49,8 @@ def test_state_survives_a_reopen(tmp_path: Path) -> None:
 def test_removing_a_source_returns_its_document_ids(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
-    store.upsert_document(a_document("doc_2", source.id))
+    store.save_documents([a_document("doc_1", source.id)], [])
+    store.save_documents([a_document("doc_2", source.id)], [])
 
     removed = store.remove_source(source.id)
 
@@ -62,8 +62,8 @@ def test_removing_a_source_returns_its_document_ids(tmp_path: Path) -> None:
 def test_sha_index_maps_path_to_digest(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
-    store.set_sha("/corpus/doc_1.md", "deadbeef")
+    store.save_documents([a_document("doc_1", source.id)], [])
+    store.save_documents([], [("/corpus/doc_1.md", "deadbeef")])
 
     assert store.sha_index()["/corpus/doc_1.md"] == "deadbeef"
 
@@ -99,7 +99,7 @@ def test_settings_round_trip(tmp_path: Path) -> None:
 def test_a_document_can_be_fetched_by_id(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
+    store.save_documents([a_document("doc_1", source.id)], [])
 
     fetched = store.get_document("doc_1")
 
@@ -113,11 +113,11 @@ def test_an_unknown_document_is_none_not_an_error(tmp_path: Path) -> None:
 def test_upserting_the_same_id_replaces_the_row(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
+    store.save_documents([a_document("doc_1", source.id)], [])
 
     changed = a_document("doc_1", source.id)
     changed.status = "error"
-    store.upsert_document(changed)
+    store.save_documents([changed], [])
 
     assert len(store.list_documents()) == 1
     assert store.list_documents()["doc_1"].status == "error"
@@ -127,7 +127,7 @@ def test_documents_can_be_deleted_in_bulk(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
     for doc_id in ("doc_1", "doc_2", "doc_3"):
-        store.upsert_document(a_document(doc_id, source.id))
+        store.save_documents([a_document(doc_id, source.id)], [])
 
     store.delete_documents(["doc_1", "doc_3"])
 
@@ -138,7 +138,7 @@ def test_deleting_an_empty_list_deletes_nothing(tmp_path: Path) -> None:
     """An empty `IN ()` must never be read as "everything"."""
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
+    store.save_documents([a_document("doc_1", source.id)], [])
 
     store.delete_documents([])
 
@@ -155,9 +155,9 @@ def test_removing_a_source_with_no_documents_is_harmless(tmp_path: Path) -> None
 
 def test_a_sha_can_be_updated_in_place(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
-    store.set_sha("/corpus/doc_1.md", "before")
+    store.save_documents([], [("/corpus/doc_1.md", "before")])
 
-    store.set_sha("/corpus/doc_1.md", "after")
+    store.save_documents([], [("/corpus/doc_1.md", "after")])
 
     assert store.sha_index() == {"/corpus/doc_1.md": "after"}
 
@@ -165,8 +165,8 @@ def test_a_sha_can_be_updated_in_place(tmp_path: Path) -> None:
 def test_removing_a_source_forgets_its_shas(tmp_path: Path) -> None:
     store = MetaStore(tmp_path / "app.db")
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
-    store.set_sha("/corpus/doc_1.md", "deadbeef")
+    store.save_documents([a_document("doc_1", source.id)], [])
+    store.save_documents([], [("/corpus/doc_1.md", "deadbeef")])
 
     store.remove_source(source.id)
 
@@ -181,8 +181,8 @@ def test_wipe_clears_everything_but_the_settings(tmp_path: Path) -> None:
     settings.telemetry = True
     store.save_settings(settings)
     source = store.add_source(SourceCreate(path="/corpus"))
-    store.upsert_document(a_document("doc_1", source.id))
-    store.set_sha("/corpus/doc_1.md", "abc")
+    store.save_documents([a_document("doc_1", source.id)], [])
+    store.save_documents([], [("/corpus/doc_1.md", "abc")])
     session = store.create_session(None, None)
     store.append_message(
         ChatMessage(

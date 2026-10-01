@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -111,8 +112,15 @@ def walk_source(
     include_globs: list[str],
     exclude_globs: list[str],
     max_file_mb: int,
+    suffixes: Collection[str] | None = None,
+    known: Mapping[str, tuple[int, datetime, str]] | None = None,
 ) -> list[FoundFile]:
     """Find files under ``root`` worth indexing.
+
+    ``suffixes`` (lowercased, with the dot) drops other files before they are
+    stat'd or hashed. ``known`` maps a path to the ``(size_bytes, mtime,
+    sha256)`` seen last time; a file whose size and mtime both still match
+    reuses that digest instead of being read again.
 
     See the module docstring for the exact glob, hidden-file, symlink, size
     and failure-handling rules this applies. Results are sorted by path for a
@@ -130,26 +138,33 @@ def walk_source(
 
     out: list[FoundFile] = []
     for path in sorted(included):
-        if _is_hidden(path.relative_to(root)):
+        ext = path.suffix.lower()
+        if _is_hidden(path.relative_to(root)) or (suffixes is not None and ext not in suffixes):
             continue
         try:
             stat = path.stat()
             if stat.st_size > cap_bytes:
                 continue
-            digest = sha256_of(path)
+            mtime = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+            # ponytail: size+mtime is the change signal (as make/rsync use it); an
+            # edit that preserves both goes unseen until the file is touched.
+            last = known.get(str(path)) if known else None
+            if last is not None and last[0] == stat.st_size and last[1] == mtime:
+                digest = last[2]
+            else:
+                digest = sha256_of(path)
         except OSError as exc:
             # Realistically FileNotFoundError (deleted between glob and stat) or
             # PermissionError (unreadable) — both are OSError subclasses. Skip
             # this one file rather than losing every file already found.
             logger.warning("skipping %s: %s", path, exc)
             continue
-        ext = path.suffix.lower()
         out.append(
             FoundFile(
                 path=path,
                 sha256=digest,
                 size_bytes=stat.st_size,
-                mtime=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
+                mtime=mtime,
                 ext=ext,
                 mime=MIME_BY_EXT.get(ext, "application/octet-stream"),
             )

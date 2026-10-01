@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import random
 from collections.abc import AsyncIterator
+from itertools import islice
 
 from fastapi import APIRouter
 
@@ -42,16 +43,23 @@ async def run_eval(payload: EvalRunRequest, store: StoreDep, config: ConfigDep):
 
     # Questions are drawn from the fixture corpus so retrieval actually runs;
     # only the relevance labels are synthetic.
-    questions = [
-        (c.text.split(".")[0][:90], c.doc_id)
-        for doc in store.loaded.values()
-        for c in doc.chunks[:2]
-    ][: eval_set.n_questions]
+    contents = (store.content(doc_id) for doc_id in store.documents)
+    questions = list(
+        islice(
+            (
+                (c.text.split(".")[0][:90], content.doc_id)
+                for content in contents
+                if content is not None
+                for c in content.chunks[:2]
+            ),
+            eval_set.n_questions,
+        )
+    )
 
     async def events() -> AsyncIterator[str]:
         results: list[EvalQuestionResult] = []
         for index, (question, expected_doc) in enumerate(questions):
-            chunks, latency, _ = store.retriever.search(
+            chunks, latency, _ = await store.retriever.asearch(
                 question,
                 settings=store.settings.retrieval,
                 filters=QueryFilters(),

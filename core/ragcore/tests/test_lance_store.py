@@ -141,11 +141,15 @@ async def test_asking_for_more_neighbours_than_exist_is_not_an_error(
     assert len(store.dense(vector, k=50)) == 1
 
 
-async def test_full_text_search_is_not_built_yet_and_says_so(tmp_path: Path) -> None:
-    import pytest
+async def test_full_text_search_sees_every_write_without_a_rebuild(tmp_path: Path) -> None:
+    store = VectorStore(tmp_path / "index")
+    store.add_chunks(await rows_for(["Cross encoders rerank passages."], doc_id="doc_old"))
+    store.add_chunks(await rows_for(["Rerank added after the index existed."], doc_id="doc_new"))
+    store.delete_by_doc(["doc_old"])
 
-    with pytest.raises(NotImplementedError, match="Task 12"):
-        VectorStore(tmp_path / "index").fts("reranking", 6)
+    hits = VectorStore(tmp_path / "index").fts("rerank", 6)
+
+    assert [store.get([cid])[0]["doc_id"] for cid, _ in hits] == ["doc_new"]
 
 
 async def test_writing_the_same_meta_key_twice_replaces_it(tmp_path: Path) -> None:
@@ -162,3 +166,23 @@ async def test_chunks_survive_a_reopen(tmp_path: Path) -> None:
     VectorStore(root).add_chunks(await rows_for(["a passage"]))
 
     assert VectorStore(root).chunk_count() == 1
+
+
+async def test_a_quote_in_an_id_is_matched_literally(tmp_path: Path) -> None:
+    store = VectorStore(tmp_path / "index")
+    store.add_chunks(await rows_for(["a quoted passage"], doc_id="it's"))
+    store.add_chunks(await rows_for(["a plain passage"], doc_id="doc_2"))
+
+    store.delete_by_doc(["it's"])
+
+    assert store.chunk_count() == 1
+    assert store.get(["chk_0"])[0]["doc_id"] == "doc_2"
+
+
+async def test_clear_empties_the_chunk_table(tmp_path: Path) -> None:
+    store = VectorStore(tmp_path / "index")
+    store.add_chunks(await rows_for(["one passage", "another passage"]))
+
+    store.clear()
+
+    assert store.chunk_count() == 0

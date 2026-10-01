@@ -27,13 +27,16 @@ PIPELINE_BY_ROLE: dict[ModelRole, str] = {
 # flagged, and these are what the "recommended for your hardware" list draws on.
 CURATED: dict[ModelRole, list[tuple[str, str]]] = {
     "embedding": [
-        ("ggml-org/embeddinggemma-300M-qat-q4_0-GGUF", "Ships with the app; changing it forces a re-index"),
+        (
+            "ggml-org/embeddinggemma-300M-qat-q4_0-GGUF",
+            "Ships with the app; changing it forces a re-index",
+        ),
         ("Qwen/Qwen3-Embedding-0.6B-GGUF", "Apache-2.0, longer context; about 2x the CPU and RAM"),
         ("Qwen/Qwen3-Embedding-4B-GGUF", "Higher recall, needs roughly 4 GB"),
         ("nomic-ai/nomic-embed-text-v1.5-GGUF", "Small and fast on CPU"),
     ],
     "reranking": [
-        ("Qwen/Qwen3-Reranker-0.6B-GGUF", "Ships with the app"),
+        ("ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF", "Ships with the app"),
         ("Qwen/Qwen3-Reranker-4B-GGUF", "Best quality; worth it above 8 GB of VRAM"),
         ("BAAI/bge-reranker-v2-m3", "Multilingual alternative"),
     ],

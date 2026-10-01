@@ -96,9 +96,34 @@ def test_pdf_extracts_slide_text_page_by_page(tmp_path: Path, monkeypatch) -> No
     parsed = parse(source)
 
     assert parsed.title == "presentation"
-    assert len(parsed.pages) == 1
+    assert [page.page for page in parsed.pages] == [1, 2]
     assert parsed.pages[0].text == "Slide title\nElaborated slide text."
+    assert parsed.pages[1].text == ""
     assert parsed.needs_ocr is True
+
+
+def test_pdf_page_numbers_survive_a_page_without_text(tmp_path: Path, text_pdf) -> None:
+    source = tmp_path / "paper.pdf"
+    source.write_bytes(text_pdf("Cross encoders score pairs.", "", "Hybrid search merges legs."))
+
+    parsed = parse(source)
+
+    assert [page.page for page in parsed.pages] == [1, 2, 3]
+    assert parsed.pages[1].text == ""
+    assert "Hybrid search" in parsed.pages[2].text
+    assert parsed.needs_ocr is True
+
+
+def test_a_pdf_page_with_a_near_empty_text_layer_is_flagged_for_ocr(
+    tmp_path: Path, text_pdf
+) -> None:
+    clean, scanned = tmp_path / "clean.pdf", tmp_path / "scanned.pdf"
+    clean.write_bytes(text_pdf("Cross encoders score query passage pairs."))
+    scanned.write_bytes(text_pdf("Cross encoders score query passage pairs.", "12"))
+
+    assert parse(clean).needs_ocr is False
+    assert parse(scanned).needs_ocr is True
+    assert parse(scanned).pages[1].text == "12"
 
 
 def test_pptx_extracts_visible_text_in_slide_order(tmp_path: Path) -> None:
@@ -117,6 +142,26 @@ def test_pptx_extracts_visible_text_in_slide_order(tmp_path: Path) -> None:
     assert [page.page for page in parsed.pages] == [1, 2]
     assert parsed.pages[0].text == "First slide content"
     assert parsed.pages[1].text == "Second slide content"
+
+
+def test_a_slide_without_text_keeps_the_later_slide_numbers(tmp_path: Path) -> None:
+    source = tmp_path / "deck.pptx"
+    slide = (
+        '<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">{}</p:sld>'
+    )
+    with ZipFile(source, "w") as archive:
+        archive.writestr("ppt/slides/slide1.xml", slide.format("<a:t>First</a:t>"))
+        archive.writestr("ppt/slides/slide2.xml", slide.format(""))
+        archive.writestr("ppt/slides/slide3.xml", slide.format("<a:t>Third</a:t>"))
+
+    parsed = parse(source)
+
+    assert [(page.page, page.text) for page in parsed.pages] == [
+        (1, "First"),
+        (2, ""),
+        (3, "Third"),
+    ]
 
 
 def test_pptx_appends_speaker_notes_when_present(tmp_path: Path) -> None:
@@ -157,7 +202,7 @@ def test_pptx_appends_external_hyperlinks_when_present(tmp_path: Path) -> None:
         '<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
         'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        "<a:r><a:rPr><a:hlinkClick r:id=\"rId2\"/></a:rPr><a:t>Learn more</a:t></a:r>"
+        '<a:r><a:rPr><a:hlinkClick r:id="rId2"/></a:rPr><a:t>Learn more</a:t></a:r>'
         "</p:sld>"
     )
     rels = (
@@ -174,9 +219,7 @@ def test_pptx_appends_external_hyperlinks_when_present(tmp_path: Path) -> None:
 
     parsed = parse(source)
 
-    assert parsed.pages[0].text == (
-        "Learn more\n\nLink nella slide: https://example.com/reference"
-    )
+    assert parsed.pages[0].text == ("Learn more\n\nLink nella slide: https://example.com/reference")
 
 
 def test_pptx_slide_without_rels_file_is_unaffected(tmp_path: Path) -> None:
