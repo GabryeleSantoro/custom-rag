@@ -479,7 +479,7 @@ def test_english_prompt_is_unchanged() -> None:
 
 class _CodedFailingAnswerer:
     async def stream(self, question, chunks, directives, *, system_prompt=None, max_tokens=None):
-        from ragcore.stub.answers import LlmError
+        from ragcore.llm import LlmError
 
         yield "partial"
         raise LlmError("llm_idle_timeout", "model went quiet", name="LM Studio", seconds=120)

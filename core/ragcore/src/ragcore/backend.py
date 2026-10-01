@@ -34,7 +34,8 @@ class ConnectionAnswerEngine:
         system_prompt: str | None = None,
         max_tokens: int | None = None,
     ) -> AsyncIterator[str]:
-        from ragcore.stub.answers import llm_stream, scripted_stream
+        from ragcore.llm import llm_stream
+        from ragcore.stub.answers import scripted_stream
 
         connection = self.store.active_connection()
         if connection is None:

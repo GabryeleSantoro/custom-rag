@@ -25,7 +25,7 @@ from ragcore.api.schemas import (
 )
 from ragcore.api.sse import frame, sse_response
 from ragcore.ingest.parse import UnsupportedFormat, parse
-from ragcore.stub.answers import LlmError
+from ragcore.llm import LlmError
 
 router = APIRouter(prefix="/conversions", tags=["conversions"])
 logger = logging.getLogger("ragcore.conversions")

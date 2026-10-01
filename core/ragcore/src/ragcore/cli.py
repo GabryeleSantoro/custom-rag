@@ -26,7 +26,7 @@ from ragcore.api.schemas import QueryFilters, SourceCreate
 from ragcore.backend import build_backend
 from ragcore.citations import extract_citations
 from ragcore.config import Config
-from ragcore.stub.answers import LlmError
+from ragcore.llm import LlmError
 
 
 def _adopt_legacy_data_dir(data_dir: Path) -> None:
