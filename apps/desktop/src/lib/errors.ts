@@ -3,7 +3,6 @@ import type { TFunction } from "i18next";
 import i18n from "@/lib/i18n";
 import { IpcError } from "@/lib/ipc";
 
-export { parseIpcError } from "@/lib/ipc";
 
 type Translate = TFunction | ((key: string, options?: Record<string, unknown>) => string);
 

@@ -131,9 +131,6 @@ class MetaStore:
 
     # ---------------------------------------------------------------- documents
 
-    def upsert_document(self, doc: Document) -> None:
-        self.save_documents([doc], [])
-
     def save_documents(self, docs: list[Document], shas: list[tuple[str, str]]) -> None:
         """Upsert documents and ``(path, sha)`` digests in one transaction."""
         with self._lock, self._conn:
@@ -167,9 +164,6 @@ class MetaStore:
         with self._lock:
             rows = self._conn.execute("SELECT path, sha FROM shas").fetchall()
         return dict(rows)
-
-    def set_sha(self, path: str, sha: str) -> None:
-        self.save_documents([], [(path, sha)])
 
     def clear_shas(self) -> None:
         with self._lock, self._conn:

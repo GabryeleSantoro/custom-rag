@@ -10,7 +10,7 @@ from ragcore.api.routes import conversions
 from ragcore.api.schemas import ConnectionTestResult, SlideConversionRequest
 
 
-async def _fake_probe_ok(store, kind, base_url, model_id, api_key):
+async def _fake_probe_ok(kind, base_url, model_id, api_key):
     return ConnectionTestResult(ok=True, reachable=True, model_found=True, streaming=True)
 
 
@@ -93,7 +93,7 @@ def test_slide_conversion_is_disabled_when_the_active_connection_is_unreachable(
     )
     slide_id = client.get("/documents", params={"limit": 1}).json()["items"][0]["id"]
 
-    async def fake_probe(store, kind, base_url, model_id, api_key):
+    async def fake_probe(kind, base_url, model_id, api_key):
         return ConnectionTestResult(
             ok=False, reachable=False, model_found=False, streaming=False, error="ConnectError"
         )

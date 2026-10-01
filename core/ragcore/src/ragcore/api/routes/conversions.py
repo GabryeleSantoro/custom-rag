@@ -339,7 +339,7 @@ async def convert_slides(
         )
 
     probe = await probe_connection(
-        store, active.kind, active.base_url, active.model_id, store.secrets.get(active.id)
+        active.kind, active.base_url, active.model_id, store.secrets.get(active.id)
     )
     if not probe.ok:
         logger.error("model %s not reachable: %s", active.model_id, probe.error)

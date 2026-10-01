@@ -17,7 +17,6 @@ from ragcore.api.schemas import (
     ConnectionTestResult,
     Ok,
 )
-from ragcore.ports import StorePort
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -109,7 +108,6 @@ def restore_secret(connection_id: str, payload: ConnectionSecret, store: StoreDe
 
 
 async def probe_connection(
-    store: StorePort,
     kind: str,
     base_url: str | None,
     model_id: str | None,
@@ -181,4 +179,4 @@ async def test_connection(payload: ConnectionTestRequest, store: StoreDep) -> Co
         # Testing a saved connection must not require retyping its key.
         api_key = api_key or store.secrets.get(connection.id)
 
-    return await probe_connection(store, kind, base_url, model_id, api_key)
+    return await probe_connection(kind, base_url, model_id, api_key)

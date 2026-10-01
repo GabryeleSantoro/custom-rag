@@ -222,9 +222,6 @@ class RealStore(Store):
 
     # ---------------------------------------------------------------- ingestion
 
-    def ingest_source(self, source_id: str, scanned: object = None) -> list[Document]:
-        raise RuntimeError("RealStore embeds asynchronously: use ingest_source_async")
-
     async def ingest_source_async(self, source_id: str) -> list[Document]:
         """Bring the index in line with a source folder; returns its documents.
 
