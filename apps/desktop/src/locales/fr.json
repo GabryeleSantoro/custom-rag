@@ -705,5 +705,11 @@
     "install": "Installer (~1,1 Go)",
     "downloading": "Téléchargement {{percent}} %",
     "failed": "Échec du téléchargement : {{error}}"
+  },
+  "slowSpeed": {
+    "text": "Les réponses sont lentes sur cet ordinateur (~{{speed}} tok/s). Un modèle cloud serait plus rapide.",
+    "privacy": "Avec OpenRouter, les passages récupérés sont envoyés au fournisseur.",
+    "openrouter": "Configurer OpenRouter",
+    "keep": "Continuer sur cet ordinateur"
   }
 }

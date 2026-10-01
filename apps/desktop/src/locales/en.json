@@ -705,5 +705,11 @@
     "install": "Install (~1.1 GB)",
     "downloading": "Downloading {{percent}}%",
     "failed": "Download failed: {{error}}"
+  },
+  "slowSpeed": {
+    "text": "Answers are slow on this computer (~{{speed}} tok/s). A cloud model would be faster.",
+    "privacy": "With OpenRouter, the retrieved passages are sent to the provider.",
+    "openrouter": "Set up OpenRouter",
+    "keep": "Keep using this computer"
   }
 }
