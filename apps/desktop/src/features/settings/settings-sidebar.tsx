@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 export const SETTINGS_SECTIONS = [
   { slug: "general" },
   { slug: "connections" },
+  { slug: "appearance" },
   { slug: "retrieval" },
   { slug: "performance" },
   { slug: "storage" },

@@ -87,6 +87,10 @@
       "updates": {
         "label": "Aggiornamenti",
         "blurb": "Versione in uso e come arrivano le nuove."
+      },
+      "appearance": {
+        "label": "Aspetto",
+        "blurb": "Tema e dimensione del testo."
       }
     },
     "saved": "Impostazioni salvate",
@@ -156,6 +160,14 @@
       "checking": "Controllo…",
       "check": "Controlla aggiornamenti",
       "current": "Versione attuale {{version}}"
+    },
+    "appearance": {
+      "theme": "Tema",
+      "fontSize": "Dimensione del testo",
+      "fontSizeHint": "Ridimensiona tutta l'interfaccia.",
+      "small": "Piccola",
+      "medium": "Media",
+      "large": "Grande"
     }
   },
   "nav": {

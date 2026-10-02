@@ -87,6 +87,10 @@
       "updates": {
         "label": "Updates",
         "blurb": "Verwendete Version und wie neue ankommen."
+      },
+      "appearance": {
+        "label": "Darstellung",
+        "blurb": "Design und Textgröße."
       }
     },
     "saved": "Einstellungen gespeichert",
@@ -156,6 +160,14 @@
       "checking": "Prüfung läuft …",
       "check": "Nach Updates suchen",
       "current": "Aktuelle Version {{version}}"
+    },
+    "appearance": {
+      "theme": "Design",
+      "fontSize": "Textgröße",
+      "fontSizeHint": "Skaliert die gesamte Oberfläche.",
+      "small": "Klein",
+      "medium": "Mittel",
+      "large": "Groß"
     }
   },
   "nav": {

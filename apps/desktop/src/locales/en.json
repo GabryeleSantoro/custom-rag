@@ -87,6 +87,10 @@
       "updates": {
         "label": "Updates",
         "blurb": "Version in use, and how new ones arrive."
+      },
+      "appearance": {
+        "label": "Appearance",
+        "blurb": "Theme and text size."
       }
     },
     "saved": "Settings saved",
@@ -156,6 +160,14 @@
       "checking": "Checking…",
       "check": "Check for updates",
       "current": "Current version {{version}}"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "fontSize": "Text size",
+      "fontSizeHint": "Scales the whole interface.",
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
     }
   },
   "nav": {

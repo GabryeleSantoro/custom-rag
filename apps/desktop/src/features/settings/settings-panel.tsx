@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
 import { ConnectionDialog } from "@/features/settings/connection-dialog";
+import { useTheme, type Theme } from "@/components/shell/theme-provider";
 import { LocalModelControl } from "@/features/settings/local-model";
 import { SETTINGS_SECTIONS } from "@/features/settings/settings-sidebar";
 import { UpdatesSection } from "@/features/settings/updates";
@@ -56,6 +57,7 @@ import {
   setLanguagePref,
   type LanguagePref,
 } from "@/lib/i18n";
+import { getFontSize, setFontSize, type FontSize } from "@/lib/font-size";
 import { cn } from "@/lib/utils";
 
 function Field({
@@ -435,6 +437,47 @@ function GeneralSection() {
   );
 }
 
+function AppearanceSection() {
+  const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  const [size, setSize] = useState<FontSize>(getFontSize());
+
+  return (
+    <div className="space-y-6">
+      <Field label={t("settings.appearance.theme")}>
+        <Select value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="system">{t("nav.themeSystem")}</SelectItem>
+            <SelectItem value="light">{t("nav.themeLight")}</SelectItem>
+            <SelectItem value="dark">{t("nav.themeDark")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label={t("settings.appearance.fontSize")} hint={t("settings.appearance.fontSizeHint")}>
+        <Select
+          value={size}
+          onValueChange={(value) => {
+            setSize(value as FontSize);
+            setFontSize(value as FontSize);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="s">{t("settings.appearance.small")}</SelectItem>
+            <SelectItem value="m">{t("settings.appearance.medium")}</SelectItem>
+            <SelectItem value="l">{t("settings.appearance.large")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+    </div>
+  );
+}
+
 function StorageSection() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -530,6 +573,7 @@ export function SettingsPanel() {
         <div className="max-w-3xl p-5">
           {section === "general" ? <GeneralSection /> : null}
           {section === "connections" ? <ConnectionsSection /> : null}
+          {section === "appearance" ? <AppearanceSection /> : null}
           {section === "retrieval" ? <RetrievalSection /> : null}
           {section === "performance" ? <PerformanceSection /> : null}
           {section === "storage" ? <StorageSection /> : null}
