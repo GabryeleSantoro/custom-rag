@@ -189,6 +189,11 @@
       "goChat": "Vai a Chat",
       "goLibrary": "Vai a Libreria",
       "goConvert": "Vai a Slide → testo"
+    },
+    "startup": {
+      "label": "Avvia all'accesso",
+      "hint": "Apre Ibid quando accedi al computer.",
+      "failed": "Impossibile cambiare l'impostazione di avvio"
     }
   },
   "nav": {

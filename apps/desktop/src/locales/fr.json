@@ -189,6 +189,11 @@
       "goChat": "Aller à Chat",
       "goLibrary": "Aller à Bibliothèque",
       "goConvert": "Aller à Diapos → texte"
+    },
+    "startup": {
+      "label": "Lancer à l'ouverture de session",
+      "hint": "Ouvre Ibid lorsque vous vous connectez à votre ordinateur.",
+      "failed": "Impossible de modifier le réglage de démarrage"
     }
   },
   "nav": {

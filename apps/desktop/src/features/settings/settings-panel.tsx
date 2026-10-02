@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CloudIcon, HardDriveIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { toast } from "sonner";
 
 import { Page, PageBody, PageHeader } from "@/components/shell/page";
@@ -411,6 +412,34 @@ function PerformanceSection() {
   );
 }
 
+function LaunchAtLogin() {
+  const { t } = useTranslation();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    isEnabled()
+      .then(setEnabled)
+      .catch(() => setEnabled(null));
+  }, []);
+
+  const toggle = async (next: boolean) => {
+    try {
+      await (next ? enable() : disable());
+      setEnabled(next);
+    } catch (error) {
+      toast.error(t("settings.startup.failed"), { description: errorText(error) });
+    }
+  };
+
+  // Browser or dev without the shell: the plugin call rejects and the row stays hidden.
+  if (enabled === null) return null;
+  return (
+    <Field label={t("settings.startup.label")} hint={t("settings.startup.hint")}>
+      <Switch checked={enabled} onCheckedChange={toggle} />
+    </Field>
+  );
+}
+
 function GeneralSection() {
   const { t } = useTranslation();
   const [pref, setPref] = useState<LanguagePref>(getLanguagePref());
@@ -438,6 +467,7 @@ function GeneralSection() {
           </SelectContent>
         </Select>
       </Field>
+      <LaunchAtLogin />
     </div>
   );
 }

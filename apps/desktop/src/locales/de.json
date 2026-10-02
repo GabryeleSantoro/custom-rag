@@ -189,6 +189,11 @@
       "goChat": "Zu Chat",
       "goLibrary": "Zur Bibliothek",
       "goConvert": "Zu Folien → Text"
+    },
+    "startup": {
+      "label": "Beim Anmelden starten",
+      "hint": "Öffnet Ibid, wenn du dich am Computer anmeldest.",
+      "failed": "Die Anmeldeeinstellung konnte nicht geändert werden"
     }
   },
   "nav": {

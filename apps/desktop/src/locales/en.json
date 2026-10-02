@@ -189,6 +189,11 @@
       "goChat": "Go to Chat",
       "goLibrary": "Go to Library",
       "goConvert": "Go to Slides to text"
+    },
+    "startup": {
+      "label": "Launch at login",
+      "hint": "Open Ibid when you sign in to your computer.",
+      "failed": "Could not change the login setting"
     }
   },
   "nav": {
