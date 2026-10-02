@@ -95,6 +95,10 @@
       "chat": {
         "label": "Chat",
         "blurb": "Réglages par défaut de la rédaction des réponses."
+      },
+      "shortcuts": {
+        "label": "Raccourcis",
+        "blurb": "Raccourcis clavier valables partout dans l'app."
       }
     },
     "saved": "Réglages enregistrés",
@@ -177,6 +181,14 @@
       "extra": "Instructions supplémentaires",
       "extraHint": "Ajoutées à chaque question. Les réponses n'utilisent toujours que vos documents et gardent leurs citations.",
       "extraPlaceholder": "p. ex. Réponses courtes avec des puces."
+    },
+    "shortcuts": {
+      "newChat": "Nouveau chat",
+      "focusComposer": "Aller à la zone de question",
+      "openSettings": "Ouvrir les Réglages",
+      "goChat": "Aller à Chat",
+      "goLibrary": "Aller à Bibliothèque",
+      "goConvert": "Aller à Diapos → texte"
     }
   },
   "nav": {

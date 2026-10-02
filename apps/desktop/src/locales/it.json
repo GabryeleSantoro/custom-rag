@@ -95,6 +95,10 @@
       "chat": {
         "label": "Chat",
         "blurb": "Impostazioni predefinite per come vengono scritte le risposte."
+      },
+      "shortcuts": {
+        "label": "Scorciatoie",
+        "blurb": "Scorciatoie da tastiera valide in tutta l'app."
       }
     },
     "saved": "Impostazioni salvate",
@@ -177,6 +181,14 @@
       "extra": "Istruzioni aggiuntive",
       "extraHint": "Aggiunte a ogni domanda. Le risposte usano comunque solo i tuoi documenti e mantengono le citazioni.",
       "extraPlaceholder": "es. Risposte brevi e con elenchi puntati."
+    },
+    "shortcuts": {
+      "newChat": "Nuova chat",
+      "focusComposer": "Vai al campo della domanda",
+      "openSettings": "Apri le Impostazioni",
+      "goChat": "Vai a Chat",
+      "goLibrary": "Vai a Libreria",
+      "goConvert": "Vai a Slide → testo"
     }
   },
   "nav": {

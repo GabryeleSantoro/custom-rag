@@ -95,6 +95,10 @@
       "chat": {
         "label": "Chat",
         "blurb": "Valores predeterminados para cómo se redactan las respuestas."
+      },
+      "shortcuts": {
+        "label": "Atajos",
+        "blurb": "Atajos de teclado que funcionan en toda la app."
       }
     },
     "saved": "Ajustes guardados",
@@ -177,6 +181,14 @@
       "extra": "Instrucciones adicionales",
       "extraHint": "Se añaden a cada pregunta. Las respuestas siguen usando solo tus documentos y mantienen sus citas.",
       "extraPlaceholder": "p. ej. Respuestas cortas con viñetas."
+    },
+    "shortcuts": {
+      "newChat": "Nuevo chat",
+      "focusComposer": "Ir al cuadro de pregunta",
+      "openSettings": "Abrir Ajustes",
+      "goChat": "Ir a Chat",
+      "goLibrary": "Ir a Biblioteca",
+      "goConvert": "Ir a Diapositivas → texto"
     }
   },
   "nav": {

@@ -11,6 +11,7 @@ export const SETTINGS_SECTIONS = [
   { slug: "chat" },
   { slug: "retrieval" },
   { slug: "performance" },
+  { slug: "shortcuts" },
   { slug: "storage" },
   { slug: "updates" },
 ] as const;

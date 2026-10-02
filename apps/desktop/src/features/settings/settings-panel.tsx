@@ -59,6 +59,8 @@ import {
   type LanguagePref,
 } from "@/lib/i18n";
 import { getFontSize, setFontSize, type FontSize } from "@/lib/font-size";
+import { isMac } from "@/lib/platform";
+import { SHORTCUTS } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 
 function Field({
@@ -507,6 +509,24 @@ function ChatSection() {
   );
 }
 
+function ShortcutsSection() {
+  const { t } = useTranslation();
+  const mod = isMac ? "⌘" : "Ctrl+";
+  return (
+    <div className="max-w-md divide-y rounded-lg border">
+      {SHORTCUTS.map((shortcut) => (
+        <div key={shortcut.id} className="flex items-center justify-between px-3 py-2 text-[0.8125rem]">
+          <span>{t(`settings.shortcuts.${shortcut.id}`)}</span>
+          <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem]">
+            {mod}
+            {shortcut.key.toUpperCase()}
+          </kbd>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StorageSection() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -606,6 +626,7 @@ export function SettingsPanel() {
           {section === "chat" ? <ChatSection /> : null}
           {section === "retrieval" ? <RetrievalSection /> : null}
           {section === "performance" ? <PerformanceSection /> : null}
+          {section === "shortcuts" ? <ShortcutsSection /> : null}
           {section === "storage" ? <StorageSection /> : null}
           {section === "updates" ? <UpdatesSection /> : null}
         </div>

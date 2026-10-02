@@ -95,6 +95,10 @@
       "chat": {
         "label": "Chat",
         "blurb": "Defaults for how answers are written."
+      },
+      "shortcuts": {
+        "label": "Shortcuts",
+        "blurb": "Keyboard shortcuts that work anywhere in the app."
       }
     },
     "saved": "Settings saved",
@@ -177,6 +181,14 @@
       "extra": "Extra instructions",
       "extraHint": "Added to every question. Answers still only use your documents and keep their citations.",
       "extraPlaceholder": "e.g. Keep answers short and use bullet points."
+    },
+    "shortcuts": {
+      "newChat": "New chat",
+      "focusComposer": "Focus the question box",
+      "openSettings": "Open Settings",
+      "goChat": "Go to Chat",
+      "goLibrary": "Go to Library",
+      "goConvert": "Go to Slides to text"
     }
   },
   "nav": {

@@ -95,6 +95,10 @@
       "chat": {
         "label": "Chat",
         "blurb": "Standardeinstellungen dafür, wie Antworten verfasst werden."
+      },
+      "shortcuts": {
+        "label": "Tastenkürzel",
+        "blurb": "Tastenkürzel, die überall in der App funktionieren."
       }
     },
     "saved": "Einstellungen gespeichert",
@@ -177,6 +181,14 @@
       "extra": "Zusätzliche Anweisungen",
       "extraHint": "Wird jeder Frage hinzugefügt. Antworten nutzen weiterhin nur deine Dokumente und behalten ihre Zitate.",
       "extraPlaceholder": "z. B. Kurze Antworten mit Aufzählungspunkten."
+    },
+    "shortcuts": {
+      "newChat": "Neuer Chat",
+      "focusComposer": "Zum Fragefeld springen",
+      "openSettings": "Einstellungen öffnen",
+      "goChat": "Zu Chat",
+      "goLibrary": "Zur Bibliothek",
+      "goConvert": "Zu Folien → Text"
     }
   },
   "nav": {
