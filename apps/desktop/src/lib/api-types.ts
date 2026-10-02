@@ -785,6 +785,11 @@ export interface components {
             telemetry: boolean;
             retrieval?: components["schemas"]["RetrievalSettings"];
             performance?: components["schemas"]["PerformanceSettings"];
+            /**
+             * Chat Extra Instructions
+             * @default
+             */
+            chat_extra_instructions: string;
         };
         /** AppSettingsPatch */
         AppSettingsPatch: {
@@ -798,6 +803,8 @@ export interface components {
             telemetry?: boolean | null;
             retrieval?: components["schemas"]["RetrievalSettings"] | null;
             performance?: components["schemas"]["PerformanceSettings"] | null;
+            /** Chat Extra Instructions */
+            chat_extra_instructions?: string | null;
         };
         /** ChatMessage */
         ChatMessage: {

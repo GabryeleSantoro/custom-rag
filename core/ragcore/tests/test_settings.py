@@ -98,3 +98,23 @@ def test_a_wiped_index_answers_that_it_knows_nothing(client: TestClient, read_ev
 
 def test_an_empty_confirmation_is_refused(client: TestClient) -> None:
     assert client.post("/settings/wipe", json={"confirm": ""}).status_code == 400
+
+
+def test_extra_instructions_default_empty_and_round_trip(client: TestClient) -> None:
+    assert client.get("/settings").json()["chat_extra_instructions"] == ""
+    patched = client.patch("/settings", json={"chat_extra_instructions": "Be brief"}).json()
+    assert patched["chat_extra_instructions"] == "Be brief"
+    assert client.get("/settings").json()["chat_extra_instructions"] == "Be brief"
+
+
+def test_over_long_extra_instructions_are_rejected(client: TestClient) -> None:
+    response = client.patch("/settings", json={"chat_extra_instructions": "x" * 1001})
+    assert response.status_code == 422
+    assert client.get("/settings").json()["chat_extra_instructions"] == ""
+
+
+def test_settings_saved_before_the_field_existed_still_load() -> None:
+    from ragcore.api.schemas import AppSettings
+
+    old = AppSettings(storage_path="/tmp/x").model_dump_json(exclude={"chat_extra_instructions"})
+    assert AppSettings.model_validate_json(old).chat_extra_instructions == ""

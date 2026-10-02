@@ -464,3 +464,18 @@ def test_a_local_server_that_fails_to_start_is_reported_as_a_coded_error() -> No
 
     assert raised.value.code == "local_model_failed"
     assert "did not become healthy" in raised.value.params["reason"]
+
+
+def test_extra_instructions_follow_the_grounding_rules() -> None:
+    from ragcore.llm import SYSTEM_PROMPT, system_prompt_for
+
+    prompt = system_prompt_for(None, "Keep it short {x}\nUse bullets.")
+    assert prompt.startswith(SYSTEM_PROMPT)
+    assert prompt.endswith("Keep it short {x}\nUse bullets.")
+
+
+def test_blank_extra_instructions_change_nothing() -> None:
+    from ragcore.llm import SYSTEM_PROMPT, system_prompt_for
+
+    assert system_prompt_for(None, "   \n") == SYSTEM_PROMPT
+    assert system_prompt_for("fr", "") == system_prompt_for("fr")

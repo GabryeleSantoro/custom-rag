@@ -521,6 +521,7 @@ class AppSettings(BaseModel):
     telemetry: bool = False
     retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
     performance: PerformanceSettings = Field(default_factory=PerformanceSettings)
+    chat_extra_instructions: str = Field(default="", max_length=1000)
 
 
 class AppSettingsPatch(BaseModel):
@@ -530,6 +531,7 @@ class AppSettingsPatch(BaseModel):
     telemetry: bool | None = None
     retrieval: RetrievalSettings | None = None
     performance: PerformanceSettings | None = None
+    chat_extra_instructions: str | None = Field(default=None, max_length=1000)
 
 
 class WipeRequest(BaseModel):

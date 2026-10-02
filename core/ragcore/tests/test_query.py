@@ -359,3 +359,26 @@ def test_stub_answers_report_no_speed(client: TestClient, read_events) -> None:
         done = dict(read_events(response))["done"]
 
     assert done["tokens_per_s"] is None
+
+
+def test_extra_instructions_reach_the_answer_engine(client: TestClient, read_events) -> None:
+    from ragcore.api import deps
+
+    captured: dict = {}
+
+    class Recorder:
+        async def stream(
+            self, question, chunks, directives, *, system_prompt=None, max_tokens=None
+        ):
+            captured["system_prompt"] = system_prompt
+            yield "ok"
+
+    client.patch("/settings", json={"chat_extra_instructions": "Answer in bullets"})
+    client.app.dependency_overrides[deps.get_answerer] = Recorder
+    try:
+        with client.stream("POST", "/query", json={"q": "Why rerank?"}) as response:
+            read_events(response)
+    finally:
+        client.app.dependency_overrides.pop(deps.get_answerer, None)
+
+    assert captured["system_prompt"].endswith("Answer in bullets")

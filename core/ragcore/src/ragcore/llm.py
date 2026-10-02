@@ -26,15 +26,21 @@ cite nothing. Do not invent document ids."""
 LANGUAGE_NAMES = {"it": "Italian", "fr": "French", "de": "German", "es": "Spanish"}
 
 
-def system_prompt_for(lang: str | None) -> str:
-    """The answer prompt, told to write in the UI language. English adds nothing."""
+def system_prompt_for(lang: str | None, extra: str = "") -> str:
+    """The answer prompt, told to write in the UI language, plus the user's own notes.
+
+    The user's text goes last and after the grounding rules, which are not editable.
+    English with no notes adds nothing.
+    """
+    prompt = SYSTEM_PROMPT
     name = LANGUAGE_NAMES.get(lang or "")
-    if name is None:
-        return SYSTEM_PROMPT
-    return (
-        f"{SYSTEM_PROMPT}\nWrite the answer in {name}. "
-        "Keep the [document_id:page] markers unchanged."
-    )
+    if name is not None:
+        prompt = (
+            f"{prompt}\nWrite the answer in {name}. "
+            "Keep the [document_id:page] markers unchanged."
+        )
+    extra = extra.strip()
+    return f"{prompt}\n{extra}" if extra else prompt
 
 
 

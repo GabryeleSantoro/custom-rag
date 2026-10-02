@@ -153,7 +153,10 @@ async def query(payload: QueryRequest, request: Request, store: StoreDep, answer
 
         connection = store.active_connection()
         stream = answerer.stream(
-            question, chunks, directives, system_prompt=system_prompt_for(payload.lang)
+            question,
+            chunks,
+            directives,
+            system_prompt=system_prompt_for(payload.lang, store.settings.chat_extra_instructions),
         )
 
         answer: list[str] = []
