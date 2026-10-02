@@ -91,6 +91,10 @@
       "appearance": {
         "label": "Apparence",
         "blurb": "Thème et taille du texte."
+      },
+      "chat": {
+        "label": "Chat",
+        "blurb": "Réglages par défaut de la rédaction des réponses."
       }
     },
     "saved": "Réglages enregistrés",
@@ -168,6 +172,11 @@
       "small": "Petite",
       "medium": "Moyenne",
       "large": "Grande"
+    },
+    "chat": {
+      "extra": "Instructions supplémentaires",
+      "extraHint": "Ajoutées à chaque question. Les réponses n'utilisent toujours que vos documents et gardent leurs citations.",
+      "extraPlaceholder": "p. ex. Réponses courtes avec des puces."
     }
   },
   "nav": {

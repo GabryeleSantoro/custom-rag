@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconTooltip } from "@/components/ui/tooltip";
@@ -63,10 +64,12 @@ import { cn } from "@/lib/utils";
 function Field({
   label,
   hint,
+  wide,
   children,
 }: {
   label: string;
   hint?: string;
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -75,7 +78,7 @@ function Field({
         <Label className="text-[0.8125rem]">{label}</Label>
         {hint ? <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{hint}</p> : null}
       </div>
-      <div className="max-w-xs">{children}</div>
+      <div className={wide ? "max-w-xl" : "max-w-xs"}>{children}</div>
     </div>
   );
 }
@@ -478,6 +481,32 @@ function AppearanceSection() {
   );
 }
 
+function ChatSection() {
+  const { t } = useTranslation();
+  const { draft, setDraft, save } = useSettingsDraft();
+  if (!draft) return <Skeleton className="h-40 w-full" />;
+
+  return (
+    <div className="space-y-6">
+      <Field label={t("settings.chat.extra")} hint={t("settings.chat.extraHint")} wide>
+        <Textarea
+          rows={5}
+          maxLength={1000}
+          placeholder={t("settings.chat.extraPlaceholder")}
+          value={draft.chat_extra_instructions}
+          onChange={(event) => setDraft({ ...draft, chat_extra_instructions: event.target.value })}
+        />
+      </Field>
+      <Button
+        disabled={save.isPending}
+        onClick={() => save.mutate({ chat_extra_instructions: draft.chat_extra_instructions })}
+      >
+        {t("common.save")}
+      </Button>
+    </div>
+  );
+}
+
 function StorageSection() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -574,6 +603,7 @@ export function SettingsPanel() {
           {section === "general" ? <GeneralSection /> : null}
           {section === "connections" ? <ConnectionsSection /> : null}
           {section === "appearance" ? <AppearanceSection /> : null}
+          {section === "chat" ? <ChatSection /> : null}
           {section === "retrieval" ? <RetrievalSection /> : null}
           {section === "performance" ? <PerformanceSection /> : null}
           {section === "storage" ? <StorageSection /> : null}

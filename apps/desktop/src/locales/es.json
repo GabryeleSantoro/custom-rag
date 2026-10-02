@@ -91,6 +91,10 @@
       "appearance": {
         "label": "Apariencia",
         "blurb": "Tema y tamaño del texto."
+      },
+      "chat": {
+        "label": "Chat",
+        "blurb": "Valores predeterminados para cómo se redactan las respuestas."
       }
     },
     "saved": "Ajustes guardados",
@@ -168,6 +172,11 @@
       "small": "Pequeño",
       "medium": "Mediano",
       "large": "Grande"
+    },
+    "chat": {
+      "extra": "Instrucciones adicionales",
+      "extraHint": "Se añaden a cada pregunta. Las respuestas siguen usando solo tus documentos y mantienen sus citas.",
+      "extraPlaceholder": "p. ej. Respuestas cortas con viñetas."
     }
   },
   "nav": {

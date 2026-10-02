@@ -91,6 +91,10 @@
       "appearance": {
         "label": "Aspetto",
         "blurb": "Tema e dimensione del testo."
+      },
+      "chat": {
+        "label": "Chat",
+        "blurb": "Impostazioni predefinite per come vengono scritte le risposte."
       }
     },
     "saved": "Impostazioni salvate",
@@ -168,6 +172,11 @@
       "small": "Piccola",
       "medium": "Media",
       "large": "Grande"
+    },
+    "chat": {
+      "extra": "Istruzioni aggiuntive",
+      "extraHint": "Aggiunte a ogni domanda. Le risposte usano comunque solo i tuoi documenti e mantengono le citazioni.",
+      "extraPlaceholder": "es. Risposte brevi e con elenchi puntati."
     }
   },
   "nav": {

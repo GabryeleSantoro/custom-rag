@@ -91,6 +91,10 @@
       "appearance": {
         "label": "Appearance",
         "blurb": "Theme and text size."
+      },
+      "chat": {
+        "label": "Chat",
+        "blurb": "Defaults for how answers are written."
       }
     },
     "saved": "Settings saved",
@@ -168,6 +172,11 @@
       "small": "Small",
       "medium": "Medium",
       "large": "Large"
+    },
+    "chat": {
+      "extra": "Extra instructions",
+      "extraHint": "Added to every question. Answers still only use your documents and keep their citations.",
+      "extraPlaceholder": "e.g. Keep answers short and use bullet points."
     }
   },
   "nav": {

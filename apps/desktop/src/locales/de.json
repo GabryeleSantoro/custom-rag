@@ -91,6 +91,10 @@
       "appearance": {
         "label": "Darstellung",
         "blurb": "Design und Textgröße."
+      },
+      "chat": {
+        "label": "Chat",
+        "blurb": "Standardeinstellungen dafür, wie Antworten verfasst werden."
       }
     },
     "saved": "Einstellungen gespeichert",
@@ -168,6 +172,11 @@
       "small": "Klein",
       "medium": "Mittel",
       "large": "Groß"
+    },
+    "chat": {
+      "extra": "Zusätzliche Anweisungen",
+      "extraHint": "Wird jeder Frage hinzugefügt. Antworten nutzen weiterhin nur deine Dokumente und behalten ihre Zitate.",
+      "extraPlaceholder": "z. B. Kurze Antworten mit Aufzählungspunkten."
     }
   },
   "nav": {
