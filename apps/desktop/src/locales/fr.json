@@ -348,7 +348,10 @@
       "embeddingWhy": "Transforme chaque fragment et chaque question en vecteur. Le changer plus tard impose de réindexer.",
       "rerankingWhy": "Lit ensemble la question et chaque candidat, puis les réordonne. C'est ce qui garde les réponses pertinentes.",
       "downloadFailed": "Impossible de lancer le téléchargement du modèle {{role}}",
-      "verified": "vérifié"
+      "verified": "vérifié",
+      "runtimeInstall": "Télécharger les modèles",
+      "runtimeDownloading": "Téléchargement… {{percent}}%",
+      "runtimeFailed": "Échec du téléchargement : {{error}}"
     },
     "connection": {
       "title": "Qui rédige les réponses",

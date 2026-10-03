@@ -98,23 +98,28 @@ class LocalLLM:
                         self.progress = base + weight * done / total
         part.replace(dest)
 
+    async def ensure_binary(self) -> Path:
+        if (binary := self._binary()) is not None:
+            return binary
+        asset = _asset()
+        if asset is None:
+            raise RuntimeError(f"no llama.cpp build for {platform.system()}")
+        archive = self.dir / asset
+        url = f"https://github.com/ggml-org/llama.cpp/releases/download/{LLAMA_TAG}/{asset}"
+        await self._fetch(url, archive, 0.05, 0.0)
+        await asyncio.to_thread(shutil.unpack_archive, archive, self.dir)
+        archive.unlink()
+        binary = self._binary()
+        if binary is None:
+            raise RuntimeError("llama-server missing from the downloaded build")
+        binary.chmod(0o755)
+        return binary
+
     async def _install(self) -> None:
         try:
             self.dir.mkdir(parents=True, exist_ok=True)
             self.progress = 0.0
-            if self._binary() is None:
-                asset = _asset()
-                if asset is None:
-                    raise RuntimeError(f"no llama.cpp build for {platform.system()}")
-                archive = self.dir / asset
-                url = f"https://github.com/ggml-org/llama.cpp/releases/download/{LLAMA_TAG}/{asset}"
-                await self._fetch(url, archive, 0.05, 0.0)
-                await asyncio.to_thread(shutil.unpack_archive, archive, self.dir)
-                archive.unlink()
-                binary = self._binary()
-                if binary is None:
-                    raise RuntimeError("llama-server missing from the downloaded build")
-                binary.chmod(0o755)
+            await self.ensure_binary()
             if not (self.dir / MODEL_FILE).exists():
                 await self._fetch(MODEL_URL, self.dir / MODEL_FILE, 0.95, 0.05)
             self.progress = 1.0

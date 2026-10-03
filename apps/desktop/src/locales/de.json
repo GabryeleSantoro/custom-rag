@@ -348,7 +348,10 @@
       "embeddingWhy": "Wandelt jeden Abschnitt und jede Frage in einen Vektor um. Ein späterer Wechsel erfordert eine Neuindizierung.",
       "rerankingWhy": "Liest die Frage und jeden Kandidaten gemeinsam und sortiert neu. Das hält die Antworten beim Thema.",
       "downloadFailed": "Der Download des Modells {{role}} konnte nicht gestartet werden",
-      "verified": "geprüft"
+      "verified": "geprüft",
+      "runtimeInstall": "Modelle herunterladen",
+      "runtimeDownloading": "Wird heruntergeladen… {{percent}}%",
+      "runtimeFailed": "Download fehlgeschlagen: {{error}}"
     },
     "connection": {
       "title": "Wer die Antworten schreibt",

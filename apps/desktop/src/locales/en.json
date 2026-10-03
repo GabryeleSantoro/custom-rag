@@ -348,7 +348,10 @@
       "embeddingWhy": "Turns every chunk and every question into a vector. Swapping it later means re-indexing.",
       "rerankingWhy": "Reads the question and each candidate together, then reorders them. This is what keeps answers on topic.",
       "downloadFailed": "Could not start the {{role}} download",
-      "verified": "verified"
+      "verified": "verified",
+      "runtimeInstall": "Download models",
+      "runtimeDownloading": "Downloading… {{percent}}%",
+      "runtimeFailed": "Download failed: {{error}}"
     },
     "connection": {
       "title": "Who writes the answers",

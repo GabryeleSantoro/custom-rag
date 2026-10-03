@@ -348,7 +348,10 @@
       "embeddingWhy": "Convierte cada fragmento y cada pregunta en un vector. Cambiarlo después obliga a reindexar.",
       "rerankingWhy": "Lee juntas la pregunta y cada candidato y los reordena. Es lo que mantiene las respuestas en el tema.",
       "downloadFailed": "No se pudo iniciar la descarga del modelo {{role}}",
-      "verified": "verificado"
+      "verified": "verificado",
+      "runtimeInstall": "Descargar modelos",
+      "runtimeDownloading": "Descargando… {{percent}}%",
+      "runtimeFailed": "Descarga fallida: {{error}}"
     },
     "connection": {
       "title": "Quién escribe las respuestas",

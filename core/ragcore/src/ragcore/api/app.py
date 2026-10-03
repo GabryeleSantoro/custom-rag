@@ -49,9 +49,14 @@ def create_app(config: Config) -> FastAPI:
         app.state.hub = backend.hub
         app.state.answerer = backend.answerer
         app.state.local_llm = backend.local_llm
+        app.state.servers = backend.servers
+        if backend.servers:
+            await backend.servers.start()
         try:
             yield
         finally:
+            if backend.servers:
+                backend.servers.stop()
             app.state.local_llm.stop()
             await backend.jobs.shutdown()
             await backend.hub.aclose()

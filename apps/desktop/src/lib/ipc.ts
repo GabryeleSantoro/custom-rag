@@ -188,6 +188,14 @@ export const api = {
     ),
   installSuggestionModel: () => request<void>("POST", "/suggestions/model"),
 
+  runtime: () =>
+    request<{
+      state: "missing" | "downloading" | "ready" | "unavailable";
+      progress: number;
+      error: string | null;
+    }>("GET", "/models/runtime"),
+  installRuntime: () => request<void>("POST", "/models/runtime/install"),
+
   listFolders: () => request<Folder[]>("GET", "/folders"),
   createFolder: (name: string) => request<Folder>("POST", "/folders", { name }),
   renameFolder: (id: string, name: string) => request<Folder>("PATCH", `/folders/${id}`, { name }),

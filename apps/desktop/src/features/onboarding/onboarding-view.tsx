@@ -34,6 +34,7 @@ import {
   healthQuery,
   keys,
   modelsQuery,
+  runtimeQuery,
   sourcesQuery,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -310,20 +311,51 @@ function ModelRow({
 
 function ModelsStep({ installed }: { installed: InstalledModel[] }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const runtime = useQuery(runtimeQuery);
+  const install = useMutation({
+    mutationFn: api.installRuntime,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.runtime }),
+  });
+  const data = runtime.data;
+  const real = data !== undefined && data.state !== "unavailable";
   return (
     <StepFrame
       title={t("onboarding.models.title")}
       lead={t("onboarding.models.lead")}
     >
       <div className="space-y-2">
-        {CORE_MODELS.map((spec) => (
-          <ModelRow
-            key={spec.role}
-            spec={spec}
-            installed={installed.find((model) => model.role === spec.role && model.active)}
-          />
-        ))}
+        {CORE_MODELS.map((spec) =>
+          real ? (
+            <Row
+              key={spec.role}
+              icon={CpuIcon}
+              tone={data.state === "ready" ? "ok" : undefined}
+              title={spec.name}
+              body={t(spec.whyKey)}
+            />
+          ) : (
+            <ModelRow
+              key={spec.role}
+              spec={spec}
+              installed={installed.find((model) => model.role === spec.role && model.active)}
+            />
+          ),
+        )}
       </div>
+      {data?.state === "downloading" ? (
+        <Progress value={Math.round(data.progress * 100)} />
+      ) : null}
+      {data?.error ? (
+        <p className="text-xs text-status-error">
+          {t("onboarding.models.runtimeFailed", { error: data.error })}
+        </p>
+      ) : null}
+      {data?.state === "missing" ? (
+        <Button size="sm" onClick={() => install.mutate()}>
+          <DownloadIcon /> {t("onboarding.models.runtimeInstall")}
+        </Button>
+      ) : null}
     </StepFrame>
   );
 }
@@ -513,9 +545,13 @@ export function OnboardingView() {
       toast.error(t("onboarding.saveFailed"), { description: errorText(error) }),
   });
 
-  const coreReady = CORE_MODELS.every((spec) =>
-    installed.some((model) => model.role === spec.role && model.active),
-  );
+  const runtime = useQuery(runtimeQuery);
+  const coreReady =
+    runtime.data?.state === "ready" ||
+    (runtime.data?.state === "unavailable" &&
+      CORE_MODELS.every((spec) =>
+        installed.some((model) => model.role === spec.role && model.active),
+      ));
 
   const blocked =
     (step === "hardware" && !hardware.data) || (step === "models" && !coreReady);

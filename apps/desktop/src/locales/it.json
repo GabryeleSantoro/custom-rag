@@ -348,7 +348,10 @@
       "embeddingWhy": "Trasforma ogni frammento e ogni domanda in un vettore. Cambiarlo in seguito richiede una nuova indicizzazione.",
       "rerankingWhy": "Legge insieme la domanda e ogni candidato, poi li riordina. È ciò che mantiene le risposte pertinenti.",
       "downloadFailed": "Impossibile avviare il download del modello {{role}}",
-      "verified": "verificato"
+      "verified": "verificato",
+      "runtimeInstall": "Scarica i modelli",
+      "runtimeDownloading": "Download in corso… {{percent}}%",
+      "runtimeFailed": "Download non riuscito: {{error}}"
     },
     "connection": {
       "title": "Chi scrive le risposte",

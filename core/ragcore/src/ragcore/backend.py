@@ -18,6 +18,7 @@ class Backend:
     hub: object
     answerer: AnswerEngine
     local_llm: object
+    servers: object | None = None
 
 
 class ConnectionAnswerEngine:
@@ -82,10 +83,16 @@ def build_backend(config: Config) -> Backend:
     from ragcore.local_llm import LocalLLM
 
     local_llm = LocalLLM(config.data_dir)
+    servers = None
+    if config.backend == "real" and not os.getenv("RAGCORE_FAKE_MODELS"):
+        from ragcore.model_servers import ModelServers
+
+        servers = ModelServers(config.data_dir, local_llm, config.embed_url, config.rerank_url)
     return Backend(
         store=store,
         jobs=JobManager(),
         hub=HubClient(config),
         answerer=ConnectionAnswerEngine(store, local_llm),
         local_llm=local_llm,
+        servers=servers,
     )

@@ -53,8 +53,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--ram-mb", type=int, default=None)
     serve.add_argument("--vram-mb", type=int, default=0)
     serve.add_argument("--gpu-backend", default="cpu", choices=["metal", "cuda", "vulkan", "cpu"])
-    # The shell passes no --backend and does not start the llama-servers yet, so
-    # the app keeps the stub until it supervises them.
+    # The shell passes --backend real; ragcore supervises the llama-servers itself
+    # (model_servers.py). The stub stays the default for bare `ragcore serve` dev runs.
     serve.add_argument("--backend", default="stub", choices=["stub", "real"])
     serve.add_argument("--prod", action="store_true", help="Disable dev-only routes")
     serve.add_argument("--log-level", default="info")

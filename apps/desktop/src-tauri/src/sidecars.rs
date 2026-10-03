@@ -5,9 +5,9 @@
 //! healthy, restarts it with backoff if it dies, and kills it on exit. The
 //! webview never learns the port or the token.
 //!
-//! Only `ragcore` is supervised today. The two `llama-server` instances (and a
-//! third for an in-app generation model) are the same shape, which is why the
-//! state below is keyed by role rather than hard-coded to one child.
+//! Only `ragcore` is supervised here. It starts and restarts the embedder and
+//! reranker `llama-server` instances itself (`model_servers.py`), so the shell
+//! needs no knowledge of them.
 
 use std::collections::VecDeque;
 use std::fs::{File, OpenOptions};
@@ -173,7 +173,9 @@ fn push_serve_args(command: &mut Command, port: u16, token: &str, hw: &HardwareI
         .arg("--vram-mb")
         .arg(hw.vram_mb.to_string())
         .arg("--gpu-backend")
-        .arg(&hw.gpu_backend);
+        .arg(&hw.gpu_backend)
+        .arg("--backend")
+        .arg("real");
 }
 
 impl Supervisor {
@@ -607,6 +609,7 @@ mod tests {
         assert!(args.windows(2).any(|w| w == ["--ram-mb", "32768"]));
         assert!(args.windows(2).any(|w| w == ["--vram-mb", "32768"]));
         assert!(args.windows(2).any(|w| w == ["--gpu-backend", "metal"]));
+        assert!(args.windows(2).any(|w| w == ["--backend", "real"]));
     }
 
     #[test]
